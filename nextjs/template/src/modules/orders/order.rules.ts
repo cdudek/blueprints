@@ -1,7 +1,7 @@
 import { err, ok, type Result } from "@/shared/result";
 import type { Order, OrderStatus } from "./order.types";
 
-export const CANCELLABLE: readonly OrderStatus[] = ["pending", "paid"];
+const CANCELLABLE: readonly OrderStatus[] = ["pending", "paid"];
 const CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 // Time comes in as a parameter: rules never read a clock.

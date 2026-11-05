@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { FIXTURE_SIGNATURE } from "@/clients/payments/providers/fixture";
 import { db } from "@/shared/db";
 import { signInAs } from "@tests/helpers/auth-mock";
 import { resetData } from "@tests/helpers/db-mock";
@@ -14,7 +15,6 @@ vi.mock("@/shared/db", () => import("@tests/helpers/db-mock").then((m) => m.dbMo
 vi.mock("@/shared/auth", () => import("@tests/helpers/auth-mock").then((m) => m.authMock));
 
 const ORDER = "00000000-0000-4000-8000-0000000000aa";
-const SIGNATURE = "fixture-signature";
 const event = (type: string, providerRef: string) =>
   JSON.stringify({ id: `evt_${type}`, type, providerRef });
 const only = async () => (await db.select().from(payments))[0];
@@ -74,8 +74,8 @@ describe("receivePaymentEventFromWebhook", () => {
   it("changes state once when the same event is delivered twice", async () => {
     await startPayment(ORDER, 1000);
     const ref = (await only())?.providerRef ?? "";
-    const first = await receivePaymentEventFromWebhook(event("succeeded", ref), SIGNATURE);
-    const second = await receivePaymentEventFromWebhook(event("succeeded", ref), SIGNATURE);
+    const first = await receivePaymentEventFromWebhook(event("succeeded", ref), FIXTURE_SIGNATURE);
+    const second = await receivePaymentEventFromWebhook(event("succeeded", ref), FIXTURE_SIGNATURE);
     expect(first).toEqual(second);
     expect((await only())?.status).toBe("succeeded");
   });
@@ -83,8 +83,8 @@ describe("receivePaymentEventFromWebhook", () => {
   it("never moves an attempt backwards on an out-of-order event", async () => {
     await startPayment(ORDER, 1000);
     const ref = (await only())?.providerRef ?? "";
-    await receivePaymentEventFromWebhook(event("succeeded", ref), SIGNATURE);
-    await receivePaymentEventFromWebhook(event("processing", ref), SIGNATURE);
+    await receivePaymentEventFromWebhook(event("succeeded", ref), FIXTURE_SIGNATURE);
+    await receivePaymentEventFromWebhook(event("processing", ref), FIXTURE_SIGNATURE);
     expect((await only())?.status).toBe("succeeded");
   });
 
@@ -92,13 +92,13 @@ describe("receivePaymentEventFromWebhook", () => {
     await startPayment(ORDER, 1000);
     const ref = (await only())?.providerRef ?? "";
     await recordCancellation(ORDER);
-    await receivePaymentEventFromWebhook(event("succeeded", ref), SIGNATURE);
+    await receivePaymentEventFromWebhook(event("succeeded", ref), FIXTURE_SIGNATURE);
     expect((await only())?.status).toBe("refund_pending");
   });
 
   it("ignores an event for an unknown payment", async () => {
     expect(
-      await receivePaymentEventFromWebhook(event("succeeded", "pi_unknown"), SIGNATURE),
+      await receivePaymentEventFromWebhook(event("succeeded", "pi_unknown"), FIXTURE_SIGNATURE),
     ).toEqual({
       ok: true,
       value: null,

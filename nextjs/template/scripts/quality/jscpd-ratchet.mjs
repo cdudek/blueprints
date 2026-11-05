@@ -1,0 +1,47 @@
+// jscpd as a ratchet. A clone is keyed by its two files plus a hash of the duplicated text,
+// not by line numbers, so edits elsewhere in a file do not churn the key.
+// Rule: no new duplication above the threshold in .jscpd.json. Extract only when the two copies
+// change for the same reason; otherwise rename or restructure them so they stop matching.
+// Usage: node scripts/quality/jscpd-ratchet.mjs [--cwd <dir>] [--baseline <file>]
+import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, rmSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { arg, binOf, fatal, ratchet } from "./baseline.mjs";
+
+const cwd = resolve(arg("cwd", "."));
+const baseline = resolve(cwd, arg("baseline", "quality/jscpd-baseline.json"));
+const reportFile = join(cwd, "reports/jscpd/jscpd-report.json");
+rmSync(reportFile, { force: true }); // never judge a stale report
+
+const run = spawnSync(process.execPath, [binOf("jscpd")], {
+  cwd,
+  encoding: "utf8",
+  maxBuffer: 64 * 1024 * 1024,
+});
+if (run.error || run.status !== 0) fatal(`jscpd exited ${run.status}: ${run.stderr || run.error}`);
+if (!existsSync(reportFile)) fatal(`jscpd wrote no report at ${reportFile}`);
+
+/** @type {{ duplicates?: { fragment?: string, firstFile?: { name: string }, secondFile?: { name: string } }[] }} */
+let report;
+try {
+  report = JSON.parse(readFileSync(reportFile, "utf8"));
+} catch {
+  fatal("jscpd report is not valid JSON");
+}
+if (!Array.isArray(report.duplicates)) fatal("jscpd report has no `duplicates` array");
+
+const keys = new Set(
+  report.duplicates.map((d) => {
+    if (!d.firstFile || !d.secondFile || typeof d.fragment !== "string")
+      fatal("jscpd report has a malformed clone");
+    const files = [d.firstFile.name, d.secondFile.name].sort().join(":");
+    const hash = createHash("sha1")
+      .update(d.fragment.replace(/\s+/g, " ").trim())
+      .digest("hex")
+      .slice(0, 12);
+    return `${files}:${hash}`;
+  }),
+);
+
+process.exit(ratchet("jscpd", [...keys], baseline));

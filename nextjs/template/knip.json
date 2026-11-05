@@ -1,0 +1,28 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "next": {
+    "entry": [
+      "next.config.ts",
+      "src/proxy.ts",
+      "src/app/**/{page,layout,route,loading,error,not-found}.{ts,tsx}"
+    ]
+  },
+  "vitest": {
+    "config": ["vitest.config.ts", "vitest.arch.config.ts"],
+    "entry": ["src/**/*.test.{ts,tsx}", "tests/**/*.test.ts", "tests/setup.ts"]
+  },
+  "playwright": {
+    "config": ["playwright.config.ts"],
+    "entry": ["e2e/**/*.spec.ts"]
+  },
+  "entry": ["scripts/**/*.mjs", "tests/stubs/server-only.ts", "src/modules/*/{public,server}.ts"],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "tests/**/*.ts",
+    "e2e/**/*.ts",
+    "scripts/**/*.mjs",
+    "*.{ts,mjs}"
+  ],
+  "ignore": ["tests/fixtures/**"],
+  "ignoreDependencies": ["jscpd", "lint-staged"]
+}

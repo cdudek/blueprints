@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { payments } from "@/modules/billing/billing.tables";
 import { placeOrder } from "@/modules/orders/order.service";
 import { orders } from "@/modules/orders/order.tables";
+import { FIXTURE_SIGNATURE } from "@/clients/payments/providers/fixture";
 import { db } from "@/shared/db";
 import { signInAs } from "@tests/helpers/auth-mock";
 import { resetData } from "@tests/helpers/db-mock";
@@ -44,8 +45,8 @@ describe("payments webhook", () => {
 
   it("marks the order paid, and a duplicate delivery changes nothing more", async () => {
     const { orderId, providerRef } = await placedOrder();
-    expect((await POST(request(succeeded(providerRef), "fixture-signature"))).status).toBe(200);
-    expect((await POST(request(succeeded(providerRef), "fixture-signature"))).status).toBe(200);
+    expect((await POST(request(succeeded(providerRef), FIXTURE_SIGNATURE))).status).toBe(200);
+    expect((await POST(request(succeeded(providerRef), FIXTURE_SIGNATURE))).status).toBe(200);
     const [row] = await db.select().from(orders).where(eq(orders.id, orderId));
     expect(row?.status).toBe("paid");
   });

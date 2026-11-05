@@ -1,0 +1,21 @@
+{
+  "path": ["src", "scripts", "e2e"],
+  "format": ["typescript", "tsx", "javascript"],
+  "minTokens": 50,
+  "minLines": 5,
+  "reporters": ["json", "html"],
+  "output": "./reports/jscpd",
+  "gitignore": true,
+  "ignore": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/tests/**",
+    "**/fixtures/**",
+    "**/drizzle/**",
+    "**/messages/**",
+    "**/locales/**",
+    "**/*.json",
+    "**/*.css",
+    "**/*.generated.*"
+  ]
+}

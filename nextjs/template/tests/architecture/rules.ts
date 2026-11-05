@@ -648,7 +648,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
 }
 
 /** Findings the policy file's exemptions waive. */
-export function applyExemptions(arch: Architecture, findings: Finding[]): Finding[] {
+function applyExemptions(arch: Architecture, findings: Finding[]): Finding[] {
   const exemptions = arch.exemptions.map((e) => ({ ...e, re: globToRegExp(e.path) }));
   return findings.filter(
     (f) => !exemptions.some((e) => e.rules.includes(f.rule) && e.re.test(f.file)),

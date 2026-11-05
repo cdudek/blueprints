@@ -2,10 +2,11 @@ import "server-only";
 import { cookies } from "next/headers";
 import { getEnv } from "./env";
 
-export type Role = "customer" | "admin";
+type Role = "customer" | "admin";
 export type SessionUser = { id: string; role: Role };
 export type Session = { user: SessionUser };
 
+/** @public Catch it in an error boundary to send the user to sign-in. */
 export class UnauthenticatedError extends Error {
   constructor() {
     super("not signed in");
@@ -30,6 +31,7 @@ export async function requireUser(): Promise<SessionUser> {
   return session.user;
 }
 
+/** @public For admin-only operations: call it first in the service function. */
 export async function requireRole(role: Role): Promise<SessionUser> {
   const user = await requireUser();
   if (user.role !== role) throw new Error(`requires role ${role}`);

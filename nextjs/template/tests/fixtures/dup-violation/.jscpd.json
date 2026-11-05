@@ -1,0 +1,9 @@
+{
+  "path": ["."],
+  "format": ["typescript"],
+  "minTokens": 50,
+  "minLines": 5,
+  "reporters": ["json"],
+  "output": "./reports/jscpd",
+  "ignore": ["**/reports/**"]
+}

@@ -13,7 +13,7 @@ export function parse(path: string, content: string): ts.SourceFile {
   );
 }
 
-export function walk(node: ts.Node, visit: (n: ts.Node) => void): void {
+function walk(node: ts.Node, visit: (n: ts.Node) => void): void {
   visit(node);
   ts.forEachChild(node, (child) => walk(child, visit));
 }
