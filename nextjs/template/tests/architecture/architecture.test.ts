@@ -23,7 +23,7 @@ describe("policy file", () => {
     expect(validate(arch), JSON.stringify(validate.errors)).toBe(true);
     expect(schema["x-schemaVersion"]).toBe(BLUEPRINT_VERSION);
     expect(arch.$schemaVersion).toBe(BLUEPRINT_VERSION);
-    expect(readFileSync(resolve(root, "../CHANGELOG.md"), "utf8")).toContain(
+    expect(readFileSync(resolve(root, "CHANGELOG.md"), "utf8")).toContain(
       `## ${BLUEPRINT_VERSION}`,
     );
   });
