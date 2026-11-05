@@ -3,7 +3,11 @@
 import boundaries from "eslint-plugin-boundaries";
 import { allowedTargets, moduleNames, tableOwnersReadBy } from "./lib.mjs";
 
-/** @param {import("./lib.mjs").Architecture} arch @param {{ tsconfig?: string }} [options] */
+/**
+ * @param {import("./lib.mjs").Architecture} arch
+ * @param {{ tsconfig?: string, rootPath?: string }} [options]
+ * @returns {import("eslint").Linter.Config[]}
+ */
 export function buildBoundariesConfig(arch, options = {}) {
   const src = arch.srcRoot;
   const tsconfig = options.tsconfig ?? "./tsconfig.json";
@@ -118,6 +122,7 @@ export function buildBoundariesConfig(arch, options = {}) {
         "boundaries/elements": elements,
         "boundaries/files": files,
         "import/resolver": { typescript: { project: tsconfig } },
+        ...(options.rootPath ? { "boundaries/root-path": options.rootPath } : {}),
       },
       rules: { "boundaries/dependencies": ["error", { default: "allow", policies }] },
     },

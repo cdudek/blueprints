@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "srcRoot": "src",
+  "doors": [
+    "public.ts",
+    "server.ts"
+  ],
+  "modules": {
+    "orders": {
+      "description": "orders"
+    },
+    "billing": {
+      "description": "billing"
+    },
+    "ledger": {
+      "description": "ledger"
+    },
+    "phantom": {
+      "description": "declared but has no files"
+    }
+  },
+  "edges": [
+    {
+      "from": "orders",
+      "to": "billing",
+      "reason": "orders asks billing for prices"
+    }
+  ],
+  "tables": {
+    "orders": "orders",
+    "payments": "billing",
+    "invoices": "orders",
+    "ghosts": "billing"
+  },
+  "readExceptions": [],
+  "exemptions": [],
+  "clients": [
+    "payments"
+  ]
+}
