@@ -18,7 +18,7 @@
     "test": "vitest run",
     "arch": "vitest run --config vitest.arch.config.ts && pnpm arch:diagram:check",
     "e2e": "playwright test",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm arch && pnpm knip && pnpm build",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm arch && pnpm arch:baseline && pnpm knip && pnpm dup && pnpm build && pnpm e2e",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/db-migrate.mjs",
     "prepare": "husky",
@@ -28,7 +28,8 @@
     "arch:diagram": "node scripts/arch/diagram.mjs",
     "arch:diagram:check": "node scripts/arch/diagram.mjs --check",
     "arch:report": "vitest run --config vitest.report.config.ts",
-    "policy:changes": "node scripts/quality/policy-changes.mjs"
+    "policy:changes": "node scripts/quality/policy-changes.mjs",
+    "new:module": "node scripts/arch/new-module.mjs"
   },
   "dependencies": {
     "drizzle-orm": "0.45.4",

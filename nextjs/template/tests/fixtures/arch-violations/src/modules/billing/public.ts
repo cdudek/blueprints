@@ -1,1 +1,1 @@
-export const label = "billing";
+export { label } from "./billing.rules";

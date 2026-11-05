@@ -5,15 +5,22 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1793915522109,
+      "when": 1793916699253,
       "tag": "0000_init",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1793915536261,
-      "tag": "0001_seed-prices",
+      "when": 1793916699731,
+      "tag": "0001_payments-order-fk",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793916700203,
+      "tag": "0002_seed-prices",
       "breakpoints": true
     }
   ]

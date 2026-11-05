@@ -1,8 +1,10 @@
 import "server-only";
-import { and, eq, isNull } from "drizzle-orm";
-import { db, type DbClient } from "@/shared/db";
-import { payments, prices } from "./billing.tables";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { db, type DbClient } from "@/db";
+import { paymentInbox, payments, prices } from "./billing.tables";
 import type { NewPayment, Payment, PaymentStatus, Price } from "./billing.types";
+
+const MAX_TRANSITION_TRIES = 5;
 
 export const billingRepository = {
   async findPrice(productId: string, c: DbClient = db): Promise<Price | null> {
@@ -10,17 +12,13 @@ export const billingRepository = {
     return row ?? null;
   },
 
-  async findPaymentByOrder(orderId: string, c: DbClient = db): Promise<Payment | null> {
-    const [row] = await c.select().from(payments).where(eq(payments.orderId, orderId)).limit(1);
+  async findPaymentById(id: string, c: DbClient = db): Promise<Payment | null> {
+    const [row] = await c.select().from(payments).where(eq(payments.id, id)).limit(1);
     return row ?? null;
   },
 
-  async findPaymentByProviderRef(providerRef: string, c: DbClient = db): Promise<Payment | null> {
-    const [row] = await c
-      .select()
-      .from(payments)
-      .where(eq(payments.providerRef, providerRef))
-      .limit(1);
+  async findPaymentByOrder(orderId: string, c: DbClient = db): Promise<Payment | null> {
+    const [row] = await c.select().from(payments).where(eq(payments.orderId, orderId)).limit(1);
     return row ?? null;
   },
 
@@ -37,12 +35,21 @@ export const billingRepository = {
     return existing;
   },
 
-  // Only the first writer stores the provider reference.
-  async attachIntent(id: string, providerRef: string, clientSecret: string, c: DbClient = db) {
+  // The first writer of each field wins: a webhook may link the provider reference before the
+  // start-payment call stores the client secret, or the other way round.
+  async attachIntent(
+    id: string,
+    providerRef: string,
+    clientSecret: string | null,
+    c: DbClient = db,
+  ) {
     await c
       .update(payments)
-      .set({ providerRef, clientSecret })
-      .where(and(eq(payments.id, id), isNull(payments.providerRef)));
+      .set({
+        providerRef: sql`coalesce(${payments.providerRef}, ${providerRef})`,
+        clientSecret: sql`coalesce(${payments.clientSecret}, ${clientSecret})`,
+      })
+      .where(eq(payments.id, id));
   },
 
   // Conditional on the status the caller read, so two writers cannot both win.
@@ -58,5 +65,55 @@ export const billingRepository = {
       .where(and(eq(payments.id, id), eq(payments.status, from)))
       .returning({ id: payments.id });
     return changed.length === 1;
+  },
+
+  /**
+   * Applies a state change computed from the CURRENT status. A conditional update that loses
+   * (another writer moved the row first) is not success: reload, recompute, try again, until
+   * the row is already where the rule wants it. Returns the row as it ends up.
+   */
+  async applyTransition(
+    id: string,
+    compute: (current: PaymentStatus) => PaymentStatus,
+    c: DbClient = db,
+  ): Promise<Payment | null> {
+    for (let tries = 0; tries < MAX_TRANSITION_TRIES; tries++) {
+      const row = await billingRepository.findPaymentById(id, c);
+      if (!row) return null;
+      const next = compute(row.status);
+      if (next === row.status) return row;
+      if (await billingRepository.transition(id, row.status, next, c))
+        return { ...row, status: next };
+    }
+    throw new Error(
+      `payment ${id} kept changing under us; giving up after ${MAX_TRANSITION_TRIES} tries`,
+    );
+  },
+
+  listWithWork(limit: number, c: DbClient = db): Promise<Payment[]> {
+    return c
+      .select()
+      .from(payments)
+      .where(inArray(payments.status, ["cancel_pending", "refund_pending"]))
+      .orderBy(payments.createdAt)
+      .limit(limit);
+  },
+
+  async recordFailedAttempt(id: string, c: DbClient = db) {
+    await c
+      .update(payments)
+      .set({ attempts: sql`${payments.attempts} + 1` })
+      .where(eq(payments.id, id));
+  },
+
+  async storeInboxEvent(event: typeof paymentInbox.$inferInsert, c: DbClient = db) {
+    await c
+      .insert(paymentInbox)
+      .values(event)
+      .onConflictDoNothing({ target: paymentInbox.eventId });
+  },
+
+  listInbox(c: DbClient = db) {
+    return c.select().from(paymentInbox);
   },
 };

@@ -1,5 +1,13 @@
-CREATE TYPE "public"."payment_status" AS ENUM('requires_payment', 'succeeded', 'cancelled', 'refund_pending');--> statement-breakpoint
+CREATE TYPE "public"."payment_status" AS ENUM('requires_payment', 'succeeded', 'cancel_pending', 'cancelled', 'refund_pending', 'refunded');--> statement-breakpoint
 CREATE TYPE "public"."order_status" AS ENUM('pending', 'paid', 'cancelled', 'shipped');--> statement-breakpoint
+CREATE TABLE "payment_inbox" (
+	"event_id" text PRIMARY KEY NOT NULL,
+	"attempt_id" text NOT NULL,
+	"type" text NOT NULL,
+	"body" text NOT NULL,
+	"received_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "payments" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"order_id" uuid NOT NULL,
@@ -8,6 +16,7 @@ CREATE TABLE "payments" (
 	"status" "payment_status" DEFAULT 'requires_payment' NOT NULL,
 	"provider_ref" text,
 	"client_secret" text,
+	"attempts" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "payments_order_id_unique" UNIQUE("order_id")
 );

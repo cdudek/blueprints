@@ -2,26 +2,39 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+/** The version of these scripts and of the policy schema they read. See CHANGELOG.md. */
+export const BLUEPRINT_VERSION = "1.0.0";
+
 /**
  * @typedef {{ from: string, to: string, reason: string }} Edge
- * @typedef {{ reader: string, table: string, reason: string }} ReadException
+ * @typedef {{ file: string, table: string, reason: string }} ReadException
  * @typedef {{ path: string, rules: string[], reason: string }} Exemption
  * @typedef {{
+ *   $schemaVersion: string,
  *   version: 1,
  *   srcRoot: string,
- *   doors: string[],
+ *   doors: Record<string, "browser" | "server">,
+ *   roots: string[],
  *   modules: Record<string, { description: string }>,
  *   edges: Edge[],
  *   tables: Record<string, string>,
  *   readExceptions: ReadException[],
  *   exemptions: Exemption[],
  *   clients: string[],
+ *   serverOnlyPackages: string[],
+ *   rulesMayImport: string[],
  * }} Architecture
  */
 
 /** @param {string} root @returns {Architecture} */
 export function loadArchitecture(root = process.cwd()) {
-  return JSON.parse(readFileSync(join(root, "architecture.json"), "utf8"));
+  const arch = JSON.parse(readFileSync(join(root, "architecture.json"), "utf8"));
+  if (String(arch.$schemaVersion).split(".")[0] !== BLUEPRINT_VERSION.split(".")[0]) {
+    throw new Error(
+      `architecture.json is for blueprint ${arch.$schemaVersion}, these scripts are ${BLUEPRINT_VERSION}: migrate per CHANGELOG.md`,
+    );
+  }
+  return arch;
 }
 
 /** @param {Architecture} arch */
@@ -31,15 +44,14 @@ export const moduleNames = (arch) => Object.keys(arch.modules);
 export const allowedTargets = (arch, name) =>
   arch.edges.filter((e) => e.from === name).map((e) => e.to);
 
-/** Modules whose tables `name` may read: its declared read exceptions. */
-export const tableOwnersReadBy = (/** @type {Architecture} */ arch, /** @type {string} */ name) => [
-  ...new Set(
-    arch.readExceptions
-      .filter((x) => x.reader === name)
-      .map((x) => arch.tables[x.table])
-      .filter((owner) => owner !== undefined),
-  ),
-];
+/** The module a file path belongs to (src/modules/<name>/...), or null. @param {string} file */
+export const moduleOf = (file) => /(?:^|\/)modules\/([^/]+)\//.exec(file)?.[1] ?? null;
+
+/** Door file names, optionally of one role. @param {Architecture} arch @param {"browser" | "server"} [role] */
+export const doorFiles = (arch, role) =>
+  Object.entries(arch.doors)
+    .filter(([, r]) => !role || r === role)
+    .map(([file]) => file);
 
 /** Finds a cycle in the declared edges, or null. @param {Architecture} arch */
 export function findEdgeCycle(arch) {

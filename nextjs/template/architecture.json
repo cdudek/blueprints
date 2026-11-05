@@ -1,11 +1,20 @@
 {
   "$schema": "./architecture.schema.json",
+  "$schemaVersion": "1.0.0",
   "version": 1,
   "srcRoot": "src",
-  "doors": ["public.ts", "server.ts"],
+  "doors": {
+    "public.ts": "browser",
+    "server.ts": "server"
+  },
+  "roots": ["proxy.ts"],
   "modules": {
-    "orders": { "description": "Placing, listing and cancelling orders" },
-    "billing": { "description": "Prices and payment attempts for orders" }
+    "orders": {
+      "description": "Placing, listing and cancelling orders"
+    },
+    "billing": {
+      "description": "Prices and payment attempts for orders"
+    }
   },
   "edges": [
     {
@@ -17,9 +26,18 @@
   "tables": {
     "orders": "orders",
     "prices": "billing",
-    "payments": "billing"
+    "payments": "billing",
+    "payment_inbox": "billing"
   },
   "readExceptions": [],
   "exemptions": [],
-  "clients": ["payments"]
+  "clients": ["payments"],
+  "serverOnlyPackages": [
+    "server-only",
+    "next/headers",
+    "postgres",
+    "drizzle-orm/postgres-js",
+    "drizzle-orm/pglite"
+  ],
+  "rulesMayImport": ["zod"]
 }

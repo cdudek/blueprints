@@ -1,3 +1,3 @@
 import { findOrder } from "@/modules/orders/order.repository";
-import { db } from "@/shared/db";
+import { db } from "@/db";
 export const q = [findOrder, db];

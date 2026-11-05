@@ -3,7 +3,7 @@
 // Greenfield: baselines are empty, so any line added to one is a new violation sneaking in.
 // Brownfield: the initial baseline commit is made on the base branch; PRs may only delete lines.
 import { execFileSync } from "node:child_process";
-import { readBaseline, gainedEntries } from "./baseline.mjs";
+import { applyRenames, gainedEntries, readBaseline, readRenames } from "./baseline.mjs";
 
 const files = [
   "quality/arch-baseline.json",
@@ -37,7 +37,8 @@ for (const file of files) {
   } catch {
     // the file did not exist at the merge base: every entry is new
   }
-  const gained = gainedEntries(before, readBaseline(file));
+  // a reviewed rename (quality/baseline-renames.json) moves an entry; it is not an addition
+  const gained = gainedEntries(applyRenames(before, readRenames()), readBaseline(file));
   for (const key of gained) console.error(`baseline-shrinks: ${file} gained ${key}`);
   if (gained.length) failed = true;
 }

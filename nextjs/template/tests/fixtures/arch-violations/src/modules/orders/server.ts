@@ -1,2 +1,2 @@
 import "server-only";
-export { placeOrder } from "./order.service";
+export { cancelOrder, placeOrder } from "./order.service";

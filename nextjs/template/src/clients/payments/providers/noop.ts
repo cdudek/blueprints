@@ -1,4 +1,4 @@
-import type { PaymentEvent, PaymentIntent, PaymentsClient } from "../base";
+import type { CancelResult, PaymentEvent, PaymentIntent, PaymentsClient } from "../base";
 
 /** Accepts everything, does nothing. For environments that must not take payments. */
 export class NoopPaymentsClient implements PaymentsClient {
@@ -6,7 +6,13 @@ export class NoopPaymentsClient implements PaymentsClient {
     return { providerRef: "noop", clientSecret: "noop" };
   }
 
+  async cancelIntent(): Promise<CancelResult> {
+    return { result: "cancelled" };
+  }
+
+  async refund(): Promise<void> {}
+
   parseEvent(): PaymentEvent {
-    return { id: "noop", type: "processing", providerRef: "noop" };
+    return { id: "noop", type: "processing", attemptId: "noop", providerRef: "noop" };
   }
 }

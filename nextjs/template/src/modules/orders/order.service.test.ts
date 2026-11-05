@@ -1,17 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { payments } from "@/modules/billing/billing.tables";
-import { db } from "@/shared/db";
+import { db } from "@/db";
+import { prices } from "@/modules/billing/billing.tables";
+import { policyOf } from "@/shared/access";
 import { signInAs } from "@tests/helpers/auth-mock";
 import { resetData } from "@tests/helpers/db-mock";
 import { cancelOrder, listMyOrders, markPaidFromWebhook, placeOrder } from "./order.service";
 import { orders } from "./order.tables";
 
-vi.mock("@/shared/db", () => import("@tests/helpers/db-mock").then((m) => m.dbModule()));
+vi.mock("@/db", () => import("@tests/helpers/db-mock").then((m) => m.dbModule()));
 vi.mock("@/shared/auth", () => import("@tests/helpers/auth-mock").then((m) => m.authMock));
 
 const C1 = "00000000-0000-4000-8000-000000000001";
 const order = (checkoutId = C1, quantity = 2) => ({ checkoutId, productId: "widget", quantity });
+const myOrders = async () => {
+  const r = await listMyOrders();
+  return r.ok ? r.value : [];
+};
 const allPayments = () => db.select().from(payments);
 const statusOf = async (id: string) =>
   (await db.select().from(orders).where(eq(orders.id, id)))[0]?.status;
@@ -24,8 +30,8 @@ beforeEach(async () => {
 describe("placeOrder", () => {
   it("creates a pending order and one payment", async () => {
     const result = await placeOrder(order());
-    expect(result.ok && result.value.payment?.clientSecret).toBeTruthy();
-    expect(await listMyOrders()).toHaveLength(1);
+    expect(result.ok && result.value.clientSecret).toBeTruthy();
+    expect(await myOrders()).toHaveLength(1);
     expect(await allPayments()).toHaveLength(1);
   });
 
@@ -42,10 +48,7 @@ describe("placeOrder", () => {
 
   it("returns a conflict when a retry changes product or quantity", async () => {
     await placeOrder(order(C1, 2));
-    expect(await placeOrder(order(C1, 5))).toEqual({
-      ok: false,
-      error: "this checkout was already used for a different order",
-    });
+    expect(await placeOrder(order(C1, 5))).toEqual({ ok: false, error: "checkout_conflict" });
   });
 
   it("never resolves another user's checkout id to their order", async () => {
@@ -53,13 +56,13 @@ describe("placeOrder", () => {
     signInAs("u2");
     const theirs = await placeOrder(order());
     expect(mine.ok && theirs.ok && mine.value.orderId !== theirs.value.orderId).toBe(true);
-    expect(await listMyOrders()).toHaveLength(1);
+    expect(await myOrders()).toHaveLength(1);
   });
 
   it("refuses an unknown product", async () => {
     expect(await placeOrder({ ...order(), productId: "nope" })).toEqual({
       ok: false,
-      error: "unknown product",
+      error: "unknown_product",
     });
   });
 
@@ -68,7 +71,7 @@ describe("placeOrder", () => {
     if (!placed.ok) throw new Error("setup failed");
     await cancelOrder(placed.value.orderId);
     const replay = await placeOrder(order());
-    expect(replay).toEqual({ ok: false, error: "this checkout was cancelled" });
+    expect(replay).toEqual({ ok: false, error: "checkout_cancelled" });
     expect(await allPayments()).toHaveLength(1);
   });
 
@@ -77,30 +80,30 @@ describe("placeOrder", () => {
     if (!placed.ok) throw new Error("setup failed");
     await markPaidFromWebhook(placed.value.orderId);
     const retry = await placeOrder(order());
-    expect(retry.ok && retry.value.payment).toBeNull();
+    expect(retry.ok && retry.value.clientSecret).toBeNull();
     expect(await allPayments()).toHaveLength(1);
   });
 
-  it("requires a signed-in user", async () => {
+  it("answers a typed unauthenticated error instead of throwing", async () => {
     signInAs(null);
-    await expect(placeOrder(order())).rejects.toThrow("not signed in");
+    expect(await placeOrder(order())).toEqual({ ok: false, error: "unauthenticated" });
   });
 });
 
 describe("cancelOrder", () => {
-  it("cancels the order and the open payment in one transaction", async () => {
+  it("cancels the order and records the payment cancel in one transaction", async () => {
     const placed = await placeOrder(order());
     if (!placed.ok) throw new Error("setup failed");
     expect(await cancelOrder(placed.value.orderId)).toEqual({ ok: true, value: true });
     expect(await statusOf(placed.value.orderId)).toBe("cancelled");
-    expect((await allPayments())[0]?.status).toBe("cancelled");
+    expect((await allPayments())[0]?.status).toBe("cancel_pending");
   });
 
   it("answers not found for another user's order", async () => {
     const placed = await placeOrder(order());
     if (!placed.ok) throw new Error("setup failed");
     signInAs("u2");
-    expect(await cancelOrder(placed.value.orderId)).toEqual({ ok: false, error: "not found" });
+    expect(await cancelOrder(placed.value.orderId)).toEqual({ ok: false, error: "not_found" });
   });
 
   it("refuses a second cancel", async () => {
@@ -139,5 +142,40 @@ describe("markPaidFromWebhook", () => {
     await markPaidFromWebhook(placed.value.orderId);
     expect(await statusOf(placed.value.orderId)).toBe("cancelled");
     expect((await allPayments())[0]?.status).toBe("refund_pending");
+  });
+});
+
+describe("retries and races", () => {
+  it("resumes a checkout with its persisted terms even if the product is no longer sold", async () => {
+    const first = await placeOrder(order());
+    await db.delete(prices).where(eq(prices.productId, "widget"));
+    const retry = await placeOrder(order());
+    expect(first.ok && retry.ok && first.value.orderId === retry.value.orderId).toBe(true);
+    expect(await allPayments()).toHaveLength(1);
+    // restore the catalog for the other tests
+    await db.insert(prices).values({ productId: "widget", unitCents: 1250 });
+  });
+
+  it("keeps the order and its payment consistent when cancel races the payment webhook", async () => {
+    for (let round = 0; round < 6; round++) {
+      await resetData(db);
+      const placed = await placeOrder(order());
+      if (!placed.ok) throw new Error("setup failed");
+      await db.update(payments).set({ status: "succeeded" });
+      await Promise.all([
+        cancelOrder(placed.value.orderId),
+        markPaidFromWebhook(placed.value.orderId),
+      ]);
+      const status = await statusOf(placed.value.orderId);
+      const payment = (await allPayments())[0]?.status;
+      // never cancelled without a refund recorded, never paid-and-refunded
+      if (status === "cancelled") expect(payment).toBe("refund_pending");
+      else expect(payment).toBe("succeeded");
+    }
+  });
+
+  it("declares its access policies", () => {
+    expect(policyOf(placeOrder)).toMatchObject({ access: "user" });
+    expect(policyOf(markPaidFromWebhook)).toMatchObject({ access: "webhook" });
   });
 });

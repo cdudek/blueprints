@@ -6,7 +6,8 @@
  * retry-safe: yes. A provider retry re-runs both steps; each one is idempotent and state-based.
  * duplicates: no duplicate effect. A repeated event re-applies a transition that already happened.
  * recovery: if orders fails after billing recorded the event, we answer 500; the provider
- *   retries and billing reports the same succeeded state, so orders runs again.
+ *   retries and billing reports the same succeeded state, so orders runs again. An event that
+ *   matches no payment attempt is stored in billing's inbox before we answer 200.
  * survives-restart: yes. All state is in the database; nothing is held in memory.
  */
 import { receivePaymentEventFromWebhook } from "@/modules/billing/server";
@@ -18,6 +19,7 @@ export async function POST(req: Request) {
 
   const received = await receivePaymentEventFromWebhook(await req.text(), signature);
   if (!received.ok) return new Response(received.error, { status: 400 });
+  // an unmatched event is already stored in billing's inbox, so acknowledging it loses nothing
 
   if (received.value?.status === "succeeded") await markPaidFromWebhook(received.value.orderId);
   return new Response(null, { status: 200 });

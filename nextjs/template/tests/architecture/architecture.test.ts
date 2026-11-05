@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import Ajv from "ajv";
 import { beforeAll, describe, expect, it } from "vitest";
-import { findEdgeCycle, loadArchitecture } from "../../scripts/arch/lib.mjs";
+import { BLUEPRINT_VERSION, findEdgeCycle, loadArchitecture } from "../../scripts/arch/lib.mjs";
 import { compareToBaseline, readBaseline } from "../../scripts/quality/baseline.mjs";
-import { buildRules, findingKey, runAll, type Finding } from "./rules";
+import { buildRules, findingKeys, runAll, type Finding } from "./rules";
 
 const root = resolve(__dirname, "../..");
 const arch = loadArchitecture(root);
@@ -17,10 +17,15 @@ beforeAll(async () => {
 });
 
 describe("policy file", () => {
-  it("matches its JSON Schema", () => {
+  it("matches its JSON Schema, and the schema, scripts and file agree on the version", () => {
     const schema = JSON.parse(readFileSync(resolve(root, "architecture.schema.json"), "utf8"));
-    const validate = new Ajv({ allErrors: true }).compile(schema);
+    const validate = new Ajv({ allErrors: true, strict: false }).compile(schema);
     expect(validate(arch), JSON.stringify(validate.errors)).toBe(true);
+    expect(schema["x-schemaVersion"]).toBe(BLUEPRINT_VERSION);
+    expect(arch.$schemaVersion).toBe(BLUEPRINT_VERSION);
+    expect(readFileSync(resolve(root, "../CHANGELOG.md"), "utf8")).toContain(
+      `## ${BLUEPRINT_VERSION}`,
+    );
   });
 
   it("declares acyclic edges between declared modules, and owners that exist", () => {
@@ -33,19 +38,20 @@ describe("policy file", () => {
       expect(Object.keys(arch.modules)).toContain(owner);
   });
 
-  it("lets a read exception exist only next to a declared edge, for a declared table", () => {
+  it("lets a read exception exist only for a declared edge, a declared table and a real file", () => {
     for (const x of arch.readExceptions) {
       const owner = arch.tables[x.table];
+      const reader = /modules\/([^/]+)\//.exec(x.file)?.[1];
       expect(owner, `table ${x.table}`).toBeDefined();
       expect(
-        arch.edges.some((e) => e.from === x.reader && e.to === owner),
-        `${x.reader} -> ${owner}`,
+        arch.edges.some((e) => e.from === reader && e.to === owner),
+        `${reader} -> ${owner}`,
       ).toBe(true);
     }
   });
 
-  it("never exempts a non-negotiable rule", () => {
-    const protectedRules = new Set(rules.filter((r) => r.nonNegotiable).map((r) => r.id));
+  it("never exempts a never-baselinable rule", () => {
+    const protectedRules = new Set(rules.filter((r) => r.neverBaseline).map((r) => r.id));
     for (const e of arch.exemptions)
       for (const id of e.rules) expect(protectedRules.has(id), id).toBe(false);
   });
@@ -53,27 +59,42 @@ describe("policy file", () => {
 
 describe("rules on the real tree", () => {
   const baseline = readBaseline(baselineFile);
-  for (const rule of rules) {
+  const keys = (rule: string) => findingKeys(findings.filter((f) => f.rule === rule));
+
+  // Positive control at scale: the template is greenfield, so every rule finds nothing.
+  for (const rule of rules.filter((r) => r.severity !== "diagnostic")) {
     it(rule.description, () => {
-      const mine = findings.filter((f) => f.rule === rule.id);
-      const fresh = rule.nonNegotiable
-        ? mine
-        : mine.filter((f) => !baseline.includes(findingKey(f)));
-      expect(fresh.map((f) => `${findingKey(f)}  ${f.message}`)).toEqual([]);
+      const fresh = keys(rule.id).filter((k) => !baseline.includes(k));
+      expect(fresh).toEqual([]);
     });
   }
+
+  it("reports diagnostics without failing on them", () => {
+    const diagnostics = rules.filter((r) => r.severity === "diagnostic").flatMap((r) => keys(r.id));
+    if (diagnostics.length)
+      console.warn(`architecture diagnostics (not failing):\n${diagnostics.join("\n")}`);
+    expect(diagnostics).toEqual([]); // the template itself keeps them at zero
+  });
 });
 
 describe("baseline", () => {
   const baseline = readBaseline(baselineFile);
-  const neverBaselined = new Set(rules.filter((r) => r.nonNegotiable).map((r) => r.id));
+  const never = new Set(rules.filter((r) => r.neverBaseline).map((r) => r.id));
+  const known = new Set(rules.map((r) => r.id));
 
-  it("holds no entry for a non-negotiable rule", () => {
-    expect(baseline.filter((k) => neverBaselined.has(k.split("|")[0] ?? ""))).toEqual([]);
+  it("is empty in a greenfield template, and holds only known, baselinable rules otherwise", () => {
+    for (const k of baseline) {
+      const id = k.split("|")[0] ?? "";
+      expect(known.has(id), `unknown rule in baseline: ${id}`).toBe(true);
+      expect(
+        never.has(id),
+        `${id} can never be baselined: server code or secrets in a browser bundle`,
+      ).toBe(false);
+    }
   });
 
   it("holds no stale entry: a fixed violation deletes its line", () => {
-    const { stale } = compareToBaseline(findings.map(findingKey), baseline);
+    const { stale } = compareToBaseline(findingKeys(findings), baseline);
     expect(stale).toEqual([]);
   });
 });

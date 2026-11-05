@@ -13,7 +13,7 @@ export function parse(path: string, content: string): ts.SourceFile {
   );
 }
 
-function walk(node: ts.Node, visit: (n: ts.Node) => void): void {
+export function walk(node: ts.Node, visit: (n: ts.Node) => void): void {
   visit(node);
   ts.forEachChild(node, (child) => walk(child, visit));
 }
@@ -39,16 +39,31 @@ export function specifiers(sf: ts.SourceFile): string[] {
   return found;
 }
 
-/** True when the file carries the directive ("use client", "use server") anywhere. */
+/** String-literal statements at the very top of a statement list: the directive prologue. */
+function prologue(statements: readonly ts.Statement[]): string[] {
+  const found: string[] = [];
+  for (const s of statements) {
+    if (ts.isExpressionStatement(s) && ts.isStringLiteral(s.expression))
+      found.push(s.expression.text);
+    else break;
+  }
+  return found;
+}
+
+/**
+ * True when the file has the directive in a real directive prologue: at the top of the file, or
+ * at the top of a function body (inline "use server"). A string statement anywhere else is just a string.
+ */
 export function hasDirective(sf: ts.SourceFile, directive: string): boolean {
-  let found = false;
+  let found = prologue(sf.statements).includes(directive);
   walk(sf, (n) => {
     if (
-      ts.isExpressionStatement(n) &&
-      ts.isStringLiteral(n.expression) &&
-      n.expression.text === directive
-    )
-      found = true;
+      (ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n)) &&
+      n.body &&
+      ts.isBlock(n.body)
+    ) {
+      if (prologue(n.body.statements).includes(directive)) found = true;
+    }
   });
   return found;
 }
@@ -64,33 +79,28 @@ export function importsServerOnly(sf: ts.SourceFile): boolean {
   );
 }
 
-/** Member accesses such as Date.now, Math.random, process.env. */
-export function usesMember(sf: ts.SourceFile, object: string, property: string): boolean {
-  let found = false;
-  walk(sf, (n) => {
-    if (
-      ts.isPropertyAccessExpression(n) &&
-      ts.isIdentifier(n.expression) &&
-      n.expression.text === object &&
-      n.name.text === property
-    )
-      found = true;
-  });
-  return found;
-}
-
-export function usesNewDateWithoutArguments(sf: ts.SourceFile): boolean {
-  let found = false;
-  walk(sf, (n) => {
-    if (
-      ts.isNewExpression(n) &&
-      ts.isIdentifier(n.expression) &&
-      n.expression.text === "Date" &&
-      (n.arguments?.length ?? 0) === 0
-    )
-      found = true;
-  });
-  return found;
+/** True when `id` is a reference to a binding, not a property name, a declaration name or a type. */
+export function isValueReference(id: ts.Identifier): boolean {
+  const p = id.parent;
+  if (!p) return true;
+  if (ts.isPropertyAccessExpression(p) && p.name === id) return false;
+  if (ts.isPropertyAssignment(p) && p.name === id) return false;
+  if (ts.isPropertySignature(p) || ts.isMethodSignature(p)) return false;
+  if (ts.isTypeReferenceNode(p) || ts.isQualifiedName(p) || ts.isTypeQueryNode(p)) return false;
+  if (
+    (ts.isVariableDeclaration(p) ||
+      ts.isParameter(p) ||
+      ts.isBindingElement(p) ||
+      ts.isFunctionDeclaration(p) ||
+      ts.isImportSpecifier(p) ||
+      ts.isImportClause(p) ||
+      ts.isNamespaceImport(p) ||
+      ts.isExportSpecifier(p)) &&
+    (p as { name?: ts.Node }).name === id
+  ) {
+    return false;
+  }
+  return true;
 }
 
 /** pgTable("name", …) calls: the table names a file defines. */
@@ -107,30 +117,6 @@ export function definedTables(sf: ts.SourceFile): string[] {
     }
   });
   return names;
-}
-
-/** Exported function names in a file, with their bodies, for `export function f` and `export const f = () =>`. */
-export function exportedFunctions(sf: ts.SourceFile): { name: string; node: ts.Node }[] {
-  const out: { name: string; node: ts.Node }[] = [];
-  const exported = (n: ts.Node) =>
-    ts.canHaveModifiers(n) &&
-    ts.getModifiers(n)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
-  for (const s of sf.statements) {
-    if (ts.isFunctionDeclaration(s) && s.name && exported(s))
-      out.push({ name: s.name.text, node: s });
-    if (ts.isVariableStatement(s) && exported(s)) {
-      for (const d of s.declarationList.declarations) {
-        if (
-          ts.isIdentifier(d.name) &&
-          d.initializer &&
-          (ts.isArrowFunction(d.initializer) || ts.isFunctionExpression(d.initializer))
-        ) {
-          out.push({ name: d.name.text, node: d.initializer });
-        }
-      }
-    }
-  }
-  return out;
 }
 
 export function callsFunction(node: ts.Node, names: string[]): boolean {
@@ -165,22 +151,6 @@ export function importedBindings(
       for (const el of namedBindings.elements) bindings.set(el.name.text, spec);
   }
   return bindings;
-}
-
-/** `db.transaction(cb)` callbacks (any `<x>.transaction(...)` call). */
-export function transactionCallbacks(sf: ts.SourceFile): ts.Node[] {
-  const callbacks: ts.Node[] = [];
-  walk(sf, (n) => {
-    if (
-      ts.isCallExpression(n) &&
-      ts.isPropertyAccessExpression(n.expression) &&
-      n.expression.name.text === "transaction"
-    ) {
-      for (const arg of n.arguments)
-        if (ts.isArrowFunction(arg) || ts.isFunctionExpression(arg)) callbacks.push(arg);
-    }
-  });
-  return callbacks;
 }
 
 /** Identifier names referenced inside a node. */

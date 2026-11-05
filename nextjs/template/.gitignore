@@ -12,3 +12,4 @@ test-results
 coverage
 .DS_Store
 .vitest
+.husky/_

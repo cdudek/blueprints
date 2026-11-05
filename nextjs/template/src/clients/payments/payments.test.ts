@@ -46,7 +46,9 @@ describe("real provider", () => {
   it("talks only through the fetch it is given", async () => {
     const fake = vi.fn(async () => Response.json({ id: "pi_1", client_secret: "sec_1" }));
     const client = new RealPaymentsClient({ apiKey: "k", webhookSecret: "s", fetch: fake });
-    expect(await client.createIntent({ amountCents: 500, idempotencyKey: "a1" })).toEqual({
+    expect(
+      await client.createIntent({ amountCents: 500, attemptId: "a1", idempotencyKey: "a1" }),
+    ).toEqual({
       providerRef: "pi_1",
       clientSecret: "sec_1",
     });

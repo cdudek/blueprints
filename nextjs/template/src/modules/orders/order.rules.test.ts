@@ -13,14 +13,14 @@ describe("canCancel", () => {
   it("refuses shipped and cancelled orders", () => {
     expect(canCancel({ status: "shipped", createdAt: fresh }, now)).toEqual({
       ok: false,
-      error: "a shipped order cannot be cancelled",
+      error: "not_cancellable",
     });
     expect(canCancel({ status: "cancelled", createdAt: fresh }, now).ok).toBe(false);
   });
   it("refuses once the window has closed", () => {
     expect(canCancel({ status: "pending", createdAt: stale }, now)).toEqual({
       ok: false,
-      error: "cancel window closed",
+      error: "window_closed",
     });
   });
 });

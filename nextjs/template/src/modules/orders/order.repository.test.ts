@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { db } from "@/shared/db";
+import { db } from "@/db";
 import { resetData } from "@tests/helpers/db-mock";
 import { orderRepository as repo } from "./order.repository";
 import { orders } from "./order.tables";
 
-vi.mock("@/shared/db", () => import("@tests/helpers/db-mock").then((m) => m.dbModule()));
+vi.mock("@/db", () => import("@tests/helpers/db-mock").then((m) => m.dbModule()));
 
 const base = { productId: "widget", quantity: 1, totalCents: 1250 };
 const checkout = (userId: string, checkoutId: string) => ({ ...base, userId, checkoutId });

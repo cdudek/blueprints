@@ -1,7 +1,9 @@
 import "server-only";
 
 export {
+  listPaymentInboxFromJob,
   priceFor,
+  processPaymentWorkFromJob,
   receivePaymentEventFromWebhook,
   recordCancellation,
   recordCancellationFromWebhook,

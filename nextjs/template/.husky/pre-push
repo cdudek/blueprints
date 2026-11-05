@@ -1,0 +1,2 @@
+# The full gate, the same named scripts CI runs: typecheck, tests, architecture, quality, build, E2E.
+pnpm check

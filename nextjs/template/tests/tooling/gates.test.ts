@@ -4,7 +4,12 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { compareToBaseline, gainedEntries } from "../../scripts/quality/baseline.mjs";
+import {
+  applyRenames,
+  compareToBaseline,
+  gainedEntries,
+  numbered,
+} from "../../scripts/quality/baseline.mjs";
 
 const root = resolve(__dirname, "../..");
 const node = (script: string, args: string[], env: Record<string, string> = {}, cwd = root) =>
@@ -21,6 +26,19 @@ describe("baseline arithmetic", () => {
   it("sees lines a baseline gained", () => {
     expect(gainedEntries(["a"], ["a", "b"])).toEqual(["b"]);
     expect(gainedEntries(["a", "b"], ["a"])).toEqual([]);
+  });
+});
+
+describe("baseline identity", () => {
+  it("keeps multiplicity: a second identical finding is a new entry", () => {
+    const base = numbered(["r|a.ts|t"]);
+    const now = numbered(["r|a.ts|t", "r|a.ts|t"]);
+    expect(compareToBaseline(now, base)).toEqual({ added: ["r|a.ts|t#2"], stale: [] });
+  });
+  it("applies a recorded rename to old entries", () => {
+    expect(applyRenames(["r|old.ts|t#1"], [{ from: "old.ts", to: "new.ts" }])).toEqual([
+      "r|new.ts|t#1",
+    ]);
   });
 });
 
@@ -63,7 +81,29 @@ describe("jscpd ratchet", () => {
       "tests/fixtures/dup-violation",
     ]);
     expect(result.status).toBe(1);
-    expect(result.stderr).toMatch(/NEW\s+copy-a\.ts:copy-b\.ts:[0-9a-f]{12}/);
+    expect(result.stderr).toMatch(/NEW\s+copy-a\.ts:copy-b\.ts:[0-9a-f]{12}#1/);
+  });
+
+  it("admits a clone listed as a reviewed exception, and fails a stale exception", () => {
+    const dir = mkdtempSync(join(tmpdir(), "dup-"));
+    const copy = (n: string) =>
+      spawnSync("cp", ["-R", join(root, "tests/fixtures/dup-violation", n), dir]);
+    for (const n of ["copy-a.ts", "copy-b.ts", ".jscpd.json", "package.json"]) copy(n);
+    mkdirSync(join(dir, "quality"));
+    const first = node("scripts/quality/jscpd-ratchet.mjs", ["--cwd", dir]);
+    const fingerprint = /NEW\s+(copy-a\.ts:copy-b\.ts:[0-9a-f]{12})#1/.exec(first.stderr)?.[1];
+    expect(fingerprint).toBeDefined();
+    const reason = "two independent implementations that change for different reasons";
+    writeFileSync(
+      join(dir, "quality/jscpd-exceptions.json"),
+      JSON.stringify({ exceptions: [{ fingerprint, reason }] }),
+    );
+    expect(node("scripts/quality/jscpd-ratchet.mjs", ["--cwd", dir]).status).toBe(0);
+    writeFileSync(
+      join(dir, "quality/jscpd-exceptions.json"),
+      JSON.stringify({ exceptions: [{ fingerprint: "x.ts:y.ts:000000000000", reason }] }),
+    );
+    expect(node("scripts/quality/jscpd-ratchet.mjs", ["--cwd", dir]).status).toBe(1);
   });
 
   it("is green on the template itself", () => {
@@ -99,6 +139,24 @@ describe("baseline-shrinks", () => {
     const result = check(dir);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("gained new");
+  });
+
+  it("treats a recorded, reviewed rename as a move, not an addition", () => {
+    const { dir, set } = repoWithBaseline(["r|old.ts|t#1"]);
+    set(["r|new.ts|t#1"]);
+    expect(check(dir).status).toBe(1); // an unexplained rename is an addition
+    // what baseline-rename.mjs does: rewrite every baseline, record the move
+    for (const f of ["knip", "jscpd"]) {
+      writeFileSync(
+        join(dir, `quality/${f}-baseline.json`),
+        JSON.stringify({ entries: ["r|new.ts|t#1"] }),
+      );
+    }
+    writeFileSync(
+      join(dir, "quality/baseline-renames.json"),
+      JSON.stringify({ renames: [{ from: "old.ts", to: "new.ts" }] }),
+    );
+    expect(check(dir).status).toBe(0);
   });
 
   it("passes when a branch only deletes lines", () => {

@@ -1,17 +1,16 @@
 import "server-only";
-import { and, desc, eq, gte } from "drizzle-orm";
-import { db, type DbClient } from "@/shared/db";
+import { and, eq, gte } from "drizzle-orm";
+import { db, type DbClient } from "@/db";
 import { orders } from "./order.tables";
 import type { NewOrder, Order, OrderStatus } from "./order.types";
 
 // Every method takes an optional transaction client; the calling service owns the boundary.
 export const orderRepository = {
   async findForUser(id: string, userId: string, c: DbClient = db): Promise<Order | null> {
-    const [row] = await c
-      .select()
-      .from(orders)
-      .where(and(eq(orders.id, id), eq(orders.userId, userId)))
-      .limit(1);
+    // the relational query API works because src/db/schema.ts composes the schema
+    const row = await c.query.orders.findFirst({
+      where: and(eq(orders.id, id), eq(orders.userId, userId)),
+    });
     return row ?? null;
   },
 
@@ -20,8 +19,24 @@ export const orderRepository = {
     return row ?? null;
   },
 
+  async findByCheckout(
+    userId: string,
+    checkoutId: string,
+    c: DbClient = db,
+  ): Promise<Order | null> {
+    const [row] = await c
+      .select()
+      .from(orders)
+      .where(and(eq(orders.userId, userId), eq(orders.checkoutId, checkoutId)))
+      .limit(1);
+    return row ?? null;
+  },
+
   listForUser(userId: string, c: DbClient = db): Promise<Order[]> {
-    return c.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+    return c.query.orders.findMany({
+      where: eq(orders.userId, userId),
+      orderBy: (o, { desc }) => desc(o.createdAt),
+    });
   },
 
   // Create, or return the existing order for this user's checkout. Safe under concurrent submits:
@@ -33,11 +48,7 @@ export const orderRepository = {
       .onConflictDoNothing({ target: [orders.userId, orders.checkoutId] })
       .returning();
     if (created) return created;
-    const [existing] = await c
-      .select()
-      .from(orders)
-      .where(and(eq(orders.userId, data.userId), eq(orders.checkoutId, data.checkoutId)))
-      .limit(1);
+    const existing = await orderRepository.findByCheckout(data.userId, data.checkoutId, c);
     if (!existing) throw new Error("order vanished after a checkout conflict");
     return existing;
   },

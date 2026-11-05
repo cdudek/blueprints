@@ -1,48 +1,89 @@
 // Builds the eslint-plugin-boundaries config (plus the rules-purity syntax bans) from
 // architecture.json. eslint.config.mjs imports this, so there is no second hand-kept list.
+// The same historical baseline that the architecture tests read is turned into exact
+// (file -> file) allow policies here, so brownfield debt is admitted once, in one place.
 import boundaries from "eslint-plugin-boundaries";
-import { allowedTargets, moduleNames, tableOwnersReadBy } from "./lib.mjs";
+import { allowedTargets, doorFiles, moduleNames, moduleOf } from "./lib.mjs";
+
+const PURE = "Rules are pure: pass time, randomness and config in from the service";
+const BANNED_GLOBALS = [
+  "fetch",
+  "process",
+  "crypto",
+  "performance",
+  "setTimeout",
+  "setInterval",
+  "queueMicrotask",
+  "window",
+  "document",
+  "localStorage",
+  "sessionStorage",
+  "globalThis",
+  "require",
+];
+
+/**
+ * Baseline lines look like `rule|file|target#n`. Dependency findings have a project file as target.
+ * @param {string[]} baseline
+ */
+export function baselinedDependencies(baseline) {
+  /** @type {{ file: string, target: string }[]} */
+  const pairs = [];
+  for (const key of baseline) {
+    const [, file, target] = key.replace(/#\d+$/, "").split("|");
+    if (file && target && /^src\/.*\.tsx?$/.test(target)) pairs.push({ file, target });
+  }
+  return pairs;
+}
 
 /**
  * @param {import("./lib.mjs").Architecture} arch
- * @param {{ tsconfig?: string, rootPath?: string }} [options]
+ * @param {{ tsconfig?: string, rootPath?: string, baseline?: string[] }} [options]
  * @returns {import("eslint").Linter.Config[]}
  */
 export function buildBoundariesConfig(arch, options = {}) {
   const src = arch.srcRoot;
   const tsconfig = options.tsconfig ?? "./tsconfig.json";
   const owners = moduleNames(arch);
+  const doors = doorFiles(arch);
 
+  // Every production file must fit one of these. Anything else is reported as unknown.
   const elements = [
     { type: "app", pattern: `${src}/app`, partialMatch: false },
     { type: "ui", pattern: `${src}/ui`, partialMatch: false },
     { type: "shared", pattern: `${src}/shared`, partialMatch: false },
+    { type: "db", pattern: `${src}/db`, partialMatch: false },
     { type: "client", pattern: `${src}/clients/*`, capture: ["client"], partialMatch: false },
     { type: "module", pattern: `${src}/modules/*`, capture: ["module"], partialMatch: false },
   ];
 
   const files = [
-    { pattern: arch.doors.map((d) => `${src}/modules/*/${d}`), category: "door" },
+    { pattern: doors.map((d) => `${src}/modules/*/${d}`), category: "door" },
     { pattern: "**/*.tables.ts", category: "tables" },
     { pattern: "**/*.repository.ts", category: "repository" },
     { pattern: "**/*.service.ts", category: "service" },
     { pattern: "**/*.rules.ts", category: "rules" },
     { pattern: `${src}/modules/*/components/**`, category: "component" },
     { pattern: `${src}/clients/*/providers/**`, category: "provider" },
-    { pattern: `${src}/shared/db.ts`, category: "db" },
-    { pattern: `${src}/shared/{db,auth,env}.ts`, category: "shared-server" },
+    { pattern: `${src}/db/**`, category: "db" },
+    { pattern: `${src}/shared/{db,auth,env,access}.ts`, category: "shared-server" },
+    // allowed root files (for example proxy.ts): classified, so nothing else sits loose in src
+    ...arch.roots.map((file) => ({ pattern: `${src}/${file}`, category: "root" })),
   ];
 
   const type = (/** @type {string} */ t, captured = undefined) => ({
     element: captured ? { type: t, captured } : { type: t },
   });
   const category = (/** @type {string} */ c) => ({ file: { categories: c } });
+  const sameModule = {
+    element: { type: "module", captured: { module: "{{ from.element.captured.module }}" } },
+  };
 
-  /** @type {object[]} last matching policy wins, so exceptions come last */
+  /** The last matching policy decides, so broad refusals come first and exceptions last. */
   const policies = [
     {
       disallow: { to: { ...type("module"), file: { categories: { noneOf: ["door"] } } } },
-      message: `Enter a module only through its doors (${arch.doors.join(", ")}), never its internals`,
+      message: `Enter a module only through its doors (${doors.join(", ")}), never its internals`,
     },
     {
       disallow: { to: category("tables") },
@@ -52,6 +93,16 @@ export function buildBoundariesConfig(arch, options = {}) {
       disallow: { to: category("provider") },
       message: "Providers are imported only inside their client folder; use the client's index",
     },
+    {
+      from: type("client"),
+      allow: {
+        to: {
+          element: { type: "client", captured: { client: "{{ from.element.captured.client }}" } },
+        },
+      },
+    },
+    // dependencies inside one module are checked too (checkInternals): allowed unless a role rule below says no
+    { from: type("module"), allow: { to: sameModule } },
     ...owners.map((name) => ({
       from: type("module", { module: name }),
       disallow: {
@@ -59,6 +110,13 @@ export function buildBoundariesConfig(arch, options = {}) {
       },
       message: `${name} may not depend on this module: declare the edge in architecture.json or move the responsibility`,
     })),
+    // the persistence composition root: table files of every module, nothing else
+    { from: type("db"), allow: { to: category("tables") } },
+    {
+      from: type("db"),
+      disallow: { to: { ...type("module"), file: { categories: { noneOf: ["tables"] } } } },
+      message: "src/db imports table files only, never a module's code",
+    },
     ...["repository", "service", "db"].map((c) => ({
       from: category("rules"),
       disallow: { to: category(c) },
@@ -70,14 +128,15 @@ export function buildBoundariesConfig(arch, options = {}) {
       message: "Rules are pure: they never import src/app",
     },
     {
-      from: { element: { types: ["module", "shared", "ui", "client"] } },
+      from: { element: { types: ["module", "shared", "ui", "client", "db"] } },
       disallow: { to: type("app") },
       message: "Nothing imports src/app",
     },
     {
       from: type("ui"),
-      disallow: { to: { element: { types: ["module", "client", "app"] } } },
-      message: "src/ui is the design system: it never imports modules, clients or app code",
+      disallow: { to: { element: { types: ["module", "client", "app", "db"] } } },
+      message:
+        "src/ui is the project's design system: it never imports modules, clients, db or app code",
     },
     {
       from: type("ui"),
@@ -86,8 +145,8 @@ export function buildBoundariesConfig(arch, options = {}) {
     },
     {
       from: type("shared"),
-      disallow: { to: { element: { types: ["module", "app"] } } },
-      message: "src/shared never imports modules or app code",
+      disallow: { to: { element: { types: ["module", "app", "db"] } } },
+      message: "src/shared never imports modules, db or app code",
     },
     ...["repository", "tables", "db"].map((c) => ({
       from: category("component"),
@@ -99,18 +158,27 @@ export function buildBoundariesConfig(arch, options = {}) {
       disallow: { to: category(c) },
       message: "app/ goes through a module's server.ts: no repository, tables or db",
     })),
-    // Declared read exceptions: allowed only where the edge is declared as well.
-    ...owners.flatMap((reader) =>
-      tableOwnersReadBy(arch, reader)
-        .filter((owner) => allowedTargets(arch, reader).includes(owner))
-        .map((owner) => ({
-          from: type("module", { module: reader }),
+    // Declared read exceptions: one reader FILE, one owner module's tables (names are checked
+    // by the architecture tests; an import check cannot tell a read from a write).
+    ...arch.readExceptions.flatMap((x) => {
+      const reader = moduleOf(x.file);
+      const owner = arch.tables[x.table];
+      if (!reader || !owner || !allowedTargets(arch, reader).includes(owner)) return [];
+      return [
+        {
+          from: { file: { path: x.file } },
           allow: { to: { ...type("module", { module: owner }), ...category("tables") } },
-        })),
-    ),
+        },
+      ];
+    }),
+    // Historical debt: exact (file -> file) pairs from the shared baseline. Additions are refused
+    // by the baseline-shrinks check; multiplicity is enforced by the architecture tests.
+    ...baselinedDependencies(options.baseline ?? []).map(({ file, target }) => ({
+      from: { file: { path: file } },
+      allow: { to: { file: { path: target } } },
+    })),
   ];
 
-  const pure = `Rules are pure: pass time, randomness and config in from the service`;
   return [
     {
       name: "architecture/boundaries",
@@ -124,7 +192,12 @@ export function buildBoundariesConfig(arch, options = {}) {
         "import/resolver": { typescript: { project: tsconfig } },
         ...(options.rootPath ? { "boundaries/root-path": options.rootPath } : {}),
       },
-      rules: { "boundaries/dependencies": ["error", { default: "allow", policies }] },
+      rules: {
+        "boundaries/dependencies": ["error", { default: "allow", checkInternals: true, policies }],
+        // a file that fits no declared element, or a dependency on one, is an error
+        "boundaries/no-unknown-files": "error",
+        "boundaries/no-unknown-dependencies": "error",
+      },
     },
     {
       name: "architecture/rules-purity",
@@ -134,22 +207,30 @@ export function buildBoundariesConfig(arch, options = {}) {
           "error",
           {
             patterns: [
-              { group: ["next", "next/*", "react", "react-dom", "server-only"], message: pure },
+              {
+                group: ["next", "next/*", "react", "react-dom", "server-only", "node:*"],
+                message: PURE,
+              },
             ],
           },
         ],
+        "no-restricted-globals": [
+          "error",
+          ...BANNED_GLOBALS.map((name) => ({ name, message: PURE })),
+        ],
         "no-restricted-syntax": [
           "error",
-          { selector: "MemberExpression[object.name='Date'][property.name='now']", message: pure },
+          { selector: "MemberExpression[object.name='Date']", message: PURE },
           {
             selector: "MemberExpression[object.name='Math'][property.name='random']",
-            message: pure,
+            message: PURE,
           },
           {
-            selector: "MemberExpression[object.name='process'][property.name='env']",
-            message: pure,
+            selector: "MemberExpression[object.name='Math'][property.value='random']",
+            message: PURE,
           },
-          { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: pure },
+          { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: PURE },
+          { selector: "VariableDeclarator[init.name='Date']", message: PURE },
         ],
       },
     },

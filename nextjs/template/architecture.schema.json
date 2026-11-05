@@ -6,40 +6,68 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "$schemaVersion",
     "version",
     "srcRoot",
     "doors",
+    "roots",
     "modules",
     "edges",
     "tables",
     "readExceptions",
     "exemptions",
-    "clients"
+    "clients",
+    "serverOnlyPackages",
+    "rulesMayImport"
   ],
   "definitions": {
-    "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
-    "reason": { "type": "string", "minLength": 10 }
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 10
+    }
   },
   "properties": {
-    "$schema": { "type": "string" },
-    "version": { "const": 1 },
-    "srcRoot": { "type": "string", "minLength": 1 },
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
+    "srcRoot": {
+      "type": "string",
+      "minLength": 1
+    },
     "doors": {
-      "description": "File names a module exposes. Everything else in a module is private.",
-      "type": "array",
-      "items": { "type": "string", "pattern": "^[A-Za-z0-9.-]+\\.tsx?$" },
-      "minItems": 1,
-      "uniqueItems": true
+      "description": "Door file name -> role. A browser door exports only browser-safe types, schemas and components. A server door exports only service operations and server components. Both are listed by name, never `export *`.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9.-]+\\.tsx?$"
+      },
+      "additionalProperties": {
+        "enum": ["browser", "server"]
+      }
     },
     "modules": {
       "description": "One folder src/modules/<name> each.",
       "type": "object",
-      "propertyNames": { "$ref": "#/definitions/name" },
+      "propertyNames": {
+        "$ref": "#/definitions/name"
+      },
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
         "required": ["description"],
-        "properties": { "description": { "type": "string", "minLength": 1 } }
+        "properties": {
+          "description": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       }
     },
     "edges": {
@@ -50,28 +78,44 @@
         "additionalProperties": false,
         "required": ["from", "to", "reason"],
         "properties": {
-          "from": { "$ref": "#/definitions/name" },
-          "to": { "$ref": "#/definitions/name" },
-          "reason": { "$ref": "#/definitions/reason" }
+          "from": {
+            "$ref": "#/definitions/name"
+          },
+          "to": {
+            "$ref": "#/definitions/name"
+          },
+          "reason": {
+            "$ref": "#/definitions/reason"
+          }
         }
       }
     },
     "tables": {
       "description": "Every table and the one module that owns it. Only the owner writes it.",
       "type": "object",
-      "additionalProperties": { "$ref": "#/definitions/name" }
+      "additionalProperties": {
+        "$ref": "#/definitions/name"
+      }
     },
     "readExceptions": {
-      "description": "A module that may read another module's table directly (a report, a joined list). Needs a declared edge as well.",
+      "description": "One reader FILE may import one owner table directly, for reads only. Prefer an owner query function; an import check cannot tell a read from a raw-SQL write.",
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["reader", "table", "reason"],
+        "required": ["file", "table", "reason"],
         "properties": {
-          "reader": { "$ref": "#/definitions/name" },
-          "table": { "type": "string", "minLength": 1 },
-          "reason": { "$ref": "#/definitions/reason" }
+          "file": {
+            "type": "string",
+            "pattern": "^src/modules/[a-z0-9-]+/.+\\.tsx?$"
+          },
+          "table": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "$ref": "#/definitions/reason"
+          }
         }
       }
     },
@@ -83,17 +127,58 @@
         "additionalProperties": false,
         "required": ["path", "rules", "reason"],
         "properties": {
-          "path": { "type": "string", "minLength": 1 },
-          "rules": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-          "reason": { "$ref": "#/definitions/reason" }
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "reason": {
+            "$ref": "#/definitions/reason"
+          }
         }
       }
     },
     "clients": {
       "description": "Third-party ports under src/clients/<name>, each with providers/.",
       "type": "array",
-      "items": { "$ref": "#/definitions/name" },
+      "items": {
+        "$ref": "#/definitions/name"
+      },
       "uniqueItems": true
+    },
+    "$schemaVersion": {
+      "description": "The blueprint release this file was written for. Scripts refuse a different major version.",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "roots": {
+      "description": "Files allowed directly under srcRoot. Every other file must live in app, modules/<declared>, shared, ui, db or clients/<declared>.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "serverOnlyPackages": {
+      "description": "Packages (and subpaths) a browser bundle must never reach, besides Node builtins.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rulesMayImport": {
+      "description": "External packages a *.rules.ts file may use. Rules otherwise reach only other rules, types, schemas and shared/result.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
-  }
+  },
+  "x-schemaVersion": "1.0.0"
 }

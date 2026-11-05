@@ -1,9 +1,13 @@
 {
+  "$schemaVersion": "1.0.0",
   "version": 1,
   "srcRoot": "src",
-  "doors": [
-    "public.ts",
-    "server.ts"
+  "doors": {
+    "public.ts": "browser",
+    "server.ts": "server"
+  },
+  "roots": [
+    "proxy.ts"
   ],
   "modules": {
     "orders": {
@@ -15,8 +19,11 @@
     "ledger": {
       "description": "ledger"
     },
+    "half": {
+      "description": "has only one door"
+    },
     "phantom": {
-      "description": "declared but has no files"
+      "description": "declared, no files"
     }
   },
   "edges": [
@@ -24,17 +31,31 @@
       "from": "orders",
       "to": "billing",
       "reason": "orders asks billing for prices"
+    },
+    {
+      "from": "ledger",
+      "to": "billing",
+      "reason": "ledger settles through billing"
     }
   ],
   "tables": {
     "orders": "orders",
     "payments": "billing",
     "invoices": "orders",
-    "ghosts": "billing"
+    "ghosts": "billing",
+    "prices": "billing"
   },
   "readExceptions": [],
   "exemptions": [],
   "clients": [
     "payments"
+  ],
+  "serverOnlyPackages": [
+    "server-only",
+    "next/headers",
+    "postgres"
+  ],
+  "rulesMayImport": [
+    "zod"
   ]
 }

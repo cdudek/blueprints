@@ -1,7 +1,7 @@
-export async function listEntries() {
-  return [];
-}
-export const addEntry = async () => 1;
-export async function syncFromJob() {
+import { operation } from "@/shared/access";
+import { ok } from "@/shared/result";
+export const listEntries = async () => [];
+export async function addEntry() {
   return 1;
 }
+export const closeBooks = operation({ access: "job", triggeredBy: "cron" }, async () => ok(1));

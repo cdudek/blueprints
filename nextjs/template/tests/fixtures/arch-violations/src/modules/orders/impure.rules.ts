@@ -1,8 +1,10 @@
 import React from "react";
+import { randomUUID } from "node:crypto";
 export { cookies } from "next/headers";
 export const load = () => import("next/cache");
 export const a = process.env.SECRET;
 export const b = Date.now();
 export const c = Math.random();
 export const d = new Date();
-export const e = React;
+export const e = [React, fetch, Date["now"], randomUUID];
+export const { now } = Date;

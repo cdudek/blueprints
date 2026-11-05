@@ -75,3 +75,29 @@ export function fatal(message) {
   console.error(`ANALYZER ERROR: ${message}`);
   process.exit(2);
 }
+
+/**
+ * Stable occurrence identity: the n-th identical key becomes `key#n`. A second occurrence of the
+ * same finding is therefore a NEW entry (multiplicity is preserved), and fixing one leaves the
+ * other lines untouched. @param {string[]} keys
+ */
+export function numbered(keys) {
+  const seen = new Map();
+  return [...keys].sort().map((k) => {
+    const n = (seen.get(k) ?? 0) + 1;
+    seen.set(k, n);
+    return `${k}#${n}`;
+  });
+}
+
+/** quality/baseline-renames.json: reviewed file moves, applied to the base before comparing. */
+export function readRenames(path = "quality/baseline-renames.json") {
+  if (!existsSync(path)) return [];
+  const { renames } = JSON.parse(readFileSync(path, "utf8"));
+  return Array.isArray(renames) ? renames : [];
+}
+
+/** @param {string[]} entries @param {{ from: string, to: string }[]} renames */
+export function applyRenames(entries, renames) {
+  return entries.map((e) => renames.reduce((acc, r) => acc.split(r.from).join(r.to), e));
+}

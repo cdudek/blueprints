@@ -8,7 +8,9 @@ export const dynamic = "force-dynamic";
 export default async function OrdersPage() {
   if (!(await getSession())) return <p>Sign in to see your orders.</p>;
 
-  const orders = await listMyOrders();
+  const result = await listMyOrders();
+  if (!result.ok) return <p>Sign in to see your orders.</p>;
+  const orders = result.value;
   return (
     <main>
       <h1>Orders</h1>

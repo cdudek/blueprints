@@ -16,7 +16,8 @@ export class UnauthenticatedError extends Error {
 // STUB: reads a cookie so the example runs. Replace with your real session library
 // (Auth.js, Clerk, your own) before production; this refuses to run there.
 export async function getSession(): Promise<Session | null> {
-  if (getEnv().NODE_ENV === "production") {
+  const env = getEnv();
+  if (env.NODE_ENV === "production" && env.AUTH_STUB !== "e2e") {
     throw new Error("shared/auth.ts is a stub: wire a real session before production");
   }
   const jar = await cookies();

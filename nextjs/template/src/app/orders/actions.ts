@@ -11,22 +11,18 @@ export async function placeOrderAction(
   form: FormData,
 ): Promise<PlaceOrderResponse> {
   const parsed = placeOrderSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { ok: false, error: "invalid input" };
+  if (!parsed.success) return { ok: false, error: "invalid_input" };
 
   const result = await placeOrder(parsed.data);
   if (!result.ok) return { ok: false, error: result.error };
 
   revalidatePath("/orders");
-  return {
-    ok: true,
-    orderId: result.value.orderId,
-    clientSecret: result.value.payment?.clientSecret ?? null,
-  };
+  return { ok: true, orderId: result.value.orderId, clientSecret: result.value.clientSecret };
 }
 
 export async function cancelOrderAction(id: unknown): Promise<CancelOrderResponse> {
   const parsed = orderIdSchema.safeParse(id);
-  if (!parsed.success) return { ok: false, error: "invalid id" };
+  if (!parsed.success) return { ok: false, error: "invalid_input" };
 
   const result = await cancelOrder(parsed.data);
   if (!result.ok) return { ok: false, error: result.error };

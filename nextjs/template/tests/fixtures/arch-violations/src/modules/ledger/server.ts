@@ -1,1 +1,1 @@
-export { listEntries } from "./ledger.service";
+export * from "./ledger.service";
