@@ -1,0 +1,73 @@
+{
+  "name": "nextjs-blueprint-template",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "arch": "vitest run --config vitest.arch.config.ts && pnpm arch:diagram:check && pnpm arch:baseline",
+    "arch:diagram": "node scripts/arch/diagram.mjs",
+    "arch:diagram:check": "node scripts/arch/diagram.mjs --check",
+    "arch:baseline": "node scripts/quality/baseline-shrinks.mjs",
+    "arch:report": "vitest run --config vitest.arch.config.ts --project report",
+    "knip": "node scripts/quality/knip-ratchet.mjs",
+    "dup": "jscpd",
+    "e2e": "playwright test",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm arch && pnpm knip && pnpm build",
+    "new:module": "node scripts/arch/new-module.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.4",
+    "next": "16.4.5",
+    "postgres": "4.0.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "server-only": "0.0.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.15",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.65.0",
+    "@types/node": "22.20.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "archunit": "2.5.4",
+    "drizzle-kit": "0.31.11",
+    "eslint": "10.14.0",
+    "eslint-config-next": "16.4.5",
+    "eslint-import-resolver-typescript": "4.4.5",
+    "eslint-plugin-boundaries": "7.4.2",
+    "husky": "9.1.7",
+    "jscpd": "5.4.2",
+    "knip": "6.44.1",
+    "lint-staged": "17.6.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "5.1.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ]
+  }
+}
