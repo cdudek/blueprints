@@ -19,7 +19,9 @@ export function createPaymentsClient(env: Env, deps: Deps = {}): PaymentsClient 
         throw new Error("the real payments provider is only available in production");
       }
       if (!env.PAYMENTS_API_KEY || !env.PAYMENTS_WEBHOOK_SECRET) {
-        throw new Error("the real payments provider needs PAYMENTS_API_KEY and PAYMENTS_WEBHOOK_SECRET");
+        throw new Error(
+          "the real payments provider needs PAYMENTS_API_KEY and PAYMENTS_WEBHOOK_SECRET",
+        );
       }
       return new RealPaymentsClient({
         apiKey: env.PAYMENTS_API_KEY,

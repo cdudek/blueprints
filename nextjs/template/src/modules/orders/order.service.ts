@@ -1,5 +1,10 @@
 import "server-only";
-import { startPayment, priceFor, recordCancellation, recordCancellationFromWebhook } from "@/modules/billing/server";
+import {
+  startPayment,
+  priceFor,
+  recordCancellation,
+  recordCancellationFromWebhook,
+} from "@/modules/billing/server";
 import { requireUser } from "@/shared/auth";
 import { db } from "@/shared/db";
 import { err, ok } from "@/shared/result";
@@ -22,7 +27,8 @@ export async function placeOrder(input: PlaceOrderInput) {
     totalCents: totalCents(price.value.unitCents, input.quantity),
   });
 
-  if (!sameCheckout(order, input)) return err("this checkout was already used for a different order");
+  if (!sameCheckout(order, input))
+    return err("this checkout was already used for a different order");
   if (order.status === "cancelled") return err("this checkout was cancelled");
   if (order.status !== "pending") return ok({ orderId: order.id, payment: null });
 
@@ -45,7 +51,13 @@ export async function cancelOrder(id: string) {
   // billing's job cancels the open payment or refunds a captured one after commit.
   try {
     const cancelled = await db.transaction(async (tx) => {
-      const changed = await repo.cancelIfUnchanged(id, user.id, order.status, cancelCutoff(now), tx);
+      const changed = await repo.cancelIfUnchanged(
+        id,
+        user.id,
+        order.status,
+        cancelCutoff(now),
+        tx,
+      );
       if (!changed) return false;
       const recorded = await recordCancellation(order.id, tx);
       // a failed billing write must roll the order back too

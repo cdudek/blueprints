@@ -66,7 +66,12 @@ export const orderRepository = {
     return changed.length === 1;
   },
 
-  async transition(id: string, from: OrderStatus, to: OrderStatus, c: DbClient = db): Promise<boolean> {
+  async transition(
+    id: string,
+    from: OrderStatus,
+    to: OrderStatus,
+    c: DbClient = db,
+  ): Promise<boolean> {
     const changed = await c
       .update(orders)
       .set({ status: to })

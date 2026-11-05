@@ -22,7 +22,9 @@ export function OrderTable({ orders, cancelAction }: Props) {
           <tr key={order.id}>
             <td>{order.id.slice(0, 8)}</td>
             <td>
-              <Badge tone={order.status === "cancelled" ? "danger" : "neutral"}>{order.status}</Badge>
+              <Badge tone={order.status === "cancelled" ? "danger" : "neutral"}>
+                {order.status}
+              </Badge>
             </td>
             <td>
               <PriceTag cents={order.totalCents} />

@@ -10,7 +10,8 @@ export function cancelCutoff(now: Date): Date {
 }
 
 export function canCancel(order: Pick<Order, "status" | "createdAt">, now: Date): Result<true> {
-  if (!CANCELLABLE.includes(order.status)) return err(`a ${order.status} order cannot be cancelled`);
+  if (!CANCELLABLE.includes(order.status))
+    return err(`a ${order.status} order cannot be cancelled`);
   if (order.createdAt < cancelCutoff(now)) return err("cancel window closed");
   return ok(true);
 }

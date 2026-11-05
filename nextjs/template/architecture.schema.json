@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "architecture.schema.json",
+  "title": "Architecture policy",
+  "description": "The single source of truth for module boundaries. Both lint and the architecture tests are built from it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "srcRoot",
+    "doors",
+    "modules",
+    "edges",
+    "tables",
+    "readExceptions",
+    "exemptions",
+    "clients"
+  ],
+  "definitions": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "reason": { "type": "string", "minLength": 10 }
+  },
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "srcRoot": { "type": "string", "minLength": 1 },
+    "doors": {
+      "description": "File names a module exposes. Everything else in a module is private.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[A-Za-z0-9.-]+\\.tsx?$" },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "modules": {
+      "description": "One folder src/modules/<name> each.",
+      "type": "object",
+      "propertyNames": { "$ref": "#/definitions/name" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description"],
+        "properties": { "description": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "edges": {
+      "description": "Declared module dependencies. Anything not listed is refused; a cycle is refused.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to", "reason"],
+        "properties": {
+          "from": { "$ref": "#/definitions/name" },
+          "to": { "$ref": "#/definitions/name" },
+          "reason": { "$ref": "#/definitions/reason" }
+        }
+      }
+    },
+    "tables": {
+      "description": "Every table and the one module that owns it. Only the owner writes it.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/name" }
+    },
+    "readExceptions": {
+      "description": "A module that may read another module's table directly (a report, a joined list). Needs a declared edge as well.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["reader", "table", "reason"],
+        "properties": {
+          "reader": { "$ref": "#/definitions/name" },
+          "table": { "type": "string", "minLength": 1 },
+          "reason": { "$ref": "#/definitions/reason" }
+        }
+      }
+    },
+    "exemptions": {
+      "description": "Files a rule does not apply to, for example seed scripts. Never for a non-negotiable rule.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "rules", "reason"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "rules": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "reason": { "$ref": "#/definitions/reason" }
+        }
+      }
+    },
+    "clients": {
+      "description": "Third-party ports under src/clients/<name>, each with providers/.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/name" },
+      "uniqueItems": true
+    }
+  }
+}
