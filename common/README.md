@@ -167,3 +167,42 @@ cp -R common my-app/tools/common
 
 An upgrade replaces the folder and follows [`CHANGELOG.md`](./CHANGELOG.md). `secrets check` warns
 when `tools/common` is older than the manifest's `schemaVersion` supports.
+
+## Terraform module: `terraform/secrets/`
+
+Terraform 1.11 or later (write-only arguments) and the Google provider 8.x.
+
+```hcl
+module "secrets" {
+  source = "../tools/common/terraform/secrets"
+
+  manifest_path  = "${path.root}/../secrets.manifest.json"
+  env            = var.env
+  project        = var.project
+  project_number = var.project_number
+  human_group    = "secrets-admins@example.com"
+}
+```
+
+It reads the manifest and `secret-versions/<env>.json` beside it, and creates:
+
+- **One secret per declared purpose:** `<repo>-<purpose>-<env>`, automatic replication, the labels
+  `app`, `env`, `role=secret` and `owner`, and `version_destroy_ttl` set to the rollback window, so a
+  destroyed version stays recoverable that long.
+- **Rotation notices** for secrets with `rotationDays`: a `<repo>-secrets-rotation-<env>` topic,
+  publish rights for the Secret Manager service agent, and `rotation_period` with a first
+  `next_rotation_time` that later plans ignore. Secret Manager rotates nothing itself; it publishes
+  a `SECRET_ROTATE` message for the team's alert channel. Create the service agent once per project:
+  `gcloud beta services identity create --service secretmanager.googleapis.com --project PROJECT`.
+- **IAM per secret:** `secretAccessor` for each reader's `<repo>-<kind>-<env>` service account;
+  `secretVersionManager` and `viewer` for the human group (no payload access); `viewer` for
+  `<repo>-ci-<env>`; and `secretAccessor` for the human group in `dev` only, on `local` secrets.
+- **Generated values, and no others.** An ephemeral `random_password` feeds `secret_data_wo`, which
+  is never stored in plan or state. `secret_data_wo_version` is the generation in
+  `secret-versions/<env>.json`; `secrets rotate` bumps it. The old version is abandoned, not
+  deleted, so running revisions keep working until `secrets retire`.
+
+The output `env_vars` maps each env var name to `{secret, version, readers}`; a secret with no pin is
+left out, so the app fails closed. [`examples/cloud-run/`](./terraform/secrets/examples/cloud-run)
+wires a web service, a worker and a migrate job to it. `project_number` is an input rather than a
+data source so the module plans without credentials.
