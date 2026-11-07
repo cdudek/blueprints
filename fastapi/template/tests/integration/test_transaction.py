@@ -1,8 +1,11 @@
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.db.transaction import TransactionAlreadyOpenError, in_transaction
+from tests.integration.conftest import TEMPLATE_ROOT
 
 pytestmark = pytest.mark.anyio
 
@@ -33,5 +36,7 @@ async def test_leaving_the_block_commits_and_an_error_rolls_back(bound_db: Async
 
 async def test_schema_history_records_the_applied_revision(bound_db: AsyncEngine) -> None:
     async with bound_db.connect() as conn:
-        revisions = (await conn.execute(text("SELECT revision FROM schema_history"))).scalars()
-        assert len(list(revisions)) == 1
+        recorded = set((await conn.execute(text("SELECT revision FROM schema_history"))).scalars())
+
+    scripts = ScriptDirectory.from_config(Config(TEMPLATE_ROOT / "alembic.ini"))
+    assert recorded == {script.revision for script in scripts.walk_revisions()}

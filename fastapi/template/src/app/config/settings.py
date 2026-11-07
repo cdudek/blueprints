@@ -4,6 +4,7 @@ from functools import cache
 from pathlib import Path
 from typing import Literal
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 
@@ -14,6 +15,10 @@ class Settings(BaseSettings):
 
     app_env: Literal["development", "test", "production"] = "development"
     database_url: str = "postgresql+psycopg://app:app@localhost:5432/app"
+
+    payments_provider: Literal["real", "fixture", "noop"] = "fixture"
+    payments_base_url: str = "https://payments.example.com"
+    payments_api_key: SecretStr | None = None
 
     @classmethod
     def settings_customise_sources(

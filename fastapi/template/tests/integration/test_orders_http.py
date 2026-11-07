@@ -33,3 +33,26 @@ def test_anonymous_caller_is_refused() -> None:
         response = client.get("/v1/orders/00000000-0000-0000-0000-000000000000")
 
     assert response.status_code == 401
+
+
+def test_post_order_places_it_and_reads_back() -> None:
+    with TestClient(app) as client:
+        headers = {"X-User-Id": "alice"}
+        created = client.post(
+            "/v1/orders", json={"amount_cents": 900, "currency": "EUR"}, headers=headers
+        )
+        read = client.get(f"/v1/orders/{created.json()['id']}", headers=headers)
+
+    assert created.status_code == 201
+    assert read.json() == created.json()
+
+
+def test_post_order_refuses_unknown_fields() -> None:
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/orders",
+            json={"amount_cents": 900, "currency": "EUR", "status": "paid"},
+            headers={"X-User-Id": "alice"},
+        )
+
+    assert response.status_code == 422
