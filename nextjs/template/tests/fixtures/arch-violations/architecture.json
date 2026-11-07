@@ -7,7 +7,9 @@
     "server.ts": "server"
   },
   "roots": [
-    "proxy.ts"
+    "proxy.ts",
+    "instrumentation.ts",
+    "worker.ts"
   ],
   "modules": {
     "orders": {

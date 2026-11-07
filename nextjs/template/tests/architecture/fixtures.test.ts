@@ -30,8 +30,10 @@ const intended: Record<string, string[]> = {
   "src/app/bad-actions.ts": ["app-no-persistence", "module-doors"],
   "src/app/ns.ts": ["system-operations-from-routes-only"],
   "src/app/reads-orders-table.ts": ["app-no-persistence", "tables-owner-only"],
+  "src/app/settle-action.ts": ["system-operations-from-routes-only"],
   "src/db/schema.ts": ["schema-composition"],
   "src/escape.ts": ["module-doors-complete", "roots-classified"],
+  "src/instrumentation.ts": ["roots-no-modules"],
   "src/modules/billing/direct-provider.ts": ["providers-in-client-folder"],
   "src/modules/billing/dyn-edge.ts": ["declared-edges-complete"],
   "src/modules/billing/reads-orders-table.ts": ["declared-edges", "tables-owner-only"],
@@ -106,6 +108,11 @@ describe("positive controls: everything else is clean", () => {
       "an indirect import: the violation is located at the helper",
     ],
     ["src/app/api/hook/route.ts", "a route handler calling a system (webhook) operation"],
+    ["src/app/_workflows/settle-payment.ts", "a workflow calling a system operation"],
+    [
+      "src/app/api/settle/route.ts",
+      "a route handler calling a workflow that calls a system operation",
+    ],
     [
       "src/modules/orders/order.service.ts",
       "a user operation using inTransaction and passing tx to billing",
@@ -115,6 +122,7 @@ describe("positive controls: everything else is clean", () => {
       "a service with user and webhook operations and a Tx-taking operation",
     ],
     ["src/db/index.ts", "the one place db.transaction is allowed"],
+    ["src/worker.ts", "the worker root calling a job operation through a server door"],
     ["src/shared/auth.ts", "a session type and pure checks: server-only but no I/O"],
     ["src/app/place/PlaceButton.tsx", 'a client file importing a "use server" action'],
     ["src/app/place/actions.ts", 'a "use server" file reaching a server door'],
@@ -235,6 +243,12 @@ const specific: [string, string, string, string][] = [
   ["system-operations-from-routes-only", "src/app/ns.ts", "billing.*", "by name"],
   [
     "system-operations-from-routes-only",
+    "src/app/settle-action.ts",
+    "src/app/_workflows/settle-payment.ts",
+    "only a route handler or the worker may call it",
+  ],
+  [
+    "system-operations-from-routes-only",
     "src/modules/orders/order.admin.service.ts",
     "billing.settleFromWebhook",
     "must not call",
@@ -308,6 +322,12 @@ const specific: [string, string, string, string][] = [
   ],
   ["modules-declared", "src/modules/ghost/public.ts", "ghost", "not in architecture.json"],
   ["roots-classified", "src/escape.ts", "escape.ts", "fits no declared root"],
+  [
+    "roots-no-modules",
+    "src/instrumentation.ts",
+    "src/modules/orders/server.ts",
+    "instrumentation.ts imports no module",
+  ],
   ["use-server-only-in-app", "src/modules/orders/actions.ts", "use server", "actions live in app"],
   ["server-only-in-server-files", "src/modules/ledger/server.ts", "server-only", "missing"],
   [

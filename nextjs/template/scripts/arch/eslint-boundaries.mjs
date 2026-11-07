@@ -72,8 +72,12 @@ export function buildBoundariesConfig(arch, options = {}) {
     { pattern: at(`${L.clients}/*/providers/**`), category: "provider" },
     { pattern: at(`${L.db}/**`), category: "db" },
     { pattern: L.serverShared.map(at), category: "shared-server" },
-    // allowed root files (for example proxy.ts): classified, so nothing else sits loose in src
-    ...arch.roots.map((file) => ({ pattern: `${src}/${file}`, category: "root" })),
+    // allowed root files (for example proxy.ts): classified, so nothing else sits loose in src;
+    // the worker is the one root that may call operations
+    ...arch.roots.map((file) => ({
+      pattern: `${src}/${file}`,
+      category: file === L.worker ? "worker" : "root",
+    })),
   ];
 
   const type = (/** @type {string} */ t, captured = undefined) => ({
@@ -136,6 +140,11 @@ export function buildBoundariesConfig(arch, options = {}) {
       from: { element: { types: ["module", "shared", "ui", "client", "db"] } },
       disallow: { to: type("app") },
       message: "Nothing imports src/app",
+    },
+    {
+      from: category("root"),
+      disallow: { to: type("module") },
+      message: `Root files (${arch.roots.filter((r) => r !== L.worker).join(", ")}) import no module: only ${L.worker} and app/ call operations`,
     },
     {
       from: type("ui"),

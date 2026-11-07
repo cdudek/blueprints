@@ -228,6 +228,12 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
       "app importing persistence",
     ],
     [
+      "src/instrumentation.ts",
+      "boundaries/dependencies",
+      /import no module/,
+      "instrumentation.ts importing a module",
+    ],
+    [
       "src/escape.ts",
       "boundaries/no-unknown-files",
       /does not match any file pattern/,
@@ -270,6 +276,7 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
     "src/ui/Button.tsx",
     "src/app/place/PlaceButton.tsx",
     "src/shared/auth.ts",
+    "src/worker.ts",
   ])("stays quiet on the clean file %s", async (file) => {
     const lint = await lintWith();
     expect(await lint(file)).toEqual([]);

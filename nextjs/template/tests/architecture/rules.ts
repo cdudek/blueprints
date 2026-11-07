@@ -813,6 +813,23 @@ export function buildRules(arch: Architecture): ArchRule[] {
       },
     },
     {
+      id: "roots-no-modules",
+      description:
+        "Root files other than the worker (proxy.ts, instrumentation.ts) import no module: they run before any session exists",
+      nonNegotiable: 2,
+      async check(ctx) {
+        const roots = arch.roots.filter((r) => r !== L.worker).map(at);
+        return graphOf(ctx)
+          .edges.filter((e) => roots.includes(e.from) && !e.external && moduleOf(e.to))
+          .map((e) => ({
+            rule: "roots-no-modules",
+            file: e.from,
+            target: e.to,
+            message: `${e.from.slice(src.length + 1)} imports no module: only ${L.worker} and app/ call operations`,
+          }));
+      },
+    },
+    {
       id: "shared-no-clients",
       description: "src/shared never imports a third-party client",
       nonNegotiable: 10,
@@ -1226,14 +1243,17 @@ export function buildRules(arch: Architecture): ArchRule[] {
     {
       id: "system-operations-from-routes-only",
       description:
-        "Webhook and job operations are called only from route handlers (and from other webhook/job operations), never from actions, pages, components or user operations",
+        "Webhook and job operations are called only from route handlers, the worker, workflows those two call, and other webhook/job operations; never from actions, pages, components or user operations",
       nonNegotiable: 6,
       async check(ctx) {
         const g = graphOf(ctx);
         const ops = systemOps(ctx);
         const findings: Finding[] = [];
+        const isWorker = (f: string) => f === at(L.worker);
+        const isWorkflow = (f: string) => f.startsWith(`${at(L.workflows)}/`);
+        const systemWorkflows = new Set<string>(); // workflows that call a system operation
         for (const [file, sf] of g.sources) {
-          if (isRoutes(file)) continue;
+          if (isRoutes(file) || isWorker(file)) continue;
           const bound = new Map<string, string>(); // local name -> "module.operation"
           const note = (target: string, message: string) =>
             findings.push({ rule: "system-operations-from-routes-only", file, target, message });
@@ -1268,8 +1288,10 @@ export function buildRules(arch: Architecture): ArchRule[] {
               const original = (el.propertyName ?? el.name).text;
               if (!names.has(original)) continue;
               bound.set(el.name.text, `${m}.${original}`);
+              // a workflow may call one; its own callers are checked below
+              if (isWorkflow(file)) systemWorkflows.add(file);
               // a webhook/job operation may be called by another system operation (service files), see below
-              if (!isServiceFile(file))
+              else if (!isServiceFile(file))
                 note(
                   `${m}.${original}`,
                   "a system operation is reachable only from a route handler that verified the caller",
@@ -1295,6 +1317,20 @@ export function buildRules(arch: Architecture): ArchRule[] {
                 );
           });
         }
+        for (const e of g.edges)
+          if (
+            systemWorkflows.has(e.to) &&
+            !isRoutes(e.from) &&
+            !isWorker(e.from) &&
+            !isWorkflow(e.from)
+          )
+            findings.push({
+              rule: "system-operations-from-routes-only",
+              file: e.from,
+              target: e.to,
+              message:
+                "this workflow calls a system operation: only a route handler or the worker may call it",
+            });
         return findings;
       },
     },
