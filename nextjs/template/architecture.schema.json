@@ -28,6 +28,11 @@
     "reason": {
       "type": "string",
       "minLength": 10
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^/].*[^/]$"
     }
   },
   "properties": {
@@ -177,6 +182,57 @@
       "type": "array",
       "items": {
         "type": "string"
+      }
+    },
+    "layout": {
+      "description": "Optional. Where each folder of the blueprint lives, relative to srcRoot. A key left out keeps its default (the 1.0.0 layout).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "$ref": "#/definitions/path",
+          "description": "Next.js routes, pages, actions. Default: app"
+        },
+        "modules": {
+          "$ref": "#/definitions/path",
+          "description": "One folder per module. Default: modules"
+        },
+        "ui": {
+          "$ref": "#/definitions/path",
+          "description": "The project's design system. Default: ui"
+        },
+        "shared": {
+          "$ref": "#/definitions/path",
+          "description": "Generic shared code. Default: shared"
+        },
+        "db": {
+          "$ref": "#/definitions/path",
+          "description": "The persistence layer. Default: db"
+        },
+        "clients": {
+          "$ref": "#/definitions/path",
+          "description": "Third-party ports, one folder each. Default: clients"
+        },
+        "dbClient": {
+          "$ref": "#/definitions/path",
+          "description": "The database client and transaction gateway. Default: db/index.ts"
+        },
+        "schemaRoot": {
+          "$ref": "#/definitions/path",
+          "description": "The persistence composition root. Default: db/schema.ts"
+        },
+        "serverShared": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/path"
+          },
+          "uniqueItems": true,
+          "description": "Server-only shared files. Default: shared/auth.ts, shared/env.ts, shared/access.ts"
+        },
+        "resultFile": {
+          "$ref": "#/definitions/path",
+          "description": "The one shared file a rules file may import. Default: shared/result.ts"
+        }
       }
     }
   },

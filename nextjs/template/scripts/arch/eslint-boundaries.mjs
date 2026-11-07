@@ -3,7 +3,7 @@
 // The same historical baseline that the architecture tests read is turned into exact
 // (file -> file) allow policies here, so brownfield debt is admitted once, in one place.
 import boundaries from "eslint-plugin-boundaries";
-import { allowedTargets, doorFiles, moduleNames, moduleOf } from "./lib.mjs";
+import { allowedTargets, doorFiles, layoutOf, moduleNames, moduleOf } from "./lib.mjs";
 
 const PURE = "Rules are pure: pass time, randomness and config in from the service";
 const BANNED_GLOBALS = [
@@ -24,14 +24,15 @@ const BANNED_GLOBALS = [
 
 /**
  * Baseline lines look like `rule|file|target#n`. Dependency findings have a project file as target.
- * @param {string[]} baseline
+ * @param {string[]} baseline @param {string} [src] srcRoot
  */
-export function baselinedDependencies(baseline) {
+export function baselinedDependencies(baseline, src = "src") {
   /** @type {{ file: string, target: string }[]} */
   const pairs = [];
+  const projectFile = new RegExp(`^${src}/[^ ]*\\.tsx?$`);
   for (const key of baseline) {
     const [, file, target] = key.replace(/#\d+$/, "").split("|");
-    if (file && target && /^src\/.*\.tsx?$/.test(target)) pairs.push({ file, target });
+    if (file && target && projectFile.test(target)) pairs.push({ file, target });
   }
   return pairs;
 }
@@ -43,30 +44,32 @@ export function baselinedDependencies(baseline) {
  */
 export function buildBoundariesConfig(arch, options = {}) {
   const src = arch.srcRoot;
+  const L = layoutOf(arch);
+  const at = (/** @type {string} */ p) => `${src}/${p}`;
   const tsconfig = options.tsconfig ?? "./tsconfig.json";
   const owners = moduleNames(arch);
   const doors = doorFiles(arch);
 
   // Every production file must fit one of these. Anything else is reported as unknown.
   const elements = [
-    { type: "app", pattern: `${src}/app`, partialMatch: false },
-    { type: "ui", pattern: `${src}/ui`, partialMatch: false },
-    { type: "shared", pattern: `${src}/shared`, partialMatch: false },
-    { type: "db", pattern: `${src}/db`, partialMatch: false },
-    { type: "client", pattern: `${src}/clients/*`, capture: ["client"], partialMatch: false },
-    { type: "module", pattern: `${src}/modules/*`, capture: ["module"], partialMatch: false },
+    { type: "app", pattern: at(L.app), partialMatch: false },
+    { type: "ui", pattern: at(L.ui), partialMatch: false },
+    { type: "shared", pattern: at(L.shared), partialMatch: false },
+    { type: "db", pattern: at(L.db), partialMatch: false },
+    { type: "client", pattern: at(`${L.clients}/*`), capture: ["client"], partialMatch: false },
+    { type: "module", pattern: at(`${L.modules}/*`), capture: ["module"], partialMatch: false },
   ];
 
   const files = [
-    { pattern: doors.map((d) => `${src}/modules/*/${d}`), category: "door" },
+    { pattern: doors.map((d) => at(`${L.modules}/*/${d}`)), category: "door" },
     { pattern: "**/*.tables.ts", category: "tables" },
     { pattern: "**/*.repository.ts", category: "repository" },
     { pattern: "**/*.service.ts", category: "service" },
     { pattern: "**/*.rules.ts", category: "rules" },
-    { pattern: `${src}/modules/*/components/**`, category: "component" },
-    { pattern: `${src}/clients/*/providers/**`, category: "provider" },
-    { pattern: `${src}/db/**`, category: "db" },
-    { pattern: `${src}/shared/{db,auth,env,access}.ts`, category: "shared-server" },
+    { pattern: at(`${L.modules}/*/components/**`), category: "component" },
+    { pattern: at(`${L.clients}/*/providers/**`), category: "provider" },
+    { pattern: at(`${L.db}/**`), category: "db" },
+    { pattern: L.serverShared.map(at), category: "shared-server" },
     // allowed root files (for example proxy.ts): classified, so nothing else sits loose in src
     ...arch.roots.map((file) => ({ pattern: `${src}/${file}`, category: "root" })),
   ];
@@ -161,7 +164,7 @@ export function buildBoundariesConfig(arch, options = {}) {
     // Declared read exceptions: one reader FILE, one owner module's tables (names are checked
     // by the architecture tests; an import check cannot tell a read from a write).
     ...arch.readExceptions.flatMap((x) => {
-      const reader = moduleOf(x.file);
+      const reader = moduleOf(arch, x.file);
       const owner = arch.tables[x.table];
       if (!reader || !owner || !allowedTargets(arch, reader).includes(owner)) return [];
       return [
@@ -173,7 +176,7 @@ export function buildBoundariesConfig(arch, options = {}) {
     }),
     // Historical debt: exact (file -> file) pairs from the shared baseline. Additions are refused
     // by the baseline-shrinks check; multiplicity is enforced by the architecture tests.
-    ...baselinedDependencies(options.baseline ?? []).map(({ file, target }) => ({
+    ...baselinedDependencies(options.baseline ?? [], src).map(({ file, target }) => ({
       from: { file: { path: file } },
       allow: { to: { file: { path: target } } },
     })),

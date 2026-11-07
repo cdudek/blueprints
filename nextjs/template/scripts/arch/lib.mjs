@@ -10,9 +10,14 @@ export const BLUEPRINT_VERSION = "1.0.0";
  * @typedef {{ file: string, table: string, reason: string }} ReadException
  * @typedef {{ path: string, rules: string[], reason: string }} Exemption
  * @typedef {{
+ *   app?: string, modules?: string, ui?: string, shared?: string, db?: string, clients?: string,
+ *   dbClient?: string, schemaRoot?: string, serverShared?: string[], resultFile?: string,
+ * }} LayoutBlock
+ * @typedef {{
  *   $schemaVersion: string,
  *   version: 1,
  *   srcRoot: string,
+ *   layout?: LayoutBlock,
  *   doors: Record<string, "browser" | "server">,
  *   roots: string[],
  *   modules: Record<string, { description: string }>,
@@ -44,8 +49,34 @@ export const moduleNames = (arch) => Object.keys(arch.modules);
 export const allowedTargets = (arch, name) =>
   arch.edges.filter((e) => e.from === name).map((e) => e.to);
 
-/** The module a file path belongs to (src/modules/<name>/...), or null. @param {string} file */
-export const moduleOf = (file) => /(?:^|\/)modules\/([^/]+)\//.exec(file)?.[1] ?? null;
+/**
+ * Where each folder of the blueprint lives, relative to srcRoot. The optional `layout` block of
+ * architecture.json overrides any key; a key left out keeps the 1.0.0 path.
+ * @param {Architecture} arch @returns {Required<LayoutBlock>}
+ */
+export function layoutOf(arch) {
+  const l = arch.layout ?? {};
+  return {
+    app: l.app ?? "app",
+    modules: l.modules ?? "modules",
+    ui: l.ui ?? "ui",
+    shared: l.shared ?? "shared",
+    db: l.db ?? "db",
+    clients: l.clients ?? "clients",
+    /** the database client: the one transaction gateway */
+    dbClient: l.dbClient ?? "db/index.ts",
+    /** the persistence composition root */
+    schemaRoot: l.schemaRoot ?? "db/schema.ts",
+    /** shared files that are server-only */
+    serverShared: l.serverShared ?? ["shared/auth.ts", "shared/env.ts", "shared/access.ts"],
+    /** the one shared file a rules file may import: the Result type */
+    resultFile: l.resultFile ?? "shared/result.ts",
+  };
+}
+
+/** The module a file path belongs to (<srcRoot>/<modules>/<name>/...), or null. @param {Architecture} arch @param {string} file */
+export const moduleOf = (arch, file) =>
+  new RegExp(`(?:^|/)${arch.srcRoot}/${layoutOf(arch).modules}/([^/]+)/`).exec(file)?.[1] ?? null;
 
 /** Door file names, optionally of one role. @param {Architecture} arch @param {"browser" | "server"} [role] */
 export const doorFiles = (arch, role) =>
