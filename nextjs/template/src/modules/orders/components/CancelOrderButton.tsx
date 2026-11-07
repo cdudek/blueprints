@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button } from "@/ui";
+import { Button } from "@/ui/Button";
+import { IconX } from "@/ui/icons";
 import type { CancelOrderResponse } from "../order.types";
 
 const MESSAGES: Record<Extract<CancelOrderResponse, { ok: false }>["error"], string> = {
@@ -31,7 +32,7 @@ export function CancelOrderButton({ orderId, action }: Props) {
           })
         }
       >
-        Cancel
+        <IconX /> Cancel
       </Button>
       {error ? <span role="alert">{error}</span> : null}
     </>

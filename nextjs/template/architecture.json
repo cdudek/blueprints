@@ -43,5 +43,13 @@
     "drizzle-orm/postgres-js",
     "drizzle-orm/pglite"
   ],
-  "rulesMayImport": ["zod"]
+  "rulesMayImport": ["zod"],
+  "uiMayImport": ["react", "react-dom", "next/link", "next/image"],
+  "iconPackages": [],
+  "bannedPackages": {
+    "axios": "Next.js extends fetch with caching; external HTTP goes through a port in src/clients with an injected fetch",
+    "redux": "server state lives in Server Components and actions; client state in useState, useReducer or the URL",
+    "@reduxjs/toolkit": "server state lives in Server Components and actions; client state in useState, useReducer or the URL",
+    "react-redux": "server state lives in Server Components and actions; client state in useState, useReducer or the URL"
+  }
 }

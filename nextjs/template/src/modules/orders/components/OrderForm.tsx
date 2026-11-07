@@ -1,7 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button, Input } from "@/ui";
+import { Button } from "@/ui/Button";
+import { IconCheck } from "@/ui/icons";
+import { Input } from "@/ui/Input";
 import type { PlaceOrderResponse } from "../order.types";
 
 // The UI branches on the kind of failure, not on a message string.
@@ -33,7 +35,11 @@ export function OrderForm({ checkoutId, action }: Props) {
         Place order
       </Button>
       {state && !state.ok ? <p role="alert">{MESSAGES[state.error]}</p> : null}
-      {state?.ok ? <p role="status">Order placed</p> : null}
+      {state?.ok ? (
+        <p role="status">
+          <IconCheck /> Order placed
+        </p>
+      ) : null}
     </form>
   );
 }

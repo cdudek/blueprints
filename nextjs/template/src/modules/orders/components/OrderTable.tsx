@@ -1,5 +1,5 @@
 import { PriceTag } from "@/modules/billing/public";
-import { Badge } from "@/ui";
+import { Badge } from "@/ui/Badge";
 import type { CancelOrderResponse, OrderRow } from "../order.types";
 import { CancelOrderButton } from "./CancelOrderButton";
 

@@ -1,4 +1,4 @@
-import { Text } from "@/ui";
+import { Text } from "@/ui/Text";
 
 const format = new Intl.NumberFormat("en", { style: "currency", currency: "EUR" });
 

@@ -13,3 +13,16 @@
   --space-3: 16px;
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
+
+/* Dark theme: the operating system's preference, or data-theme="dark" on <html> to force it. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #0b0f17;
+    --color-fg: #e5e7eb;
+    --color-muted: #9ca3af;
+    --color-border: #374151;
+    --color-accent: #60a5fa;
+    --color-accent-fg: #0b0f17;
+    --color-danger: #f87171;
+  }
+}
