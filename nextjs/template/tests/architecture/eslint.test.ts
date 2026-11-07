@@ -246,6 +246,55 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
       "composition importing an action",
     ],
     [
+      "src/ui/UsesShared.tsx",
+      "boundaries/dependencies",
+      /src\/ui is the project's design system and a leaf/,
+      "ui importing shared",
+    ],
+    [
+      "src/ui/ServerThing.tsx",
+      "no-restricted-imports",
+      /uiMayImport/,
+      "ui importing a package outside uiMayImport",
+    ],
+    ["src/ui/Gallery.tsx", "no-restricted-imports", /A story is an entry/, "importing a story"],
+    [
+      "src/app/themed/page.tsx",
+      "no-restricted-syntax",
+      /Render providers in/,
+      "a page rendering a provider",
+    ],
+    [
+      "src/app/orders/layout.tsx",
+      "boundaries/dependencies",
+      /Only a root layout/,
+      "a nested layout rendering the providers file",
+    ],
+    [
+      "src/app/styled/page.tsx",
+      "no-restricted-imports",
+      /Global CSS has two owners/,
+      "a page importing global CSS",
+    ],
+    [
+      "src/modules/orders/components/WithIcon.tsx",
+      "no-restricted-imports",
+      /Import icons from @\/ui\/icons/,
+      "an icon package outside the icon door",
+    ],
+    [
+      "src/modules/catalog/public.ts",
+      "no-restricted-syntax",
+      /A door is not a client boundary/,
+      "a door with a client directive",
+    ],
+    [
+      "src/modules/billing/uses-axios.ts",
+      "no-restricted-imports",
+      /axios is banned here/,
+      "a banned package",
+    ],
+    [
       "src/escape.ts",
       "boundaries/no-unknown-files",
       /does not match any file pattern/,
@@ -264,10 +313,16 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
 
   it("fails for the intended rule family only", async () => {
     const lint = await lintWith();
-    for (const [file, ruleId] of mustFail) {
-      const family = ruleId.startsWith("boundaries/") ? "boundaries/" : ruleId;
+    const familyOf = (ruleId: string) =>
+      ruleId.startsWith("boundaries/") ? "boundaries/" : ruleId;
+    for (const [file] of mustFail) {
+      // a file may carry violations of several families on purpose; each has its own row
+      const families = mustFail.filter(([f]) => f === file).map(([, r]) => familyOf(r));
       const others = (await lint(file)).filter(
-        (m) => m.ruleId && !m.ruleId.startsWith(family) && !m.ruleId.startsWith("no-restricted"),
+        (m) =>
+          m.ruleId &&
+          !families.some((f) => m.ruleId!.startsWith(f)) &&
+          !m.ruleId.startsWith("no-restricted"),
       );
       expect(
         others.map((m) => m.ruleId),
@@ -290,6 +345,14 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
     "src/shared/auth.ts",
     "src/worker.ts",
     "src/app/_shell/Frame.tsx",
+    "src/ui/Card.tsx",
+    "src/ui/ThemeProvider.tsx",
+    "src/app/_shell/providers.tsx",
+    "src/app/layout.tsx",
+    "src/app/(shop)/layout.tsx",
+    "src/modules/orders/components/Styled.tsx",
+    "src/ui/icons/index.ts",
+    "src/ui/Button.stories.tsx",
   ])("stays quiet on the clean file %s", async (file) => {
     const lint = await lintWith();
     expect(await lint(file)).toEqual([]);

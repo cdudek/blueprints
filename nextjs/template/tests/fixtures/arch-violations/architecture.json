@@ -26,6 +26,9 @@
     },
     "phantom": {
       "description": "declared, no files"
+    },
+    "catalog": {
+      "description": "a door with a client directive"
     }
   },
   "sessionModule": "ledger",
@@ -65,5 +68,15 @@
   ],
   "rulesMayImport": [
     "zod"
-  ]
+  ],
+  "uiMayImport": [
+    "react",
+    "lucide-react"
+  ],
+  "iconPackages": [
+    "lucide-react"
+  ],
+  "bannedPackages": {
+    "axios": "external HTTP goes through a port in clients/ with an injected fetch"
+  }
 }

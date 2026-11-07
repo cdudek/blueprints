@@ -249,12 +249,41 @@
         "worker": {
           "$ref": "#/definitions/path",
           "description": "The worker process's entry point. Default: worker.ts"
+        },
+        "providers": {
+          "$ref": "#/definitions/path",
+          "description": "The one file that composes providers. Default: app/_shell/providers.tsx"
         }
       }
     },
     "sessionModule": {
       "description": "Optional. The module that reads the signed-in session (accounts in the template). Reading the session is not a workflow step, so the workflow check does not count it.",
       "$ref": "#/definitions/name"
+    },
+    "uiMayImport": {
+      "description": "Optional. The packages (and their subpaths) src/ui may import. Absent: any package; src/ui still imports no module, shared, client, db or app file.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "iconPackages": {
+      "description": "Optional. Icon packages, imported only under ui/icons/ (the icon door).",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "bannedPackages": {
+      "description": "Optional. Package name -> the reason it is not used here. Neither a dependency in package.json nor an import may name it.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/reason"
+      }
     }
   },
   "x-schemaVersion": "1.0.0"

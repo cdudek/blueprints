@@ -40,6 +40,7 @@ describe("layout defaults", () => {
       workflows: "app/_workflows",
       compositionFolders: ["_shell", "_components"],
       worker: "worker.ts",
+      providers: "app/_shell/providers.tsx",
     });
   });
 

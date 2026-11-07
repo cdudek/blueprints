@@ -13,8 +13,8 @@
 //      decide: purity of globals, transaction discipline, access policies, door contents.
 // eslint-plugin-boundaries (generated from the same file) gives editor feedback on dependencies.
 import { builtinModules } from "node:module";
-import { readFileSync } from "node:fs";
-import { isAbsolute, join, relative } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, isAbsolute, join, normalize, relative } from "node:path";
 import { projectFiles, type FileInfo, type Violation } from "archunit";
 import ts from "typescript";
 import {
@@ -184,6 +184,32 @@ function headerBlock(sf: ts.SourceFile): string {
     .join("\n");
 }
 
+/** A relative specifier joined onto the folder of the file that wrote it, posix. */
+const posixJoin = (from: string, specifier: string) =>
+  posix(normalize(join(dirname(from), specifier)));
+
+/** Where the folders of a layer-first tree belong instead (roots-classified). */
+const LAYER_HINTS: Record<string, string> = {
+  hooks:
+    "a generic hook goes to ui/hooks, a domain hook beside its component in modules/<m>/components",
+  contexts:
+    "a generic context lives in ui/, a domain one in its module's components; providers are composed in app/_shell/providers.tsx",
+  providers: "providers are composed once, in app/_shell/providers.tsx",
+  stores:
+    "server state is Server Components plus actions; client state is useState, useReducer or the URL; a client cache stays in one module's components",
+  utils:
+    "a generic helper goes to ui/lib or a named file in shared/, a domain helper to <x>.rules.ts",
+  lib: "a generic helper goes to ui/lib or a named file in shared/, a domain helper to <x>.rules.ts",
+  types: "a type lives in its module's <x>.types.ts, a generic one in shared/",
+  config:
+    "environment values come from shared/env.ts, navigation from app/_shell/nav.ts, a constant from the module that owns it",
+  services: "a service is <x>.service.ts in its module; a vendor sits behind a port in clients/",
+  components:
+    "a component with a business noun goes to its module's components/, one without to ui/, a page part to app/**/_components",
+  common:
+    "a component with a business noun goes to its module's components/, one without to ui/, a page part to app/**/_components",
+};
+
 const graphs = new WeakMap<Ctx, Graph>();
 const graphOf = (ctx: Ctx) => {
   let g = graphs.get(ctx);
@@ -206,6 +232,8 @@ export function buildRules(arch: Architecture): ArchRule[] {
   const CLIENTS = at(L.clients);
   const moduleOf = (file: string) => moduleOfIn(arch, file);
   const modulePath = (name: string) => `${M}/${name}/**`;
+  /** the import specifier of a folder or file under srcRoot */
+  const spec = (p: string) => `@/${p.replace(/(\/index)?\.tsx?$/, "")}`;
   const modules = moduleNames(arch);
   const doorNames = doorFiles(arch);
   const serverDoorNames = doorFiles(arch, "server");
@@ -442,8 +470,9 @@ export function buildRules(arch: Architecture): ArchRule[] {
                   rule: "roots-classified",
                   file: f,
                   target: top ?? f,
-                  message:
-                    "this file fits no declared root: move it or declare it in architecture.json",
+                  message: `this file fits no declared root: ${
+                    LAYER_HINTS[top ?? ""] ?? "move it or declare it in architecture.json"
+                  }`,
                 },
               ];
         });
@@ -614,6 +643,9 @@ export function buildRules(arch: Architecture): ArchRule[] {
                 const problems: Problem[] = [];
                 for (const stmt of sf.statements) {
                   if (ts.isImportDeclaration(stmt) && !stmt.importClause) continue; // import "server-only"
+                  // a directive is judged by doors-no-client-directive
+                  if (ts.isExpressionStatement(stmt) && ts.isStringLiteral(stmt.expression))
+                    continue;
                   if (
                     !ts.isExportDeclaration(stmt) ||
                     !stmt.moduleSpecifier ||
@@ -768,43 +800,188 @@ export function buildRules(arch: Architecture): ArchRule[] {
     },
     // ---------------------------------------------------------------- ui, shared, app, components
     {
-      id: "ui-no-modules",
+      id: "ui-leaf",
       description:
-        "src/ui never imports modules (it is the project's own design system: no business nouns)",
+        "src/ui is a leaf: it imports only src/ui and the packages in uiMayImport, never a module, shared, client, db or app file",
       nonNegotiable: 10,
-      check: (ctx) =>
-        forbid(
-          ctx,
-          "ui-no-modules",
-          { path: `${UI}/**` },
-          { path: modulePath("*") },
-          "src/ui has no business nouns",
-        ),
+      async check(ctx) {
+        const g = graphOf(ctx);
+        const allowedPackage = (p: string) =>
+          !arch.uiMayImport || arch.uiMayImport.some((a) => p === a || p.startsWith(`${a}/`));
+        return g.edges
+          .filter((e) => e.from.startsWith(`${UI}/`))
+          .flatMap((e) => {
+            let why: string | null = null;
+            if (!e.external) {
+              if (!e.to.startsWith(`${UI}/`))
+                why = moduleOf(e.to)
+                  ? "src/ui has no business nouns: it never imports a module"
+                  : `src/ui is a leaf: it never imports ${e.to}`;
+            } else if (e.specifier.startsWith(".")) {
+              // a stylesheet or asset beside the component: it must stay inside src/ui
+              const to = posixJoin(e.from, e.specifier);
+              if (!to.startsWith(`${UI}/`)) why = `src/ui is a leaf: it never imports ${to}`;
+            } else if (isBuiltin(e.to) || !allowedPackage(e.to))
+              why = `src/ui imports only the packages in uiMayImport, not ${e.to}`;
+            return why ? [{ rule: "ui-leaf", file: e.from, target: e.to, message: why }] : [];
+          });
+      },
     },
     {
-      id: "ui-no-server",
-      description: "src/ui never imports clients, db, auth, env, access, server-only or app code",
+      id: "providers-composed-once",
+      description:
+        "Providers are rendered in one file (layout.providers), which only root layouts import; src/ui and module components may define them",
       nonNegotiable: 10,
-      neverBaseline: true,
       async check(ctx) {
-        const banned = [`${CLIENTS}/**`, `${APP}/**`, db, ...sharedServer];
-        const deps = await Promise.all(
-          banned.map((to) =>
-            forbid(
-              ctx,
-              "ui-no-server",
-              { path: `${UI}/**` },
-              { path: to },
-              "src/ui never imports server code",
+        const g = graphOf(ctx);
+        const providers = at(L.providers);
+        const rootLayout = new RegExp(`^${APP}/(?:(?:\\([^/]+\\)|\\[[^/]+\\])/)*layout\\.tsx$`);
+        const mayDefine = (f: string) =>
+          f === providers ||
+          f.startsWith(`${UI}/`) ||
+          new RegExp(`^${M}/[^/]+/components/`).test(f);
+        const findings: Finding[] = [];
+        for (const [file, sf] of g.sources) {
+          if (mayDefine(file) || !file.endsWith(".tsx")) continue;
+          walk(sf, (n) => {
+            if (!(ts.isJsxOpeningElement(n) || ts.isJsxSelfClosingElement(n))) return;
+            const tag = n.tagName.getText(sf);
+            if (/Provider$/.test(tag))
+              findings.push({
+                rule: "providers-composed-once",
+                file,
+                target: tag,
+                message: `render ${tag} in ${providers}, the one place providers are composed`,
+              });
+          });
+        }
+        for (const e of g.edges)
+          if (e.to === providers && !rootLayout.test(e.from))
+            findings.push({
+              rule: "providers-composed-once",
+              file: e.from,
+              target: e.to,
+              message: `only a root layout renders ${providers}`,
+            });
+        return findings;
+      },
+    },
+    {
+      id: "icons-one-door",
+      description: "Icon packages (iconPackages) are imported only under ui/icons, the icon door",
+      async check(ctx) {
+        const icons = arch.iconPackages ?? [];
+        return graphOf(ctx)
+          .edges.filter(
+            (e) =>
+              e.external &&
+              icons.some((p) => e.to === p || e.to.startsWith(`${p}/`)) &&
+              !e.from.startsWith(`${UI}/icons/`),
+          )
+          .map((e) => ({
+            rule: "icons-one-door",
+            file: e.from,
+            target: e.to,
+            message: `import icons from ${spec(`${L.ui}/icons`)}, the one place ${e.to} is imported`,
+          }));
+      },
+    },
+    {
+      id: "global-css-owners",
+      description:
+        "A global stylesheet (.css, not .module.css) is imported only in src/ui and root layouts",
+      async check(ctx) {
+        const rootLayout = new RegExp(`^${APP}/(?:(?:\\([^/]+\\)|\\[[^/]+\\])/)*layout\\.tsx$`);
+        return graphOf(ctx)
+          .edges.filter(
+            (e) =>
+              /\.css$/.test(e.specifier) &&
+              !/\.module\.css$/.test(e.specifier) &&
+              !e.from.startsWith(`${UI}/`) &&
+              !rootLayout.test(e.from),
+          )
+          .map((e) => ({
+            rule: "global-css-owners",
+            file: e.from,
+            target: e.specifier,
+            message:
+              "global CSS has two owners, src/ui and the root layout: use a ui component or a .module.css here",
+          }));
+      },
+    },
+    {
+      id: "doors-no-client-directive",
+      description:
+        'No door carries "use client": not a module door, not the icon door (it would make every re-export client code)',
+      nonNegotiable: 2,
+      async check(ctx) {
+        const doors = [...modules.flatMap((m) => door(m)), `${UI}/icons/index.ts`];
+        const results = await Promise.all(
+          doors.map((path) =>
+            content(ctx, "doors-no-client-directive", { path }, (sf) =>
+              hasDirective(sf, "use client")
+                ? [
+                    {
+                      target: "use client",
+                      message:
+                        'a door is not a client boundary: put "use client" on the component file that needs it',
+                    },
+                  ]
+                : [],
             ),
           ),
         );
-        const serverOnly = await content(ctx, "ui-no-server", { path: `${UI}/**` }, (sf) =>
-          specifiers(sf).includes("server-only")
-            ? [{ target: "server-only", message: "src/ui never imports server code" }]
-            : [],
-        );
-        return [...deps.flat(), ...serverOnly];
+        return results.flat();
+      },
+    },
+    {
+      id: "banned-packages",
+      description: "No dependency or import names a package in bannedPackages",
+      async check(ctx) {
+        const banned = Object.entries(arch.bannedPackages ?? {});
+        if (!banned.length) return [];
+        const hit = (name: string) => banned.find(([b]) => name === b || name.startsWith(`${b}/`));
+        const findings: Finding[] = [];
+        const pkgFile = join(ctx.root, "package.json");
+        if (existsSync(pkgFile)) {
+          const pkg = JSON.parse(readFileSync(pkgFile, "utf8"));
+          for (const name of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })) {
+            const b = hit(name);
+            if (b)
+              findings.push({
+                rule: "banned-packages",
+                file: "package.json",
+                target: name,
+                message: `${name} is banned here: ${b[1]}`,
+              });
+          }
+        }
+        for (const e of graphOf(ctx).edges) {
+          const b = e.external ? hit(e.to) : undefined;
+          if (b)
+            findings.push({
+              rule: "banned-packages",
+              file: e.from,
+              target: e.to,
+              message: `${e.to} is banned here: ${b[1]}`,
+            });
+        }
+        return findings;
+      },
+    },
+    {
+      id: "stories-leaf",
+      description:
+        "Nothing imports a story (*.stories.*): stories are tooling entries, never production code",
+      async check(ctx) {
+        return graphOf(ctx)
+          .edges.filter((e) => !e.external && /\.stories\.[jt]sx?$/.test(e.to))
+          .map((e) => ({
+            rule: "stories-leaf",
+            file: e.from,
+            target: e.to,
+            message: "a story is an entry for Storybook, never imported by production code",
+          }));
       },
     },
     {

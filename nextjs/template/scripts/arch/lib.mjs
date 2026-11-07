@@ -12,7 +12,7 @@ export const BLUEPRINT_VERSION = "1.0.0";
  * @typedef {{
  *   app?: string, modules?: string, ui?: string, shared?: string, db?: string, clients?: string,
  *   dbClient?: string, schemaRoot?: string, serverShared?: string[], resultFile?: string,
- *   workflows?: string, compositionFolders?: string[], worker?: string,
+ *   workflows?: string, compositionFolders?: string[], worker?: string, providers?: string,
  * }} LayoutBlock
  * @typedef {{
  *   $schemaVersion: string,
@@ -30,6 +30,9 @@ export const BLUEPRINT_VERSION = "1.0.0";
  *   serverOnlyPackages: string[],
  *   rulesMayImport: string[],
  *   sessionModule?: string,
+ *   uiMayImport?: string[],
+ *   iconPackages?: string[],
+ *   bannedPackages?: Record<string, string>,
  * }} Architecture
  */
 
@@ -79,6 +82,8 @@ export function layoutOf(arch) {
     compositionFolders: l.compositionFolders ?? ["_shell", "_components"],
     /** the worker process's entry point, a root that may call job operations (1.1.0) */
     worker: l.worker ?? "worker.ts",
+    /** the one file that composes providers, rendered by root layouts only (1.1.0) */
+    providers: l.providers ?? "app/_shell/providers.tsx",
   };
 }
 

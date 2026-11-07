@@ -7,6 +7,11 @@ import { allowedTargets, doorFiles, layoutOf, moduleNames, moduleOf } from "./li
 
 const SHARED_NO_IO =
   "src/shared does no I/O: read the session or the database in a module (accounts), not here";
+const STORIES = "A story is an entry for Storybook, never imported by production code";
+const GLOBAL_CSS =
+  "Global CSS has two owners, src/ui and the root layout: use a ui component or a .module.css";
+const PROVIDERS = "Render providers in app/_shell/providers.tsx, the one place they are composed";
+const PROVIDERS_IMPORT = "Only a root layout renders the providers file";
 const PURE = "Rules are pure: pass time, randomness and config in from the service";
 const BANNED_GLOBALS = [
   "fetch",
@@ -72,6 +77,15 @@ export function buildBoundariesConfig(arch, options = {}) {
       pattern: L.compositionFolders.map((c) => at(`${L.app}/**/${c}/**`)),
       category: "composition",
     },
+    { pattern: at(L.providers), category: "providers" },
+    {
+      pattern: [
+        at(`${L.app}/layout.tsx`),
+        at(`${L.app}/\\(*\\)/layout.tsx`),
+        at(`${L.app}/\\[*\\]/layout.tsx`),
+      ],
+      category: "root-layout",
+    },
     { pattern: "**/*.tables.ts", category: "tables" },
     { pattern: "**/*.repository.ts", category: "repository" },
     { pattern: "**/*.service.ts", category: "service" },
@@ -79,7 +93,6 @@ export function buildBoundariesConfig(arch, options = {}) {
     { pattern: at(`${L.modules}/*/components/**`), category: "component" },
     { pattern: at(`${L.clients}/*/providers/**`), category: "provider" },
     { pattern: at(`${L.db}/**`), category: "db" },
-    { pattern: L.serverShared.map(at), category: "shared-server" },
     // allowed root files (for example proxy.ts): classified, so nothing else sits loose in src;
     // the worker is the one root that may call operations
     ...arch.roots.map((file) => ({
@@ -156,15 +169,13 @@ export function buildBoundariesConfig(arch, options = {}) {
     },
     {
       from: type("ui"),
-      disallow: { to: { element: { types: ["module", "client", "app", "db"] } } },
+      disallow: { to: { element: { types: ["module", "client", "app", "db", "shared"] } } },
       message:
-        "src/ui is the project's design system: it never imports modules, clients, db or app code",
+        "src/ui is the project's design system and a leaf: it never imports modules, shared, clients, db or app code",
     },
-    {
-      from: type("ui"),
-      disallow: { to: category("shared-server") },
-      message: "src/ui never imports server code (db, auth, env)",
-    },
+    // the providers file is rendered by root layouts only
+    { disallow: { to: category("providers") }, message: PROVIDERS_IMPORT },
+    { from: category("root-layout"), allow: { to: category("providers") } },
     {
       from: type("shared"),
       disallow: { to: { element: { types: ["module", "app", "db"] } } },
@@ -215,6 +226,78 @@ export function buildBoundariesConfig(arch, options = {}) {
     })),
   ];
 
+  // Import bans. ESLint keeps one option set per rule and file, so each file group gets the
+  // whole list that applies to it, built from the same parts.
+  const escape = (/** @type {string} */ t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  /** @typedef {{ paths?: object[], patterns?: object[] }} Ban */
+  /** @param {{ name: string, message: string }[]} names @returns {Ban} */
+  const packages = (names) => ({
+    paths: names,
+    patterns: names.map(({ name, message }) => ({ group: [`${name}/*`], message })),
+  });
+  const banned = packages(
+    Object.entries(arch.bannedPackages ?? {}).map(([name, reason]) => ({
+      name,
+      message: `${name} is banned here: ${reason}`,
+    })),
+  );
+  const stories = {
+    patterns: [{ regex: "\\.stories(\\.[jt]sx?)?$", message: STORIES }],
+  };
+  const icons = packages(
+    (arch.iconPackages ?? []).map((name) => ({
+      name,
+      message: `Import icons from @/${L.ui}/icons, the one place ${name} is imported`,
+    })),
+  );
+  const css = { patterns: [{ regex: "^(?!.*\\.module\\.css$).*\\.css$", message: GLOBAL_CSS }] };
+  const sharedIo = packages(
+    arch.serverOnlyPackages
+      .filter((p) => p !== "server-only")
+      .map((name) => ({ name, message: SHARED_NO_IO })),
+  );
+  const uiPackages = arch.uiMayImport
+    ? {
+        patterns: [
+          {
+            regex: `^(?!(?:\\.|@/${escape(L.ui)}/|(?:${arch.uiMayImport.map(escape).join("|")})(?:/|$)))`,
+            message: `src/ui is a leaf: it imports only src/ui and ${arch.uiMayImport.join(", ")} (uiMayImport)`,
+          },
+        ],
+      }
+    : {};
+  const pure = {
+    patterns: [
+      { group: ["next", "next/*", "react", "react-dom", "server-only", "node:*"], message: PURE },
+    ],
+  };
+  /** @param {Ban[]} parts */
+  const bans = (...parts) => [
+    "error",
+    {
+      paths: parts.flatMap((p) => p.paths ?? []),
+      patterns: parts.flatMap((p) => p.patterns ?? []),
+    },
+  ];
+  const general = [banned, stories];
+  const rootLayouts = [
+    at(`${L.app}/layout.tsx`),
+    at(`${L.app}/\\(*\\)/layout.tsx`),
+    at(`${L.app}/\\[*\\]/layout.tsx`),
+  ];
+  const importBans = [
+    { files: [`${src}/**/*.{ts,tsx}`], bans: bans(...general, icons, css) },
+    { files: rootLayouts, bans: bans(...general, icons) },
+    { files: [at(`${L.shared}/**/*.{ts,tsx}`)], bans: bans(...general, icons, css, sharedIo) },
+    { files: [at(`${L.ui}/**/*.{ts,tsx}`)], bans: bans(...general, icons, uiPackages) },
+    { files: [at(`${L.ui}/icons/**/*.{ts,tsx}`)], bans: bans(...general, uiPackages) },
+  ].map(({ files, bans: rule }, i) => ({
+    name: `architecture/import-bans-${i}`,
+    files,
+    ignores: [`${src}/**/*.test.{ts,tsx}`],
+    rules: { "no-restricted-imports": rule },
+  }));
+
   return [
     {
       name: "architecture/boundaries",
@@ -235,38 +318,12 @@ export function buildBoundariesConfig(arch, options = {}) {
         "boundaries/no-unknown-dependencies": "error",
       },
     },
-    {
-      name: "architecture/shared-no-io",
-      files: [at(`${L.shared}/**/*.{ts,tsx}`)],
-      rules: {
-        "no-restricted-imports": [
-          "error",
-          {
-            paths: arch.serverOnlyPackages
-              .filter((p) => p !== "server-only")
-              .map((name) => ({ name, message: SHARED_NO_IO })),
-            patterns: arch.serverOnlyPackages
-              .filter((p) => p !== "server-only")
-              .map((p) => ({ group: [`${p}/*`], message: SHARED_NO_IO })),
-          },
-        ],
-      },
-    },
+    ...importBans,
     {
       name: "architecture/rules-purity",
       files: [`${src}/**/*.rules.ts`],
       rules: {
-        "no-restricted-imports": [
-          "error",
-          {
-            patterns: [
-              {
-                group: ["next", "next/*", "react", "react-dom", "server-only", "node:*"],
-                message: PURE,
-              },
-            ],
-          },
-        ],
+        "no-restricted-imports": bans(general, css, pure),
         "no-restricted-globals": [
           "error",
           ...BANNED_GLOBALS.map((name) => ({ name, message: PURE })),
@@ -284,6 +341,32 @@ export function buildBoundariesConfig(arch, options = {}) {
           },
           { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: PURE },
           { selector: "VariableDeclarator[init.name='Date']", message: PURE },
+        ],
+      },
+    },
+    {
+      name: "architecture/providers-composed-once",
+      files: [at(`${L.app}/**/*.tsx`)],
+      ignores: [at(L.providers)],
+      rules: {
+        "no-restricted-syntax": [
+          "error",
+          { selector: "JSXOpeningElement[name.name=/Provider$/]", message: PROVIDERS },
+          { selector: "JSXOpeningElement[name.property.name=/Provider$/]", message: PROVIDERS },
+        ],
+      },
+    },
+    {
+      name: "architecture/doors-no-client-directive",
+      files: [...doors.map((d) => at(`${L.modules}/*/${d}`)), at(`${L.ui}/icons/index.ts`)],
+      rules: {
+        "no-restricted-syntax": [
+          "error",
+          {
+            selector: "Program > ExpressionStatement[directive='use client']",
+            message:
+              'A door is not a client boundary: put "use client" on the component file that needs it',
+          },
         ],
       },
     },

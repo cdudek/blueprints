@@ -110,7 +110,7 @@ export { ${P}List } from "./components/${P}List";
 export { create${P}Schema, type Create${P}Input } from "./${s}.schema";
 export type { ${P}, ${P}Row } from "./${s}.types";
 `,
-  [`components/${P}List.tsx`]: `import { Text } from "${spec(L.ui)}";
+  [`components/${P}List.tsx`]: `import { Text } from "${spec(L.ui)}/Text";
 import type { ${P}Row } from "../${s}.types";
 
 // Business component: knows the ${s} type, is built from src/ui, gets its data through props.
