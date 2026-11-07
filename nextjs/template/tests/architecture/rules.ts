@@ -3,7 +3,7 @@
 // tree (architecture.test.ts) and the deliberate-violation fixtures (fixtures.test.ts).
 //
 // Three views of the code, because each has blind spots (the coverage matrix is in
-// ARCHITECTURE.md section 11):
+// ARCHITECTURE.md section 13):
 //   1. ArchUnitTS: precise folder-to-folder rules and cycles over top-level `import … from`.
 //      It cannot see `export … from`, dynamic import() or node_modules.
 //   2. A TypeScript-resolved graph (graph.ts): imports, re-exports, literal dynamic imports,
@@ -44,7 +44,7 @@ export type Finding = { rule: string; file: string; target: string; message: str
 export type ArchRule = {
   id: string;
   description: string;
-  /** Number in ARCHITECTURE.md section 12. */
+  /** Number in ARCHITECTURE.md section 14. */
   nonNegotiable?: number;
   /**
    * Never admitted to a baseline, even in a brownfield repo: leaking server code or secrets into

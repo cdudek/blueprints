@@ -82,7 +82,7 @@ drizzle/                     migrations, including a reviewed custom foreign-key
 ## Decisions D1 to D18
 
 Each row names the file that implements the decision and the check that enforces it. Rows marked
-**documentation only** have no mechanical check; the coverage matrix in `ARCHITECTURE.md` section 11
+**documentation only** have no mechanical check; the coverage matrix in `ARCHITECTURE.md` section 13
 says which parts of each rule are review obligations.
 
 | #   | Decision                                                                            | Implemented in                                                                                  | Enforced by                                                                                           |
@@ -99,7 +99,7 @@ says which parts of each rule are review obligations.
 | D10 | Flat modules; purity and UI/persistence separation                                  | module folder layout; `src/ui`                                                                  | `ui-no-server`, `components-no-persistence`, `rules-pure-closure`                                     |
 | D11 | Declared acyclic edges, for both doors                                              | `edges` in `architecture.json`                                                                  | `declared-edges-complete`, `no-cycles-complete` (re-export cycles included); fixtures                 |
 | D12 | Baselines per occurrence; may only shrink; leaks never baselined                    | `quality/*.json`, `scripts/quality/{baseline,baseline-shrinks,baseline-rename}.mjs`             | `pnpm arch:baseline` (merge base, fails closed in CI); `gates.test.ts`; eslint admission test         |
-| D13 | Pilot, then reuse through the template                                              | `ARCHITECTURE.md` section 17, `CHANGELOG.md`                                                    | **documentation only**, plus the version check between policy file and scripts                        |
+| D13 | Pilot, then reuse through the template                                              | `ARCHITECTURE.md` section 19, `CHANGELOG.md`                                                    | **documentation only**, plus the version check between policy file and scripts                        |
 | D14 | Named workflows with a four-question header; durable intent                         | `src/app/api/webhooks/payments/route.ts`, `payment_inbox`, `src/app/api/cron/payments/route.ts` | `workflow-header`; worked-slice tests (duplicate, out of order, before linkage, worker)               |
 | D15 | Thin actions; an access policy per operation; typed failures                        | `src/shared/access.ts`, `src/shared/auth.ts`, `src/app/orders/actions.ts`                       | `src/shared/access.test.ts`, `system-operations-from-routes-only`, `access-declared` diagnostic       |
 | D16 | Pass a typed `Tx` for DB-only cross-module writes; never external calls inside      | `src/db/index.ts` (`Tx`, `inTransaction`), `order.service.ts`                                   | `transaction-discipline`; the `Tx` type is a compile-time check; callee use of `tx` is review         |
