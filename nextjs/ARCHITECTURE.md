@@ -158,7 +158,8 @@ The repository root, one job per folder:
 docs/               all prose; docs/architecture.md carries the generated diagram
 drizzle/            generated migrations and reviewed custom ones (cross-module constraints)
 infra/              optional: infrastructure as code when it lives with the app (its README says when not)
-public/             static assets
+messages/           one JSON file per language (en.json is the default), typed keys
+public/             files that need a stable URL (favicon, robots.txt); images are imported beside their component
 quality/            baselines, reviewed renames, reviewed duplication exceptions
 scripts/            ops scripts; scripts/arch/ and scripts/quality/ hold the checks
 services/<name>/    another runtime, one folder each, with its own Dockerfile and contract
@@ -175,13 +176,19 @@ src/
   proxy.ts                         redirects and headers only (middleware.ts before Next 16); imports no module
   instrumentation.ts               OpenTelemetry and onRequestError; imports no module
   worker.ts                        the worker process: a Postgres queue that calls job operations
+  i18n/                            locale routing, request config and navigation (next-intl); no module
   app/                             Next.js only: routing, pages, actions, route handlers
+    _shell/
+      providers.tsx                "use client": the one place providers are composed
+      nav.ts                       routes and their message keys
     _workflows/
       payment-event.ts             a named cross-module workflow with the four-question header
-    orders/
-      page.tsx
-      actions.ts                   "use server": safeParse, call one operation or workflow, revalidate, return a DTO
-      _components/                 composition: ui/ and browser doors only, data through props
+    [locale]/
+      layout.tsx                   root layout: html, providers, messages
+      orders/
+        page.tsx
+        actions.ts                 "use server": safeParse, read the session, call one operation or workflow
+        _components/               composition: ui/ and browser doors only, data and actions through props
     api/webhooks/payments/route.ts verifies the sender, calls one workflow
     api/cron/payments/route.ts     authenticates the scheduler, calls one job operation
     api/health/route.ts            liveness for the platform
@@ -209,7 +216,13 @@ src/
     access.ts                      operation({ access }, fn): the declared access policy of an operation
     result.ts                      Result with typed errors
     env.ts                         the only reader of process.env
-  ui/                              this project's own design system: atoms, generic patterns, tokens
+  ui/                              this project's own design system, a leaf (section 7)
+    Button.tsx Badge.tsx ...       public by file path (@/ui/Button); static ones carry no directive
+    icons/                         Icon, glyphs, index.ts (the icon door)
+    hooks/                         generic browser hooks, no business nouns
+    lib/                           cn() and other pure helpers
+    styles/                        theme.css (tokens), base.css, index.css (imported once by the root layout)
+    *.stories.tsx                  beside the component they show
 ```
 
 **Start flat.** Add subfolders inside a module (for example `rules/` or `domain/`) only when it
@@ -304,23 +317,116 @@ same block. A policy file without the block gets exactly these paths.
 ## 7. UI
 
 **This public template deliberately has no central design system. Each project owns its UI and UX.**
-`src/ui` is that project's own design system: its atoms (Button, Input, Badge, Text), its generic
-patterns and its tokens (CSS custom properties). A company that does keep a central design system
-replaces the contents of `src/ui` with thin wrappers over it; the rules below do not change.
+`src/ui` is that project's own design system: its primitives (Button, Input, Badge, Text), its
+generic patterns, its icons, its hooks and its tokens. A company that does keep a central design
+system replaces the contents of `src/ui` with thin wrappers over it; the rules below do not change.
 
-- **`src/ui` has no business nouns.** It never imports a module, the database, a client, `src/db`,
-  auth, env, `src/app` or `server-only`. It is the one place a visual decision is changed.
-- **Business components** live in `modules/<x>/components/`, are built only from `src/ui`, and know
-  the module's types. A business component that other areas render is exported from the module's
-  `public.ts` (browser-safe, may be a server component). Components never import a repository,
-  tables or the database; data comes through props.
-- **Page composition** lives in `app/`. A page that needs its own components keeps them in a
-  composition folder beside it, `_components/` (parts of one page) or `_shell/` (the frame several
-  pages share). The leading underscore keeps them out of routing. A composition folder imports
-  `src/ui`, browser doors and other composition files only, and gets its data as props from the
-  page: it never calls a server door, `src/shared` or `src/db`.
-- **The placement test:** does the component know a business noun (order, invoice, customer)? No →
-  `src/ui`. Yes → the module. A pattern two modules need and that has no noun moves up into `src/ui`.
+### Where a component goes
+
+| Layer                   | Home                                                 | Rule of thumb                                                     |
+| ----------------------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
+| Tokens                  | `ui/styles/theme.css`                                | semantic names (`--color-accent`), themes override them           |
+| Primitives and patterns | `ui/<Name>.tsx`                                      | no business noun, no copy; text arrives through props or children |
+| Business components     | `modules/<x>/components/`                            | knows the module's types; data and actions arrive as props        |
+| Chrome shared by pages  | `app/_shell/` (`providers.tsx`, `nav.ts`, the frame) | composition: `src/ui`, browser doors, props                       |
+| Parts of one page       | `app/<route>/_components/`                           | composition: `src/ui`, browser doors, props                       |
+| Layouts and pages       | `layout.tsx`, `page.tsx`                             | load data through server doors, read the session, pass props down |
+
+**The placement test:** does the component know a business noun (order, invoice, customer)? No →
+`src/ui`. Yes → the module. A pattern two modules need and that has no noun moves up into `src/ui`.
+
+**Why not the popular layer-first tree.** Top-level `hooks/`, `contexts/`, `stores/`, `utils/`,
+`lib/`, `types/`, `config/`, `providers/` and `components/common` group code by what it is, not by
+what it is for, so every feature is spread across all of them and every folder becomes a junk
+drawer. `roots-classified` refuses them and says where each belongs: a generic hook goes to
+`ui/hooks`, a domain hook beside its component; a context lives with its provider; providers are
+composed once in `app/_shell/providers.tsx`; navigation is `app/_shell/nav.ts`; types live in the
+owning module's `<x>.types.ts`; a constant lives in the module that owns the concept.
+
+### The rules
+
+- **`src/ui` is a leaf** (`ui-leaf`). It imports only `src/ui` and the packages listed in
+  `uiMayImport` (React, `next/link`, `next/image`, the styling helpers and the headless library):
+  never a module, `src/shared`, a client, `src/db` or `src/app`. That keeps it portable: it can
+  move to a workspace package unchanged when a second app needs it.
+- **No barrel.** A component's public path is its file: `import { Button } from "@/ui/Button"`. A
+  `"use client"` barrel would make every re-export client code, and a mixed barrel hides which file
+  is a client boundary. The root layout imports `@/ui/styles/index.css` once.
+- **Client boundaries are per file.** A static primitive (Badge, Text, a styled Button) carries no
+  directive and stays a server component. An interactive one carries `"use client"` on its own
+  file. Interactive primitives take `children` as slots, so the content inside stays
+  server-rendered. A door never carries `"use client"` (`doors-no-client-directive`).
+- **One icon door** (`icons-one-door`). Icons live in `ui/icons`; an icon package listed in
+  `iconPackages` is imported only there, and callers import `@/ui/icons`. Swapping the package is
+  one folder. An icon without a label is decoration (`aria-hidden`).
+- **Providers are composed once** (`providers-composed-once`), in `app/_shell/providers.tsx`
+  (a client file), rendered by root layouts only, wrapping `children`. A provider component is
+  defined in `src/ui` (generic) or in a module's components (domain).
+- **Global CSS has two owners** (`global-css-owners`): `src/ui` and the root layout. Everything
+  else styles through `src/ui` primitives, utility classes, or a `.module.css` file.
+- **Banned packages** (`banned-packages`). `bannedPackages` names packages with the reason they are
+  not used. The template bans axios (Next.js extends `fetch`; external HTTP goes through a port)
+  and the Redux family (server state lives in Server Components and actions; client state in
+  `useState`, `useReducer` or the URL; a client cache, if ever needed, stays inside one module).
+- **Stories are leaves** (`stories-leaf`): nothing imports a `*.stories.tsx` file.
+- **Components never import a repository, tables or the database**; data comes through props.
+
+### Styling
+
+The template uses **Tailwind CSS v4**:
+
+- Tokens are plain, semantic CSS variables in `ui/styles/theme.css` (`--accent`, `--surface`),
+  overridden for the dark theme under `prefers-color-scheme` and `[data-theme]`. `@theme inline`
+  maps them to utilities (`bg-accent`), so switching a theme changes variables, not classes.
+- `@import "tailwindcss" source(...)` limits class scanning to `src/`, so prose in `docs/` or a
+  change folder never generates CSS.
+- Variants are closed unions mapped with `cva`; `cn()` (clsx plus tailwind-merge) merges a caller's
+  `className`. Both are pure functions, so server components use them too.
+- `components.json` points the shadcn CLI at `src/ui` (`ui`, `lib`, `hooks` aliases), so copied
+  components land in the leaf folder and fall under the same rules. Radix is the headless base for
+  interactive primitives: never hand-roll focus trapping, menus, dialogs or popovers.
+
+**Without Tailwind.** Plain CSS with the same semantic variables works just as well: keep
+`theme.css` and `base.css`, style primitives with classes and `data-*` attributes in a stylesheet
+under `ui/styles`, and drop `cva` and `cn`. A published UI package is easier to ship that way,
+because the consumer's Tailwind does not have to scan it.
+
+### Component API
+
+- Spread native props (`ComponentProps<"button">`), merge `className` with `cn()`, take `ref` as a
+  prop (React 19).
+- Variants are closed string unions; no boolean-prop pile-ups (`isPrimary`, `isLarge`). Prefer
+  composition (children, slots) over modes. `asChild` only for real polymorphism (a link styled as
+  a button).
+- Controlled and uncontrolled pairs: `value`, `defaultValue`, `onValueChange`.
+- A server component passes an icon or slot as an element (`icon={<IconCheck />}`), never as a
+  component reference, to a client component: props that cross the boundary must serialise.
+- One primary export per file, PascalCase; `X.stories.tsx` and `X.test.tsx` beside it.
+
+### Copy and languages
+
+**Every app is translatable from the first commit, in English by default.** next-intl with the
+App Router: locale routing in `proxy.ts`, pages under `app/[locale]/`, messages in
+`messages/en.json`, typed message keys (a missing key is a type error). No user-visible string
+is written in a page, a component or a primitive: pages and composition read messages with
+next-intl, business components receive copy through props or read their own namespace, and
+`src/ui` takes text only through props. A check (`copy-from-messages`) flags text in JSX and in
+user-visible attributes (`alt`, `title`, `placeholder`, `aria-label`) in `app/`, `src/ui` and
+module components. Adding a language is a messages file and a locale in the routing config.
+
+### Accessibility and visual checks
+
+- Native element first (`button`, `a`, `dialog`, `details`), a headless library for the rest; no
+  `div` with `onClick`. `role="menu"` only for real menus; a popover with mixed content is a dialog.
+- WCAG 2.2 AA: a visible focus ring token, targets of at least 24 px, `prefers-reduced-motion` in
+  `base.css`, text contrast checked in every theme.
+- **axe on real pages:** an E2E smoke test runs `@axe-core/playwright` over every page and fails
+  on any violation.
+- **Storybook** (`@storybook/nextjs-vite`) with the a11y addon set to fail: stories sit beside the
+  `src/ui` components they show. Story props-only components; Server Components in Storybook are
+  experimental and Server Actions do not run there.
+- Automated checks find only part of the issues; keyboard-only use of each new flow is a review
+  obligation.
 
 ## 8. Module dependencies and workflows
 
@@ -395,6 +501,7 @@ replaces the contents of `src/ui` with thin wrappers over it; the rules below do
 | Webhooks and jobs | signature failure, duplicates, out-of-order, retries  | integration tests with fixtures                                                              |
 | Actions and pages | the happy path and one validation failure             | Playwright E2E against the production build                                                  |
 | Architecture      | every rule, and that each rule can fail               | fixtures: violations flagged by the intended rule only, positive controls, specific messages |
+| UI                | accessibility of real pages; primitives in isolation  | `@axe-core/playwright` over every page; Storybook stories with the a11y addon                |
 
 Unit tests sit beside the code they test (`*.test.ts`); `tests/` holds the architecture suite,
 E2E, integration tests that span modules or a process entry point (the worker), tooling tests and
@@ -446,7 +553,8 @@ Production defaults. None of them is checked by the architecture suite; the temp
 
 **`architecture.json` is the single source of truth:** doors with roles, modules, declared edges,
 table owners, read exceptions (file + table), exemptions, clients, server-only packages, the
-rules allowlist and, optionally, the `layout` of the folders. The eslint config, the architecture tests and a Mermaid diagram are all built from
+rules allowlist and, optionally, the `layout` of the folders, the session module, the UI's allowed and banned
+packages and its icon packages. The eslint config, the architecture tests and a Mermaid diagram are all built from
 it. Its JSON Schema is versioned with the scripts (section 19).
 
 | Tool                                            | Job                                                                                                                                 | Gate                                             |
@@ -462,7 +570,7 @@ it. Its JSON Schema is versioned with the scripts (section 19).
 
 **Layout.** The optional `layout` block names where each folder lives, relative to `srcRoot`:
 `app`, `modules`, `ui`, `shared`, `db`, `clients`, `dbClient`, `schemaRoot`, `serverShared`,
-`resultFile`, `workflows`, `compositionFolders` and `worker`. Every rule, the eslint config, the
+`resultFile`, `workflows`, `compositionFolders`, `worker` and `providers`. Every rule, the eslint config, the
 diagram and the module generator read it through one function (`layoutOf` in
 `scripts/arch/lib.mjs`); a key left out keeps its 1.0.0 default.
 
@@ -514,7 +622,14 @@ mechanism, all are listed; where it ends in RO, that part is not enforced by a t
 | A browser door or client component reaches no server code or secret        | RD + BC       | runtime closure; Next's `server-only` build error is an independent guard                                                                                                   |
 | Rules are pure: imports and closure                                        | RD            | allowlisted closure                                                                                                                                                         |
 | Rules are pure: clock, randomness, env, network, globals                   | SH, partly RO | `Date`, `Math.random`, `process`, `fetch`, `crypto`, …; arbitrary JavaScript purity cannot be proved                                                                        |
-| `src/ui` and `src/shared` stay generic; components never touch persistence | RD            | `shared-no-modules`, `shared-no-clients`, `ui-no-modules`, `ui-no-server`                                                                                                   |
+| `src/ui` and `src/shared` stay generic; components never touch persistence | RD            | `shared-no-modules`, `shared-no-clients`, `ui-leaf`, `components-no-persistence`                                                                                            |
+| `src/ui` is a leaf: only `src/ui` and `uiMayImport` packages               | RD            | `ui-leaf`, resolved graph and eslint                                                                                                                                        |
+| Providers are composed once                                                | RD + SH       | `providers-composed-once`: `*Provider` elements and imports of the providers file                                                                                           |
+| Icons have one door; global CSS has two owners                             | RD            | `icons-one-door`, `global-css-owners`                                                                                                                                       |
+| No door is a client boundary                                               | SH            | `doors-no-client-directive`; an unneeded `"use client"` on a component is RO                                                                                                |
+| Banned packages stay out; stories stay out of production code              | RD            | `banned-packages` (package.json and imports), `stories-leaf`                                                                                                                |
+| User-visible text comes from messages                                      | SH + RO       | `copy-from-messages` over JSX text and user-visible attributes; copy built in code is RO                                                                                    |
+| UI is accessible                                                           | BT + RO       | axe over every page, Storybook a11y; keyboard use and contrast in every theme are RO                                                                                        |
 | `src/shared` does no I/O: no session reading, no database driver           | RD            | `shared-no-io`: no server-only package but `server-only`                                                                                                                    |
 | `proxy.ts` and `instrumentation.ts` import no module                       | RD            | `roots-no-modules`; `worker.ts` may import server doors                                                                                                                     |
 | Composition folders take `src/ui`, browser doors and props only            | RD            | `composition-folders`: `app/**/_shell`, `app/**/_components`, runtime edges                                                                                                 |
@@ -582,28 +697,33 @@ baseline": see section 15.
   line whose violation is gone fails as stale. Then move in this order: doors, rules files, data
   ownership, workflows.
 - **Never admitted to a baseline**, even in a brownfield app: server code or secrets in a browser
-  bundle (`client-runtime-closure`, `public-door-closure`, `server-only-in-server-files`,
-  `ui-no-server`). That is a leak, not migration debt.
+  bundle (`client-runtime-closure`, `public-door-closure`, `server-only-in-server-files`). That is
+  a leak, not migration debt.
 - A baseline change is reviewed by the owners of the policy (CODEOWNERS), is compared with a trusted
   base revision, and shows up in the governance output.
 
 ## 16. Add later, not now
 
-| Add                                            | When                                                                              |
-| ---------------------------------------------- | --------------------------------------------------------------------------------- |
-| Subfolders inside a module                     | it passes about ten files                                                         |
-| Separate read functions (`<x>.queries.ts`)     | pages need joined or aggregated reads that do not fit the service                 |
-| Repository interfaces                          | a second backend appears or a test needs to swap it                               |
-| Explicit caller parameter on shared operations | an action and a job need the same operation                                       |
-| Events between modules                         | a module must react without the publisher knowing who listens                     |
-| Outbox table                                   | an event must survive a crash between commit and publish                          |
-| Numeric coupling gates                         | months of report data show a threshold that would have caught real problems       |
-| Packages in a monorepo                         | a second app needs the same modules                                               |
-| Leaf modules (`leafModules`)                   | a module must import only a fixed list of folders; the first adopting app uses it |
-| File-naming rules (`naming`)                   | a convention keeps being broken in review; the first adopting app uses it         |
-| A file-size ceiling (`fileSize`)               | files grow past what a reviewer reads; a ceiling to lower, never to raise         |
-| Test-folder rules (`testDirs`)                 | production code starts importing test helpers                                     |
-| A readiness route in the template              | the first deploy needs one; section 12 says what it checks                        |
+| Add                                               | When                                                                                                                                      |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Subfolders inside a module                        | it passes about ten files                                                                                                                 |
+| Separate read functions (`<x>.queries.ts`)        | pages need joined or aggregated reads that do not fit the service                                                                         |
+| Repository interfaces                             | a second backend appears or a test needs to swap it                                                                                       |
+| Explicit caller parameter on shared operations    | an action and a job need the same operation                                                                                               |
+| Events between modules                            | a module must react without the publisher knowing who listens                                                                             |
+| Outbox table                                      | an event must survive a crash between commit and publish                                                                                  |
+| Numeric coupling gates                            | months of report data show a threshold that would have caught real problems                                                               |
+| Packages in a monorepo                            | a second app needs the same modules                                                                                                       |
+| Leaf modules (`leafModules`)                      | a module must import only a fixed list of folders; the first adopting app uses it                                                         |
+| File-naming rules (`naming`)                      | a convention keeps being broken in review; the first adopting app uses it                                                                 |
+| A file-size ceiling (`fileSize`)                  | files grow past what a reviewer reads; a ceiling to lower, never to raise                                                                 |
+| Test-folder rules (`testDirs`)                    | production code starts importing test helpers                                                                                             |
+| A readiness route in the template                 | the first deploy needs one; section 12 says what it checks                                                                                |
+| Visual regression (Playwright `toHaveScreenshot`) | a designer reviews UI changes or a second app shares `src/ui`; baselines generated in the CI container, never in the template             |
+| `ui/primitives` and `ui/composed` folders         | `src/ui` passes about twelve files; composed may import primitives, never the reverse                                                     |
+| `packages/ui` in a workspace                      | a second app needs the same UI; the leaf rules move with it                                                                               |
+| Design tokens as DTCG JSON                        | a non-CSS consumer appears (Figma sync, native, email)                                                                                    |
+| More UI checks                                    | a diagnostic for a needless `"use client"`, raw colour literals outside `ui/styles`, `fetch` to the app's own API from a server component |
 
 ## 17. Deliberately skipped
 
@@ -641,6 +761,12 @@ baseline": see section 15.
 | D22 | `shared/auth.ts` holds the session type and pure checks; reading the session lives in a module (`accounts`), passed to operations  | an auth library in `shared/`; a global session reader bound at start          |
 | D23 | An optional `layout` block makes every folder path configurable; the defaults are the 1.0.0 paths                                  | hard-coded paths; a fork of the scripts per app                               |
 | D24 | Unit and service tests colocated with the code; `tests/` only for what spans files                                                 | a `test/` tree mirroring `src/`                                               |
+| D25 | `src/ui` is a leaf with a per-file public path; layer-first folders are refused with a hint where each belongs                     | a `ui/index.ts` barrel; top-level hooks, contexts, stores, utils folders      |
+| D26 | Tailwind v4 over semantic CSS variables, `cva` for variants, shadcn layout aliased into `src/ui`, Radix as the headless base       | plain CSS only (documented as the alternative); a component library package   |
+| D27 | Providers composed once in `app/_shell/providers.tsx`; navigation in `app/_shell/nav.ts`; one icon door; global CSS in two places  | providers in any layout; a `config/` folder; icon packages imported anywhere  |
+| D28 | Every app is translatable from the first commit: next-intl, English by default, typed keys, no hard-coded copy                     | adding i18n later; strings in components                                      |
+| D29 | axe on every page and Storybook with the a11y addon in the template; screenshot baselines later                                    | screenshot baselines in the template; no automated accessibility check        |
+| D30 | `bannedPackages` with reasons: axios and the Redux family in the template                                                          | a lint rule per package; review only                                          |
 
 ## 19. Rollout and versioning
 
@@ -688,3 +814,15 @@ baseline": see section 15.
 - Vercel, How we optimized package imports in Next.js: https://vercel.com/blog/how-we-optimized-package-imports-in-next-js
 - React, `"use server"`: https://react.dev/reference/rsc/use-server
 - graphile-worker: https://worker.graphile.org/
+- Next.js, Server and Client Components: https://nextjs.org/docs/app/getting-started/server-and-client-components
+- Tailwind CSS, theme variables: https://tailwindcss.com/docs/theme
+- Tailwind CSS, detecting classes in source files: https://tailwindcss.com/docs/detecting-classes-in-source-files
+- shadcn/ui: https://ui.shadcn.com/docs
+- Radix Primitives, composition: https://www.radix-ui.com/primitives/docs/guides/composition
+- Brad Frost, Atomic Web Design: https://bradfrost.com/blog/post/atomic-web-design/
+- Redux Toolkit, setup with Next.js: https://redux.js.org/toolkit/usage/nextjs
+- next-intl, App Router: https://next-intl.dev/docs/getting-started/app-router
+- Storybook for Next.js: https://storybook.js.org/docs/get-started/frameworks/nextjs
+- Storybook, accessibility testing: https://storybook.js.org/docs/writing-tests/accessibility-testing
+- Playwright, accessibility testing: https://playwright.dev/docs/accessibility-testing
+- Playwright, visual comparisons: https://playwright.dev/docs/test-snapshots

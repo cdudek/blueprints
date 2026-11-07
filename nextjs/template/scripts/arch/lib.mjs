@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /** The version of these scripts and of the policy schema they read. See CHANGELOG.md. */
-export const BLUEPRINT_VERSION = "1.0.0";
+export const BLUEPRINT_VERSION = "1.1.0";
 
 /**
  * @typedef {{ from: string, to: string, reason: string }} Edge

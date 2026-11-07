@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import Ajv from "ajv";
 import { beforeAll, describe, expect, it } from "vitest";
-import { BLUEPRINT_VERSION, loadArchitecture } from "../../scripts/arch/lib.mjs";
+import { buildBoundariesConfig } from "../../scripts/arch/eslint-boundaries.mjs";
+import { BLUEPRINT_VERSION, layoutOf, loadArchitecture } from "../../scripts/arch/lib.mjs";
 import { compareToBaseline, readBaseline } from "../../scripts/quality/baseline.mjs";
 import { buildGraph } from "./graph.ts";
 import { located } from "./reporting.ts";
@@ -56,6 +57,30 @@ describe("policy file", () => {
     const protectedRules = new Set(rules.filter((r) => r.neverBaseline).map((r) => r.id));
     for (const e of arch.exemptions)
       for (const id of e.rules) expect(protectedRules.has(id), id).toBe(false);
+  });
+});
+
+describe("a 1.0.0 policy file under these scripts", () => {
+  const oldRoot = resolve(root, "tests/fixtures/policy-1.0.0");
+  const old = loadArchitecture(oldRoot);
+
+  it("loads, matches the schema and gets the 1.0.0 paths: every new key is optional", () => {
+    const schema = JSON.parse(readFileSync(resolve(root, "architecture.schema.json"), "utf8"));
+    const validate = new Ajv({ allErrors: true, strict: false }).compile(schema);
+    expect(old.$schemaVersion).toBe("1.0.0");
+    expect(validate(old), JSON.stringify(validate.errors)).toBe(true);
+    expect(layoutOf(old)).toMatchObject({
+      app: "app",
+      modules: "modules",
+      db: "db",
+      dbClient: "db/index.ts",
+      schemaRoot: "db/schema.ts",
+    });
+  });
+
+  it("builds every rule and the eslint config", () => {
+    expect(buildRules(old).length).toBe(rules.length);
+    expect(buildBoundariesConfig(old).length).toBeGreaterThan(0);
   });
 });
 
