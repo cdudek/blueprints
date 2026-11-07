@@ -60,6 +60,7 @@ const intended: Record<string, string[]> = {
   "src/modules/orders/imports-app.ts": ["nothing-imports-app"],
   "src/modules/orders/impure.rules.ts": ["rules-pure-closure", "rules-pure-content"],
   "src/modules/orders/indirect.rules.ts": ["rules-pure-closure"],
+  "src/modules/orders/late.repository.ts": ["server-only-in-server-files"],
   "src/modules/orders/order.admin.service.ts": ["system-operations-from-routes-only"],
   "src/modules/orders/reads-payments-bad.ts": ["tables-owner-only"],
   "src/modules/orders/reads-payments-ok.ts": ["tables-owner-only"],
@@ -110,6 +111,8 @@ describe("positive controls: everything else is clean", () => {
       "a service with user and webhook operations and a Tx-taking operation",
     ],
     ["src/db/index.ts", "the one place db.transaction is allowed"],
+    ["src/app/place/PlaceButton.tsx", 'a client file importing a "use server" action'],
+    ["src/app/place/actions.ts", 'a "use server" file reaching a server door'],
   ])("%s (%s)", (file) => {
     expect(rulesFor(file)).toEqual([]);
   });
@@ -300,6 +303,12 @@ const specific: [string, string, string, string][] = [
   ["roots-classified", "src/escape.ts", "escape.ts", "fits no declared root"],
   ["use-server-only-in-app", "src/modules/orders/actions.ts", "use server", "actions live in app"],
   ["server-only-in-server-files", "src/modules/ledger/server.ts", "server-only", "missing"],
+  [
+    "server-only-in-server-files",
+    "src/modules/orders/late.repository.ts",
+    "server-only",
+    "must be the first statement",
+  ],
   ["workflow-header", "src/app/api/bad/route.ts", "@workflow", "workflow header is missing"],
   ["ui-no-server", "src/ui/ServerThing.tsx", "server-only", "never imports server code"],
   ["ui-no-modules", "src/ui/BadButton.tsx", "src/modules/orders/public.ts", "no business nouns"],

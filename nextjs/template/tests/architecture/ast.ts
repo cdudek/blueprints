@@ -68,15 +68,16 @@ export function hasDirective(sf: ts.SourceFile, directive: string): boolean {
   return found;
 }
 
-/** `import "server-only"` as a bare side-effect import. */
-export function importsServerOnly(sf: ts.SourceFile): boolean {
-  return sf.statements.some(
-    (s) =>
-      ts.isImportDeclaration(s) &&
-      !s.importClause &&
-      ts.isStringLiteral(s.moduleSpecifier) &&
-      s.moduleSpecifier.text === "server-only",
-  );
+const isServerOnlyImport = (s: ts.Statement) =>
+  ts.isImportDeclaration(s) &&
+  !s.importClause &&
+  ts.isStringLiteral(s.moduleSpecifier) &&
+  s.moduleSpecifier.text === "server-only";
+
+/** Where `import "server-only"` sits: the first statement, later, or nowhere. */
+export function serverOnlyMarker(sf: ts.SourceFile): "first" | "late" | "missing" {
+  const i = sf.statements.findIndex(isServerOnlyImport);
+  return i === 0 ? "first" : i > 0 ? "late" : "missing";
 }
 
 /** True when `id` is a reference to a binding, not a property name, a declaration name or a type. */

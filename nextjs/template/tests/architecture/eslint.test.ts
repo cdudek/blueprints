@@ -256,6 +256,7 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
     "src/db/schema.ts",
     "src/proxy.ts",
     "src/ui/Button.tsx",
+    "src/app/place/PlaceButton.tsx",
   ])("stays quiet on the clean file %s", async (file) => {
     const lint = await lintWith();
     expect(await lint(file)).toEqual([]);

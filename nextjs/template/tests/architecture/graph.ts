@@ -145,11 +145,16 @@ export function buildGraph(tsconfig: string, root: string): Graph {
   };
 }
 
-/** Everything reachable from `roots` over edges accepted by `follow`, with the path that got there. */
+/**
+ * Everything reachable from `roots` over edges accepted by `follow`, with the path that got there.
+ * A file for which `stop` is true is reached but not entered (a "use server" file: its imports
+ * stay on the server).
+ */
 export function reach(
   graph: Graph,
   roots: string[],
   follow: (e: Edge) => boolean = (e) => e.kind === "runtime",
+  stop: (file: string) => boolean = () => false,
 ) {
   const out = new Map<string, Edge[]>();
   for (const e of graph.edges)
@@ -174,7 +179,7 @@ export function reach(
       parent.set(e.to, { via: cur, edge: e });
       const path = pathTo(e.to);
       reached.push({ node: e.to, external: e.external, root: path[0] ?? cur, path });
-      if (!e.external) queue.push(e.to);
+      if (!e.external && !stop(e.to)) queue.push(e.to);
     }
   }
   return reached;

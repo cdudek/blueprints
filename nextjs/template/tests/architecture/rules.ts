@@ -32,7 +32,7 @@ import {
   hasDirective,
   identifiersIn,
   importedBindings,
-  importsServerOnly,
+  serverOnlyMarker,
   isValueReference,
   parse,
   specifiers,
@@ -259,9 +259,22 @@ export function buildRules(arch: Architecture): ArchRule[] {
       const own = serverReason(root, false);
       if (own) findings.push({ rule, file: root, target: root, message: `${what} is ${own}` });
     }
+    // A "use server" file is a boundary: a client that imports it gets a reference to the action,
+    // and the file's own imports stay on the server (react.dev/reference/rsc/use-server).
+    const useServer = new Set(
+      [...g.sources].filter(([, sf]) => hasDirective(sf, "use server")).map(([f]) => f),
+    );
     // per root: a file reached from two roots is reported for each, with its own path
-    const reachedAll = roots.flatMap((root) => reach(g, [root]));
+    const reachedAll = roots.flatMap((root) =>
+      reach(
+        g,
+        [root],
+        (e) => e.kind === "runtime",
+        (f) => useServer.has(f),
+      ),
+    );
     for (const r of reachedAll) {
+      if (useServer.has(r.node)) continue;
       const reason = serverReason(r.node, r.external);
       if (reason)
         findings.push({
@@ -1117,11 +1130,19 @@ export function buildRules(arch: Architecture): ArchRule[] {
         ];
         const results = await Promise.all(
           globs.map((g) =>
-            content(ctx, "server-only-in-server-files", { path: g }, (sf) =>
-              importsServerOnly(sf)
-                ? []
-                : [{ target: "server-only", message: 'missing import "server-only"' }],
-            ),
+            content(ctx, "server-only-in-server-files", { path: g }, (sf) => {
+              const marker = serverOnlyMarker(sf);
+              if (marker === "first") return [];
+              return [
+                {
+                  target: "server-only",
+                  message:
+                    marker === "late"
+                      ? 'import "server-only" must be the first statement: code above it runs before the marker'
+                      : 'missing import "server-only"',
+                },
+              ];
+            }),
           ),
         );
         return results.flat();
