@@ -5,7 +5,9 @@
 import { resolve } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { loadArchitecture } from "../../scripts/arch/lib.mjs";
-import { buildRules, runAll, type Finding } from "./rules";
+import { buildGraph } from "./graph.ts";
+import { lineOf, located } from "./reporting.ts";
+import { buildRules, runAll, type Finding } from "./rules.ts";
 
 const root = resolve(__dirname, "../fixtures/arch-violations");
 const arch = loadArchitecture(root);
@@ -340,6 +342,36 @@ describe("each rule reports its specific diagnostic", () => {
         `${f.message} ${f.target}`.includes(text),
     );
     expect(hit, `${rule} should flag ${file} (${target}) with "${text}"`).toBeDefined();
+  });
+});
+
+describe("failure messages name file:line", () => {
+  const graph = buildGraph(resolve(root, "tsconfig.json"), root);
+  const find = (rule: string, file: string, target: string) =>
+    findings.find((f) => f.rule === rule && f.file === file && f.target === target)!;
+
+  it("points at the import, the global or the call that broke the rule", () => {
+    expect(
+      lineOf(
+        graph,
+        find("module-doors", "src/app/alias-door.ts", "src/modules/billing/billing.service.ts"),
+      ),
+    ).toBe(1);
+    expect(
+      lineOf(graph, find("rules-pure-content", "src/modules/orders/impure.rules.ts", "Date.now")),
+    ).toBe(6);
+    expect(
+      lineOf(graph, find("rules-pure-content", "src/modules/orders/impure.rules.ts", "next/cache")),
+    ).toBe(4);
+  });
+  it("prints rule, file:line, message and target", () => {
+    expect(
+      located(graph, [
+        find("rules-pure-content", "src/modules/orders/impure.rules.ts", "Math.random"),
+      ]),
+    ).toEqual([
+      "rules-pure-content src/modules/orders/impure.rules.ts:7: pass randomness in (Math.random)",
+    ]);
   });
 });
 

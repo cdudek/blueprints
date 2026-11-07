@@ -4,7 +4,9 @@ import Ajv from "ajv";
 import { beforeAll, describe, expect, it } from "vitest";
 import { BLUEPRINT_VERSION, loadArchitecture } from "../../scripts/arch/lib.mjs";
 import { compareToBaseline, readBaseline } from "../../scripts/quality/baseline.mjs";
-import { buildRules, findingKeys, runAll, type Finding } from "./rules";
+import { buildGraph } from "./graph.ts";
+import { located } from "./reporting.ts";
+import { buildRules, findingKeys, runAll, type Finding } from "./rules.ts";
 
 const root = resolve(__dirname, "../..");
 const arch = loadArchitecture(root);
@@ -65,7 +67,13 @@ describe("rules on the real tree", () => {
   for (const rule of rules.filter((r) => r.severity !== "diagnostic")) {
     it(rule.description, () => {
       const fresh = keys(rule.id).filter((k) => !baseline.includes(k));
-      expect(fresh).toEqual([]);
+      const where = fresh.length
+        ? located(
+            buildGraph(resolve(root, "tsconfig.arch.json"), root),
+            findings.filter((f) => f.rule === rule.id),
+          ).join("\n")
+        : "";
+      expect(fresh, where).toEqual([]);
     });
   }
 

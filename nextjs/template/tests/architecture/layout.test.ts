@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { layoutOf, moduleOf, type Architecture } from "../../scripts/arch/lib.mjs";
-import { runAll, type Finding } from "./rules";
+import { runAll, type Finding } from "./rules.ts";
 
 const base: Architecture = {
   $schemaVersion: "1.1.0",
