@@ -26,12 +26,12 @@ architecture.yaml
   exceptions[]     file, table, reason                    (STR-11 reads)
   fitness[]        id, target, tool, gate                 (ARCH-5)
                    budgets or key pages where the gate needs them
-  enforcement[]    per fitness id: checker, invoked by, required, applied   (ARCH-12)
+  enforcement[]    per fitness id: checker, invoked by, required, applied   (ARCH-15)
 ```
 
 ### Fitness dimensions
 
-- **ARCH-5 Every dimension is a row under `fitness`, and every row is a CI check.** It names an id, the make target that runs it (ci [Make contract](ci.md)), the tool and the gate. A dimension with no check is not listed; a check with no row is not trusted.
+- **ARCH-5 Every dimension is a row under `fitness`, and every row is a CI check.** It names an id, the make target that runs it (the Make contract in [ci](ci.md)), the tool and the gate. A dimension with no check is not listed; a check with no row is not trusted.
 - **ARCH-6 `arch.boundaries`: imports go only through doors, along declared edges, with no cycles.** Tool: dependency-cruiser for TypeScript, import-linter for Python, the per-stack equivalent otherwise. Gate: zero violations, or no more than the baseline and never rising.
 - **ARCH-7 `arch.score`: a number for the whole graph.** Score = 100 x (1 - violating edges / all cross-module edges). A cycle is a hard fail, not a point off. Gate: score at least 90 and at least the score of the merge base, so a PR can neither dip under the floor nor erode a better score.
 - **ARCH-8 `quality.slop` points to code quality.** The anti-slop rules and the slop metrics are defined in [code-quality](code-quality.md) (CQ-12 to CQ-23) and run as the `slop` job (CI-24). This row only registers them as a dimension; it does not restate their thresholds.
