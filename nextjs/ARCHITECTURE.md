@@ -828,9 +828,34 @@ baseline": see section 15.
 4. **Versioning.** The blueprint, `architecture.schema.json` and the scripts share one version
    (`template/CHANGELOG.md`). `architecture.json` carries `$schemaVersion`; the scripts refuse a
    different major version. An app upgrades by copying the new scripts and following the changelog.
-5. Python apps can get the same blueprint with import-linter (rules) and radon (complexity). A
+5. **Next:** finish the payment reconciliation (the `payment_inbox` reconciler and the deliberately
+   open items of `template/docs/worked-slice.md`) before adding more architecture rules.
+6. Python apps can get the same blueprint with import-linter (rules) and radon (complexity). A
    Python blueprint will live next to this one; until then a Python runtime inside a Next.js app
    goes in `services/<name>/` (template `services/README.md`).
+
+### Upgrading the architecture tooling
+
+The rules, the graph and the scripts (`scripts/arch/`, `scripts/quality/`, `tests/architecture/`,
+`tests/fixtures/`) are one maintained component, versioned with this blueprint. An app never edits
+them: a local need goes into `architecture.json` (a `layout` key, an exemption with a reason) or
+back into the blueprint.
+
+- **The promise.** Within a major version every policy file keeps loading: new keys are optional
+  and default to the earlier behaviour. A new major refuses an old policy with a message that names
+  the changelog. The compatibility test pins this: `tests/fixtures/policy-1.0.0/architecture.json`
+  must load, validate against today's schema and build every rule and the eslint config. Each
+  release adds the policy of the release before it.
+- **The steps.**
+  1. Read `template/CHANGELOG.md` from your version to the new one, including its migration notes.
+  2. Copy `scripts/arch/`, `scripts/quality/`, `tests/architecture/` and `tests/fixtures/`, and
+     `architecture.schema.json`; set `$schemaVersion`.
+  3. Run `pnpm arch`, `pnpm knip` and `pnpm dup`. New rules may report findings in existing code:
+     freeze them with the writers (section 13) in the upgrade PR, which carries no feature code, so
+     a reviewer sees exactly what the new version found.
+  4. Shrink those baselines in later PRs, as with any adoption.
+- **A detector upgrade** (knip, jscpd, ArchUnitTS) that changes what is found is its own PR that
+  regenerates the affected baseline; never mix it with a rule or feature change.
 
 ## 20. Sources
 

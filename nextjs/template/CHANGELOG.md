@@ -8,6 +8,11 @@ The blueprint, its policy schema (`architecture.schema.json`) and its scripts
 - Minor: a new rule or option; existing policy files keep working, new findings may appear.
 - Patch: fixes that do not change what a correct app is told.
 
+## Next
+
+- Payment reconciliation: the `payment_inbox` reconciler and the open items of
+  `docs/worked-slice.md` come before any new architecture rule.
+
 ## 1.1.0
 
 Minor release: a 1.0.0 `architecture.json` keeps working unchanged (every new key is optional and
@@ -80,7 +85,8 @@ defaults to 1.0.0 behaviour); new rules may report new findings.
 
 ### Migrating from 1.0.0
 
-1. Copy `scripts/` and `tests/architecture/`; set `$schemaVersion` to `1.1.0`.
+1. Follow "Upgrading the architecture tooling" in `ARCHITECTURE.md` section 19: copy `scripts/`,
+   `tests/architecture/`, `tests/fixtures/` and the schema; set `$schemaVersion` to `1.1.0`.
 2. Run `pnpm arch`. If new rules report findings in an existing app, freeze them with
    `pnpm arch:baseline:write` in a reviewed commit on the default branch, then remove them.
 3. If your folders differ from the defaults, add a `layout` block instead of editing the scripts.
