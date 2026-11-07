@@ -1,5 +1,5 @@
-from app.modules.billing.models import PaymentRequestStatus
 from app.modules.billing.rules import MAX_ATTEMPTS, after_retryable_failure
+from app.modules.billing.schemas import PaymentRequestStatus
 
 
 def test_retry_until_the_attempts_run_out() -> None:

@@ -1,6 +1,6 @@
 """Pure decisions about payment requests."""
 
-from app.modules.billing.models import PaymentRequestStatus
+from app.modules.billing.schemas import PaymentRequestStatus
 
 MAX_ATTEMPTS = 5
 

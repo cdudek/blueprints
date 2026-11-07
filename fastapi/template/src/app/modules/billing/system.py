@@ -13,8 +13,8 @@ from app.db.transaction import Tx
 from app.modules import orders
 from app.modules.billing import repository, rules
 from app.modules.billing.errors import PaymentRequestConflictError, PaymentRequestNotFoundError
-from app.modules.billing.models import PaymentRequest, PaymentRequestStatus
-from app.modules.billing.schemas import ClaimedPaymentRequest
+from app.modules.billing.models import PaymentRequest
+from app.modules.billing.schemas import ClaimedPaymentRequest, PaymentRequestStatus
 from app.shared.access import operation
 
 Status = PaymentRequestStatus

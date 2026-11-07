@@ -9,7 +9,7 @@ MAKEFLAGS += --warn-undefined-variables --no-builtin-rules
 COMPOSE ?= docker compose
 name ?=
 
-.PHONY: help setup dev run-worker format lint typecheck test test-integration check migrate migration clean
+.PHONY: help setup dev run-worker format lint typecheck test test-integration arch check migrate migration clean
 
 help: ## List the targets
 	@awk 'BEGIN { FS = ":[^#]*## " } /^[a-zA-Z0-9_-]+:[^=]*## / { printf "  %-20s %s\n", $$1, $$2 }' $(MAKEFILE_LIST) | sort
@@ -38,7 +38,10 @@ test: ## Unit tests: no database, sockets disabled
 test-integration: ## Integration, worker and concurrency tests against real Postgres (DATABASE_URL=)
 	uv run pytest tests/integration
 
-check: lint typecheck test test-integration ## Everything CI runs
+arch: ## Import contracts and the architecture tests
+	uv run lint-imports --no-cache && uv run pytest tests/architecture
+
+check: lint typecheck test test-integration arch ## Everything CI runs
 
 migrate: ## Apply migrations up to head
 	uv run alembic upgrade head

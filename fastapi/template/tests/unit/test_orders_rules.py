@@ -1,8 +1,8 @@
 import pytest
 
 from app.modules.orders.errors import InvalidOrderTransitionError
-from app.modules.orders.models import OrderStatus
 from app.modules.orders.rules import ensure_transition, sources_of
+from app.modules.orders.schemas import OrderStatus
 
 
 def test_only_a_pending_order_can_be_paid() -> None:

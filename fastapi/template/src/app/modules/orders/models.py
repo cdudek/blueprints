@@ -1,6 +1,5 @@
 """Private to orders. Other modules see orders only through the door's schemas."""
 
-import enum
 import uuid
 from datetime import datetime
 
@@ -8,13 +7,7 @@ from sqlalchemy import CheckConstraint, DateTime, Enum, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-
-
-class OrderStatus(enum.StrEnum):
-    PENDING_PAYMENT = "pending_payment"
-    PAID = "paid"
-    PAYMENT_FAILED = "payment_failed"
-    CANCELLED = "cancelled"
+from app.modules.orders.schemas import OrderStatus
 
 
 class Order(Base):

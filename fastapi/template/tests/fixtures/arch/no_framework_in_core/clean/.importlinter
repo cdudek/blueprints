@@ -1,0 +1,11 @@
+[importlinter]
+root_package = core_ok
+include_external_packages = True
+
+[importlinter:contract:no-framework-in-core]
+name = service, repository and rules do not import the web framework
+type = forbidden
+source_modules =
+    core_ok.modules.orders.service
+forbidden_modules =
+    fastapi

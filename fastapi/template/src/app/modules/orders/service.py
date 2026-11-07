@@ -5,8 +5,8 @@ import uuid
 from app.db.transaction import Tx
 from app.modules.orders import repository, rules
 from app.modules.orders.errors import OrderNotFoundError
-from app.modules.orders.models import Order, OrderStatus
-from app.modules.orders.schemas import OrderCreate, OrderOut
+from app.modules.orders.models import Order
+from app.modules.orders.schemas import OrderCreate, OrderOut, OrderStatus
 from app.shared.access import operation
 from app.shared.auth import Principal
 

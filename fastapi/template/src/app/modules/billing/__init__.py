@@ -2,11 +2,12 @@
 
 from app.modules.billing.errors import PaymentRequestConflictError, PaymentRequestNotFoundError
 from app.modules.billing.schemas import PaymentRequestOut
-from app.modules.billing.service import request_payment
+from app.modules.billing.service import get_payment_for_order, request_payment
 
 __all__ = [
     "PaymentRequestConflictError",
     "PaymentRequestNotFoundError",
     "PaymentRequestOut",
+    "get_payment_for_order",
     "request_payment",
 ]

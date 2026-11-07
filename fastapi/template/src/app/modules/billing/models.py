@@ -1,6 +1,5 @@
 """Private to billing. A payment request row is the durable intent to charge once."""
 
-import enum
 import secrets
 import uuid
 from datetime import datetime
@@ -9,14 +8,7 @@ from sqlalchemy import DateTime, Enum, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-
-
-class PaymentRequestStatus(enum.StrEnum):
-    REQUESTED = "requested"
-    PROCESSING = "processing"
-    SUCCEEDED = "succeeded"
-    FAILED = "failed"
-    NEEDS_ATTENTION = "needs_attention"
+from app.modules.billing.schemas import PaymentRequestStatus
 
 
 def _new_idempotency_key() -> str:

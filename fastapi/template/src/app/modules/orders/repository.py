@@ -6,7 +6,8 @@ from collections.abc import Iterable
 from sqlalchemy import select, update
 
 from app.db.transaction import Tx
-from app.modules.orders.models import Order, OrderStatus
+from app.modules.orders.models import Order
+from app.modules.orders.schemas import OrderStatus
 
 
 async def add(tx: Tx, order: Order) -> Order:

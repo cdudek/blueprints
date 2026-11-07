@@ -1,7 +1,7 @@
 """Pure decisions about orders: no database, clock, randomness or environment."""
 
 from app.modules.orders.errors import InvalidOrderTransitionError
-from app.modules.orders.models import OrderStatus
+from app.modules.orders.schemas import OrderStatus
 
 ALLOWED: dict[OrderStatus, frozenset[OrderStatus]] = {
     OrderStatus.PENDING_PAYMENT: frozenset(

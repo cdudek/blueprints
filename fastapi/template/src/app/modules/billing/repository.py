@@ -8,7 +8,8 @@ from typing import Any
 from sqlalchemy import and_, func, or_, select, update
 
 from app.db.transaction import Tx
-from app.modules.billing.models import PaymentRequest, PaymentRequestStatus
+from app.modules.billing.models import PaymentRequest
+from app.modules.billing.schemas import PaymentRequestStatus
 
 Status = PaymentRequestStatus
 
@@ -21,6 +22,15 @@ async def add(tx: Tx, request: PaymentRequest) -> PaymentRequest:
 
 async def get(tx: Tx, request_id: uuid.UUID) -> PaymentRequest | None:
     return await tx.get(PaymentRequest, request_id, populate_existing=True)
+
+
+async def get_by_order(tx: Tx, order_id: uuid.UUID) -> PaymentRequest | None:
+    return await tx.scalar(
+        select(PaymentRequest)
+        .where(PaymentRequest.order_id == order_id)
+        .order_by(PaymentRequest.created_at.desc())
+        .limit(1)
+    )
 
 
 async def claim(tx: Tx, request_id: uuid.UUID, stale_after: timedelta) -> PaymentRequest | None:

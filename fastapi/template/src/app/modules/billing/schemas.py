@@ -1,11 +1,15 @@
+import enum
 import uuid
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-type PaymentRequestStatusName = Literal[
-    "requested", "processing", "succeeded", "failed", "needs_attention"
-]
+
+class PaymentRequestStatus(enum.StrEnum):
+    REQUESTED = "requested"
+    PROCESSING = "processing"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    NEEDS_ATTENTION = "needs_attention"
 
 
 class PaymentRequestOut(BaseModel):
@@ -15,7 +19,7 @@ class PaymentRequestOut(BaseModel):
     order_id: uuid.UUID
     amount_cents: int
     currency: str
-    status: PaymentRequestStatusName
+    status: PaymentRequestStatus
     attempts: int
     provider_reference: str | None
 

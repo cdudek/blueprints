@@ -1,0 +1,11 @@
+[importlinter]
+root_package = rules_pure_bad
+include_external_packages = True
+
+[importlinter:contract:rules-pure]
+name = rules.py imports no framework, I/O or infrastructure, directly or indirectly
+type = forbidden
+source_modules =
+    rules_pure_bad.modules.orders.rules
+forbidden_modules =
+    sqlalchemy

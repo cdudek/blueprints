@@ -23,8 +23,8 @@ repos:
         files: ^(pyproject\.toml|uv\.lock)$
         pass_filenames: false
       - id: pre-push-gate
-        name: make lint typecheck
-        entry: make lint typecheck
+        name: make lint typecheck arch
+        entry: make lint typecheck arch
         language: system
         pass_filenames: false
         always_run: true

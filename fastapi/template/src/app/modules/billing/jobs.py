@@ -20,8 +20,8 @@ from app.clients.payments import (
 from app.db.queue import STALLED_AFTER_SECONDS, defer_in, queue
 from app.db.transaction import Tx, in_transaction
 from app.modules.billing import system
-from app.modules.billing.models import PaymentRequestStatus
 from app.modules.billing.rules import MAX_ATTEMPTS
+from app.modules.billing.schemas import PaymentRequestStatus
 
 # A `processing` claim older than this belongs to a dead worker: the worker's stalled timeout.
 STALE_AFTER = timedelta(seconds=STALLED_AFTER_SECONDS)

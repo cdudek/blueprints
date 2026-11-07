@@ -56,3 +56,18 @@ def test_post_order_refuses_unknown_fields() -> None:
         )
 
     assert response.status_code == 422
+
+
+def test_the_order_owner_reads_its_payment_and_others_cannot() -> None:
+    with TestClient(app) as client:
+        created = client.post(
+            "/v1/orders",
+            json={"amount_cents": 900, "currency": "EUR"},
+            headers={"X-User-Id": "alice"},
+        ).json()
+        own = client.get(f"/v1/orders/{created['id']}/payment", headers={"X-User-Id": "alice"})
+        other = client.get(f"/v1/orders/{created['id']}/payment", headers={"X-User-Id": "bob"})
+
+    assert own.status_code == 200
+    assert own.json()["status"] == "requested"
+    assert other.status_code == 404

@@ -25,6 +25,7 @@ module-name = "app"
 dev = [
     "fastapi-cli>=0.0.32",
     "httpx2>=2.16.0",
+    "import-linter==2.16",
     "mypy==2.4.1",
     "prek==0.5.10",
     "pytest>=9.2.0",
@@ -36,6 +37,7 @@ dev = [
 line-length = 100
 target-version = "py314"
 src = ["src", "tests"]
+extend-exclude = ["tests/fixtures"]  # deliberate violations, checked by tests/architecture
 
 [tool.ruff.lint]
 # Every family is listed with its reason. No ALL, no preview rules.
@@ -70,11 +72,13 @@ ban-relative-imports = "parents"
 [tool.ruff.lint.per-file-ignores]
 "src/app/config/**" = ["TID251"]  # the one place that reads the environment
 "tests/**" = ["S101"]              # assert is how pytest checks
+"tests/architecture/**" = ["S603"] # runs the pinned ruff binary on the fixtures
 
 [tool.mypy]
 python_version = "3.14"
 strict = true
 files = ["src", "tests"]
+exclude = ["^tests/fixtures/"]  # deliberate violations, checked by tests/architecture
 plugins = ["pydantic.mypy"]
 
 [tool.pydantic-mypy]

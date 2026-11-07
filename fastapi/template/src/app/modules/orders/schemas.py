@@ -1,11 +1,17 @@
 """What crosses the orders door."""
 
+import enum
 import uuid
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, PositiveInt
 
-type OrderStatusName = Literal["pending_payment", "paid", "payment_failed", "cancelled"]
+
+class OrderStatus(enum.StrEnum):
+    PENDING_PAYMENT = "pending_payment"
+    PAID = "paid"
+    PAYMENT_FAILED = "payment_failed"
+    CANCELLED = "cancelled"
 
 
 class OrderCreate(BaseModel):
@@ -22,4 +28,4 @@ class OrderOut(BaseModel):
     customer_id: str
     amount_cents: int
     currency: str
-    status: OrderStatusName
+    status: OrderStatus
