@@ -55,17 +55,3 @@ def test_the_clean_twin_keeps_it(rule: str, monkeypatch: pytest.MonkeyPatch) -> 
     code, out = run(FIXTURES / rule / "clean" / ".importlinter")
 
     assert code == 0, out
-
-
-def test_every_module_file_is_protected_by_a_contract() -> None:
-    """A new file in a module is outside every door contract until it is listed."""
-    config = (TEMPLATE / ".importlinter").read_text(encoding="utf-8")
-    listed = {line.strip() for line in config.splitlines() if line.startswith("    app.")}
-    modules = TEMPLATE / "src" / "app" / "modules"
-    files = {
-        f"app.modules.{path.parent.name}.{path.stem}"
-        for path in modules.glob("*/*.py")
-        if path.name != "__init__.py"
-    }
-
-    assert sorted(files - listed) == []

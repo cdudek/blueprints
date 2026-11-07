@@ -1,5 +1,5 @@
-# Hand-written for the two example modules (milestone 2). From milestone 3 this file is generated
-# from architecture.toml; a test then reproduces it exactly.
+# Generated from architecture.toml by `make arch-generate`. Do not edit: a test fails when
+# this file and the policy disagree. Baselines come from quality/arch-baseline.toml.
 
 [importlinter]
 root_package = app

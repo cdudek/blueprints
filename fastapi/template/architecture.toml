@@ -1,0 +1,67 @@
+# The architecture policy. It generates .importlinter (`make arch-generate`) and feeds the
+# architecture tests. Validated by scripts/arch/policy.py; editor schema: architecture.schema.json.
+# Loosening it needs an entry in quality/policy-log.toml (`make arch` lists what changed).
+
+schema_version = 1
+root_package = "app"
+
+# Top to bottom: a layer may import only the layers below it. Names in one list are independent.
+layers = [
+    ["main", "worker", "schema"],
+    ["api"],
+    ["workflows"],
+    ["modules.billing"],
+    ["modules.orders"],
+    ["clients", "shared"],
+    ["db"],
+    ["config"],
+]
+
+# Roots that compose every module's models: the only code outside a module that may import its
+# internals.
+composition_roots = ["schema"]
+
+# HTTP paths that need no require_* dependency.
+public_routes = ["/healthz", "/readyz"]
+
+# Tables owned by infrastructure rather than a module.
+infrastructure_tables = ["schema_history"]
+
+# Who may import each role door. `module_may_import`: the module's own files may import it too.
+[role_doors.router]
+importers = ["api"]
+
+[role_doors.system]
+importers = ["api", "workflows"]
+module_may_import = true
+
+[role_doors.jobs]
+importers = ["worker"]
+module_may_import = true
+
+# rules.py may not import these, directly or indirectly.
+[rules]
+forbidden = [
+    "app.db",
+    "app.clients",
+    "app.config",
+    "sqlalchemy",
+    "fastapi",
+    "starlette",
+    "httpx",
+    "psycopg",
+    "procrastinate",
+]
+
+# service.py, repository.py and rules.py may not import these, directly or indirectly.
+[core]
+forbidden = ["fastapi", "starlette"]
+
+# Modules in the order their contracts appear. Each owns its tables and lists its role doors.
+[modules.orders]
+tables = ["orders"]
+role_doors = ["router"]
+
+[modules.billing]
+tables = ["payment_requests"]
+role_doors = ["router", "system", "jobs"]

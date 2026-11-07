@@ -3,7 +3,8 @@
 Counts per file and code: lint suppression comments (`noqa`), type-checker ignores, ruff
 per-file-ignores entries in pyproject.toml, and the lines of .gitleaksignore. Only real comment
 tokens count, never text inside strings. A file absent at the merge base is being adopted and is
-not compared. A git error fails closed.
+not compared. A git error fails closed. An increase passes with a policy-log entry
+`suppression added: <path>: <kind>:<code>`.
 
 Usage: python scripts/quality/suppressions.py --base <ref>
 """
@@ -107,7 +108,8 @@ def main(argv: list[str] | None = None, cwd: Path | None = None) -> int:
         sys.stderr.write(f"suppressions: {finding}\n")
     if findings:
         sys.stderr.write(
-            "suppressions: fix the code instead; an accepted increase needs a policy-log entry\n"
+            "suppressions: fix the code instead; an accepted increase needs a policy-log entry "
+            'with change = "suppression added: <path>: <kind>:<code>"\n'
         )
     return 1 if findings else 0
 

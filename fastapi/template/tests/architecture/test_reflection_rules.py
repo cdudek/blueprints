@@ -4,6 +4,7 @@ import importlib
 
 import pytest
 from fastapi import FastAPI
+from scripts.arch.policy import load_policy
 
 from app.db.base import Base
 from app.main import app
@@ -11,9 +12,9 @@ from app.schema import metadata
 from tests.architecture import rules
 from tests.architecture.conftest import FIXTURES
 
-# Hand-written until architecture.toml (milestone 3) declares them.
-TABLE_OWNERS = {"orders": "orders", "payment_requests": "billing", "schema_history": "db"}
-PUBLIC_ROUTES = {"/healthz", "/readyz"}
+POLICY = load_policy()
+TABLE_OWNERS = POLICY.table_owners()
+PUBLIC_ROUTES = set(POLICY.public_routes)
 
 
 def test_doors_export_only_operations_schemas_and_errors() -> None:

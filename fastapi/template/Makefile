@@ -14,7 +14,7 @@ name ?=
 BASE_REF ?= $(shell git rev-parse -q --verify origin/HEAD >/dev/null && echo origin/HEAD \
 	|| (git rev-parse -q --verify origin/main >/dev/null && echo origin/main) || echo HEAD)
 
-.PHONY: setup dev run-worker format lint typecheck test test-integration test-tooling arch check migrate migration openapi secrets-scan docker-build clean
+.PHONY: setup dev run-worker format lint typecheck test test-integration test-tooling arch arch-generate arch-baseline-write check migrate migration openapi secrets-scan docker-build clean
 
 setup: ## Install the locked dependencies and the pre-commit and pre-push hooks
 	uv sync --locked && uv run prek install
@@ -44,9 +44,18 @@ test-integration: ## Integration, worker and concurrency tests against real Post
 test-tooling: ## Tests of the scripts in scripts/
 	uv run pytest tests/tooling
 
-arch: ## Import contracts, the architecture tests, and the list of review items
-	uv run lint-imports --no-cache && uv run pytest tests/architecture
+arch: ## Generated files, import contracts, architecture tests, baselines, policy changes (BASE_REF=)
+	uv run python -m scripts.arch.generate --check && uv run lint-imports --no-cache
+	uv run pytest tests/architecture
+	uv run python -m scripts.quality.baseline_shrinks --base $(BASE_REF)
+	uv run python -m scripts.quality.policy_changes --base $(BASE_REF)
 	uv run python -m scripts.arch.review_items
+
+arch-generate: ## Regenerate .importlinter and architecture.schema.json from architecture.toml
+	uv run python -m scripts.arch.generate
+
+arch-baseline-write: ## Brownfield adoption: baseline today's import violations (refuses never-baselinable ones)
+	uv run python -m scripts.arch.baseline && uv run python -m scripts.arch.generate
 
 check: lint typecheck test test-integration test-tooling arch secrets-scan ## Everything CI runs (DATABASE_URL=)
 	uv run alembic upgrade head && uv run alembic check

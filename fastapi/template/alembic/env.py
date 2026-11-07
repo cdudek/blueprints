@@ -5,6 +5,7 @@ readiness can ask "is the revision my code needs applied?" instead of "is this t
 """
 
 import asyncio
+from collections.abc import Collection, Mapping
 from logging.config import fileConfig
 from typing import Any
 
@@ -24,7 +25,9 @@ if config.config_file_name is not None and config.attributes.get("configure_logg
     fileConfig(config.config_file_name)
 
 
-def record_revision(ctx: MigrationContext, step: MigrationInfo, **_kw: Any) -> None:
+def record_revision(
+    ctx: MigrationContext, step: MigrationInfo, heads: Collection[Any], run_args: Mapping[str, Any]
+) -> None:
     conn = ctx.connection
     if conn is None:
         raise RuntimeError("schema_history needs an online migration")
@@ -35,7 +38,7 @@ def record_revision(ctx: MigrationContext, step: MigrationInfo, **_kw: Any) -> N
         conn.execute(delete(schema_history).where(schema_history.c.revision == revision))
 
 
-def include_name(name: str | None, type_: str, _parents: dict[str, str | None]) -> bool:
+def include_name(name: str | None, type_: str, _parents: object) -> bool:
     """The job queue's objects come from its vendored schema, not from our models."""
     return not (type_ == "table" and name is not None and name.startswith("procrastinate_"))
 

@@ -10,8 +10,8 @@ gate and `make help` lists every target.
 - **A business capability:** `src/app/modules/<plural>/` with `__init__.py` (the door: imports and
   `__all__` only), `service.py`, `repository.py`, `rules.py`, `schemas.py`, `models.py`,
   `errors.py`. Add `router.py`, `system.py` or `jobs.py` only when the module needs that role.
-  List every new file in the module's door contract in `.importlinter`, the table owner in
-  `tests/architecture/test_reflection_rules.py`, and import its models in `src/app/schema.py`.
+  Declare the module, its tables and role doors in `architecture.toml`, run `make arch-generate`,
+  and import its models in `src/app/schema.py`. Never edit `.importlinter`: it is generated.
 - **An operation:** a plain function in `service.py`, decorated with `@operation(access=...)`,
   taking `tx: Tx` first and, for a user operation, the caller's `Principal`. It never opens,
   commits or rolls back a transaction.

@@ -43,15 +43,14 @@ the same file is invisible once the pair is baselined.
 | One charge per payment request | the worked-slice tests (`tests/integration/test_slice.py`) | providers without idempotency support | none |
 | Mounted secret files win over env | settings test with conflicting values (`tests/unit/test_settings.py`) | none | none |
 | Expand migrations are additive | AST over each revision (`migration_phases`): every file sets `PHASE`; an `expand` upgrade calls no `op.drop_*` or `op.rename_table`, renames no column, tightens no column to `NOT NULL`, changes no type; a `contract` file sets `LAST_USE_REMOVED_IN` | raw SQL (`op.execute()`, `exec_driver_sql()`): allowed only with a `# reviewed: <reason>` comment on the line above, listed by `make arch` | marked raw SQL |
-| Suppressions only shrink | `scripts/quality/suppressions.py`, compared with the merge base: lint suppression comments and type ignores per file and code (comment tokens only), ruff per-file-ignores entries, `.gitleaksignore` lines; a file new since the merge base is adopted; a git error fails closed | none | policy-log entries (build step 10; until then every increase fails) |
-| Baselines only shrink, policy never loosens silently | arrives with `baseline_shrinks.py` and `policy_changes.py` (build step 10) | none | policy-log entries |
+| Suppressions only shrink | `scripts/quality/suppressions.py`, compared with the merge base: lint suppression comments and type ignores per file and code (comment tokens only), ruff per-file-ignores entries, `.gitleaksignore` lines; a file new since the merge base is adopted; a git error fails closed | none | policy-log entries |
+| Baselines only shrink, policy never loosens silently | `scripts/quality/baseline_shrinks.py` (a baseline line added since the merge base) and `scripts/quality/policy_changes.py` (a new public route, composition root, layer edge or role-door importer; a removed forbidden import or module; a raised lint threshold, removed rule family, new exclude, disabled strict mode or new deptry ignore), both failing closed | none | policy-log entries |
 | No secrets committed | gitleaks 8.30.1 on staged changes (pre-commit hook) and over the full history (`make secrets-scan` in `make check`), each proven by a planted key built at run time (`tests/tooling/test_gitleaks.py`); ruff S105 to S107 | secrets in runtime output beyond the redaction list | `.gitleaksignore` fingerprints, counted |
 | Declared secrets match `Settings` | the `SecretStr` fields of `Settings` equal `tools/common/secrets/secrets env-names`, and `.env.example` lists every setting by name without a value (`tests/architecture/test_secrets.py`) | none | none |
 | Readiness means schema compatibility | `/readyz` checks a database ping and `REQUIRED_REVISION` in `schema_history`; tests cover old-ready after an expand migration, new-not-ready before its migration, new-ready after it, and no database (`tests/integration/test_readiness.py`) | none | none |
 
-Until the policy file exists (build step 10), the declared table owners and the public routes are
-written in `template/tests/architecture/test_reflection_rules.py`, and the contracts in
-`template/.importlinter` are hand-written.
+`template/architecture.toml` declares the layers, modules, tables, role doors and public routes;
+`template/.importlinter` is generated from it, and a test fails when the two disagree.
 
 **Tool choice.** import-linter is the only import-graph enforcer. It cannot name a submodule of an
 external package (`sqlalchemy.ext.asyncio`), so "sessions only in `app/db`" is an AST rule. The

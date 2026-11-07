@@ -87,7 +87,7 @@ ban-relative-imports = "parents"
 [tool.mypy]
 python_version = "3.14"
 strict = true
-files = ["src", "tests"]
+files = ["src", "tests", "scripts", "alembic"]
 exclude = ["^tests/fixtures/"]  # deliberate violations, checked by tests/architecture
 plugins = ["pydantic.mypy"]
 
