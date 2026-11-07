@@ -1,0 +1,8 @@
+# Allowlist: only what the image needs. Nothing else (tests, tools, .env files) reaches a build.
+*
+!pyproject.toml
+!uv.lock
+!src/
+!alembic.ini
+!alembic/
+**/__pycache__

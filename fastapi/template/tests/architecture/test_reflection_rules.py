@@ -13,7 +13,7 @@ from tests.architecture.conftest import FIXTURES
 
 # Hand-written until architecture.toml (milestone 3) declares them.
 TABLE_OWNERS = {"orders": "orders", "payment_requests": "billing", "schema_history": "db"}
-PUBLIC_ROUTES = {"/healthz"}
+PUBLIC_ROUTES = {"/healthz", "/readyz"}
 
 
 def test_doors_export_only_operations_schemas_and_errors() -> None:
@@ -52,7 +52,8 @@ def test_table_owners_fixture(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_every_route_is_authenticated() -> None:
     assert rules.routes_authenticated(app, PUBLIC_ROUTES) == []
     assert rules.routes_authenticated(app, set()) == [
-        "GET /healthz: no require_* dependency and not listed as public"
+        "GET /healthz: no require_* dependency and not listed as public",
+        "GET /readyz: no require_* dependency and not listed as public",
     ], "the rule sees the routes of included routers"
 
 

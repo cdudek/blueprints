@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from app.api.mount import mount
 from app.config.logging import configure_logging
 from app.config.settings import get_settings
+from app.config.telemetry import configure_tracing
 from app.db.engine import create_engine
 from app.db.transaction import bind_engine
 
@@ -24,3 +25,5 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="FastAPI blueprint", version="1.0.0", lifespan=lifespan)
 mount(app)
+# Instrumented at import: middleware cannot be added once the app has started.
+configure_tracing(app, get_settings().otel_exporter_otlp_endpoint)

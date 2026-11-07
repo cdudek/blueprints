@@ -12,6 +12,8 @@ from typing import Any
 import structlog
 from pydantic import SecretStr
 
+from app.config.telemetry import add_trace_ids
+
 SENSITIVE = re.compile(r"password|secret|token|api_key|authorization|cookie", re.IGNORECASE)
 MASK = "[redacted]"
 PROBES = ("/healthz", "/readyz")
@@ -37,6 +39,7 @@ class _NoProbes(logging.Filter):
 def configure_logging(level: str = "INFO") -> None:
     shared: list[Any] = [
         structlog.contextvars.merge_contextvars,
+        add_trace_ids,
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
         structlog.processors.TimeStamper(fmt="iso", utc=True),

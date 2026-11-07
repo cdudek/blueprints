@@ -30,7 +30,7 @@ from app.db.transaction import Tx, bind_engine
 TEMPLATE_ROOT = Path(__file__).resolve().parents[2]
 
 
-def _admin_execute(server: URL, *statements: str) -> None:
+def admin_execute(server: URL, *statements: str) -> None:
     engine = create_sync_engine(server.set(database="postgres"), isolation_level="AUTOCOMMIT")
     with engine.connect() as conn:
         for statement in statements:
@@ -53,19 +53,19 @@ def server_url() -> URL:
 @pytest.fixture(scope="session")
 def template_db(server_url: URL) -> Iterator[str]:
     name = f"test_template_{uuid.uuid4().hex[:8]}"
-    _admin_execute(server_url, f'CREATE DATABASE "{name}"')
+    admin_execute(server_url, f'CREATE DATABASE "{name}"')
     url = server_url.set(database=name)
     migrate(url.render_as_string(hide_password=False))
     yield name
-    _admin_execute(server_url, f'DROP DATABASE "{name}" WITH (FORCE)')
+    admin_execute(server_url, f'DROP DATABASE "{name}" WITH (FORCE)')
 
 
 @pytest.fixture(scope="module")
 def database_url(server_url: URL, template_db: str) -> Iterator[str]:
     name = f"test_{uuid.uuid4().hex[:12]}"
-    _admin_execute(server_url, f'CREATE DATABASE "{name}" TEMPLATE "{template_db}"')
+    admin_execute(server_url, f'CREATE DATABASE "{name}" TEMPLATE "{template_db}"')
     yield server_url.set(database=name).render_as_string(hide_password=False)
-    _admin_execute(server_url, f'DROP DATABASE "{name}" WITH (FORCE)')
+    admin_execute(server_url, f'DROP DATABASE "{name}" WITH (FORCE)')
 
 
 @pytest.fixture

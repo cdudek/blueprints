@@ -7,12 +7,14 @@ include tools/common/make/common.mk tools/common/make/secrets.mk
 DEV_CMD := uv run fastapi dev src/app/main.py
 GITLEAKS_VERSION := 8.30.1
 COMPOSE ?= docker compose
+DOCKER ?= docker
+IMAGE ?= app
 name ?=
 # The branch the ratchets compare with: the remote's default branch, else HEAD (a fresh copy).
 BASE_REF ?= $(shell git rev-parse -q --verify origin/HEAD >/dev/null && echo origin/HEAD \
 	|| (git rev-parse -q --verify origin/main >/dev/null && echo origin/main) || echo HEAD)
 
-.PHONY: setup dev run-worker format lint typecheck test test-integration test-tooling arch check migrate migration openapi secrets-scan clean
+.PHONY: setup dev run-worker format lint typecheck test test-integration test-tooling arch check migrate migration openapi secrets-scan docker-build clean
 
 setup: ## Install the locked dependencies and the pre-commit and pre-push hooks
 	uv sync --locked && uv run prek install
@@ -61,6 +63,9 @@ openapi: ## Rewrite openapi.json from the app; review the diff
 secrets-scan: ## gitleaks over the full git history (needs the pinned gitleaks binary)
 	@gitleaks version | grep -qx '$(GITLEAKS_VERSION)' || { echo "need gitleaks $(GITLEAKS_VERSION)"; exit 1; }
 	gitleaks git --redact --no-banner
+
+docker-build: ## Build the web, worker and migrate images (DOCKER= IMAGE=)
+	for target in web worker migrate; do $(DOCKER) build --target $$target -t $(IMAGE)-$$target .; done
 
 clean: ## Remove caches and build output
 	rm -rf .mypy_cache .ruff_cache .pytest_cache dist build

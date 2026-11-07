@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     app_env: Literal["development", "test", "production"] = "development"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    otel_exporter_otlp_endpoint: str | None = None  # tracing is off when unset
     # Production connects through the Cloud SQL Auth Proxy with IAM login: no password in the URL.
     database_url: str = "postgresql+psycopg://app:app@localhost:5432/app"
 
