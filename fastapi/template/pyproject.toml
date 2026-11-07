@@ -8,7 +8,9 @@ dependencies = [
     "fastapi>=0.162.2",
     "httpx>=0.28.1",
     "procrastinate==3.10.0",
+    "psycopg-pool>=3.3.3",
     "psycopg[binary]>=3.3.8",
+    "pydantic>=2.14.3",
     "pydantic-settings>=2.16.2",
     "sqlalchemy[asyncio]>=2.1.8",
     "uvicorn>=0.54.0",
@@ -23,6 +25,7 @@ module-name = "app"
 
 [dependency-groups]
 dev = [
+    "deptry==0.25.1",
     "fastapi-cli>=0.0.32",
     "httpx2>=2.16.0",
     "import-linter==2.16",
@@ -73,6 +76,8 @@ ban-relative-imports = "parents"
 "src/app/config/**" = ["TID251"]  # the one place that reads the environment
 "tests/**" = ["S101"]              # assert is how pytest checks
 "tests/architecture/**" = ["S603"] # runs the pinned ruff binary on the fixtures
+"scripts/quality/git.py" = ["S603"] # runs git with fixed arguments
+"tests/tooling/**" = ["S603"]      # builds throwaway git repositories
 
 [tool.mypy]
 python_version = "3.14"
@@ -89,5 +94,14 @@ warn_required_dynamic_aliases = true
 [tool.pytest]
 minversion = "9.0"
 testpaths = ["tests"]
+pythonpath = ["."]  # tests import scripts/ and each other by package path
 addopts = ["--strict-markers", "--strict-config", "--import-mode=importlib"]
 filterwarnings = ["error"]
+
+[tool.deptry]
+known_first_party = ["app"]
+
+[tool.deptry.per_rule_ignores]
+# Used by name, not by import: psycopg is SQLAlchemy's driver (postgresql+psycopg://), uvicorn
+# is the server the container runs.
+DEP002 = ["psycopg", "uvicorn"]

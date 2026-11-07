@@ -14,6 +14,7 @@ revision: str = "e181eea7be5a"
 down_revision: str | Sequence[str] | None = "e9da57659a8a"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+PHASE = "expand"
 
 
 def upgrade() -> None:

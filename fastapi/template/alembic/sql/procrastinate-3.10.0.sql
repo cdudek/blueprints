@@ -8,7 +8,7 @@ EXCEPTION
         -- On managed PostgreSQL services (e.g. Azure Database for PostgreSQL, Amazon RDS,
         -- Google Cloud SQL), CREATE EXTENSION may fail with various error codes:
         -- insufficient_privilege, feature_not_supported, or provider-specific errors.
-        -- Before ignoring, verify the extension actually exists — if it does not exist
+        -- Before ignoring, verify the extension actually exists; if it does not exist
         -- and cannot be created, re-raise so the failure is explicit.
         IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'plpgsql') THEN
             RAISE NOTICE 'plpgsql extension already exists, skipping creation.';

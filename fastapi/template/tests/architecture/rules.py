@@ -9,6 +9,7 @@ import ast
 import importlib
 import inspect
 import pkgutil
+import re
 from collections.abc import Iterable, Iterator, Mapping
 from pathlib import Path
 
@@ -291,4 +292,74 @@ def routes_authenticated(app: FastAPI, public: set[str]) -> list[str]:
     if not paths:
         return ["no API routes found: the rule would pass vacuously"]
     findings += [f"public route {p}: does not exist" for p in sorted(public - paths)]
+    return findings
+
+
+DESTRUCTIVE_OPS = {"drop_table", "drop_column", "drop_index", "drop_constraint", "rename_table"}
+TIGHTENING_KWARGS = {"new_column_name": "rename a column", "type_": "change a column type"}
+RAW_SQL = {"execute", "exec_driver_sql"}
+REVIEWED = re.compile(r"#\s*reviewed:\s*\S")
+
+
+def _module_string(tree: ast.Module, name: str) -> str | None:
+    for stmt in tree.body:
+        value: ast.expr | None
+        if isinstance(stmt, ast.Assign):
+            targets, value = stmt.targets, stmt.value
+        elif isinstance(stmt, ast.AnnAssign):
+            targets, value = [stmt.target], stmt.value
+        else:
+            continue
+        if any(getattr(t, "id", None) == name for t in targets) and isinstance(value, ast.Constant):
+            return str(value.value)
+    return None
+
+
+def _expand_violation(call: ast.Call) -> str | None:
+    name = _called(call)
+    if name in DESTRUCTIVE_OPS:
+        return f"call op.{name}()"
+    if name == "alter_column":
+        for kw in call.keywords:
+            if kw.arg in TIGHTENING_KWARGS:
+                return TIGHTENING_KWARGS[kw.arg]
+            if kw.arg == "nullable" and isinstance(kw.value, ast.Constant) and not kw.value.value:
+                return "tighten a column to NOT NULL"
+    return None
+
+
+def migration_phases(versions: Path) -> list[str]:
+    """Expand migrations are additive; raw SQL is marked `# reviewed: <reason>`."""
+    findings = []
+    for path in sorted(versions.glob("*.py")):
+        name = path.name
+        source = path.read_text(encoding="utf-8")
+        lines = source.splitlines()
+        tree = ast.parse(source, filename=name)
+        phase = _module_string(tree, "PHASE")
+        if phase not in {"expand", "contract"}:
+            findings.append(f'{name}:1: set PHASE = "expand" or "contract"')
+        if phase == "contract" and not _module_string(tree, "LAST_USE_REMOVED_IN"):
+            findings.append(
+                f"{name}:1: a contract migration names the release that removed the last use "
+                "(LAST_USE_REMOVED_IN)"
+            )
+        for func in tree.body:
+            if not isinstance(func, ast.FunctionDef) or func.name == "downgrade":
+                continue
+            for call in ast.walk(func):
+                if not isinstance(call, ast.Call):
+                    continue
+                problem = _expand_violation(call) if phase == "expand" else None
+                if problem:
+                    findings.append(
+                        f"{name}:{call.lineno}: an expand migration may not {problem}; "
+                        "move it to a contract migration"
+                    )
+                marked = any(REVIEWED.search(lines[i]) for i in (call.lineno - 2, call.lineno - 1))
+                if _called(call) in RAW_SQL and not marked:
+                    findings.append(
+                        f"{name}:{call.lineno}: raw SQL needs a `# reviewed: <reason>` comment "
+                        "on the line above"
+                    )
     return findings

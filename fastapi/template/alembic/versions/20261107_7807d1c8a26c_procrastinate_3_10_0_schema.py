@@ -5,7 +5,8 @@ Revises: e181eea7be5a
 Create Date: 2026-11-07 19:05:00.000000
 
 The job queue's tables, types and functions, from the schema.sql that ships with the pinned
-Procrastinate version (copied to alembic/sql/). A Procrastinate upgrade adds its migration files
+Procrastinate version (copied to alembic/sql/ verbatim, except one comment's dash, by this
+repository's punctuation rule). A Procrastinate upgrade adds its migration files
 from procrastinate/sql/migrations as new revisions; this file never changes.
 """
 
@@ -18,6 +19,7 @@ revision: str = "7807d1c8a26c"
 down_revision: str | Sequence[str] | None = "e181eea7be5a"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+PHASE = "expand"
 
 SCHEMA = Path(__file__).resolve().parents[1] / "sql" / "procrastinate-3.10.0.sql"
 
@@ -36,15 +38,15 @@ DROP TYPE IF EXISTS procrastinate_job_to_defer_v1, procrastinate_job_event_type,
 """
 
 
-def _execute(sql: str) -> None:
-    op.get_bind().exec_driver_sql(sql.replace("%", "%%"))  # the driver treats % as a placeholder
+def _escaped(sql: str) -> str:
+    return sql.replace("%", "%%")  # the driver treats % as a placeholder
 
 
 def upgrade() -> None:
     # reviewed: the vendored Procrastinate schema; creates only procrastinate_* objects.
-    _execute(SCHEMA.read_text(encoding="utf-8"))
+    op.get_bind().exec_driver_sql(_escaped(SCHEMA.read_text(encoding="utf-8")))
 
 
 def downgrade() -> None:
     # reviewed: drops only procrastinate_* objects.
-    _execute(DROP_ALL)
+    op.get_bind().exec_driver_sql(_escaped(DROP_ALL))

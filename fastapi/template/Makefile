@@ -8,8 +8,11 @@ MAKEFLAGS += --warn-undefined-variables --no-builtin-rules
 
 COMPOSE ?= docker compose
 name ?=
+# The branch the ratchets compare with: the remote's default branch, else HEAD (a fresh copy).
+BASE_REF ?= $(shell git rev-parse -q --verify origin/HEAD >/dev/null && echo origin/HEAD \
+	|| (git rev-parse -q --verify origin/main >/dev/null && echo origin/main) || echo HEAD)
 
-.PHONY: help setup dev run-worker format lint typecheck test test-integration arch check migrate migration clean
+.PHONY: help setup dev run-worker format lint typecheck test test-integration test-tooling arch check migrate migration openapi clean
 
 help: ## List the targets
 	@awk 'BEGIN { FS = ":[^#]*## " } /^[a-zA-Z0-9_-]+:[^=]*## / { printf "  %-20s %s\n", $$1, $$2 }' $(MAKEFILE_LIST) | sort
@@ -26,8 +29,9 @@ run-worker: ## Run the job worker (never inside the web process)
 format: ## Format and apply safe lint fixes
 	uv run ruff format && uv run ruff check --fix
 
-lint: ## Format check and lint
-	uv run ruff format --check && uv run ruff check
+lint: ## Format check, lint, dependencies and the suppression ratchet (BASE_REF=)
+	uv run ruff format --check && uv run ruff check && uv run deptry src alembic
+	uv run python -m scripts.quality.suppressions --base $(BASE_REF)
 
 typecheck: ## mypy strict
 	uv run mypy
@@ -38,16 +42,24 @@ test: ## Unit tests: no database, sockets disabled
 test-integration: ## Integration, worker and concurrency tests against real Postgres (DATABASE_URL=)
 	uv run pytest tests/integration
 
-arch: ## Import contracts and the architecture tests
-	uv run lint-imports --no-cache && uv run pytest tests/architecture
+test-tooling: ## Tests of the scripts in scripts/
+	uv run pytest tests/tooling
 
-check: lint typecheck test test-integration arch ## Everything CI runs
+arch: ## Import contracts, the architecture tests, and the list of review items
+	uv run lint-imports --no-cache && uv run pytest tests/architecture
+	uv run python -m scripts.arch.review_items
+
+check: lint typecheck test test-integration test-tooling arch ## Everything CI runs (DATABASE_URL=)
+	uv run alembic upgrade head && uv run alembic check
 
 migrate: ## Apply migrations up to head
 	uv run alembic upgrade head
 
 migration: ## Autogenerate a migration (name=)
 	uv run alembic revision --autogenerate -m "$(name)"
+
+openapi: ## Rewrite openapi.json from the app; review the diff
+	uv run python -m scripts.openapi
 
 clean: ## Remove caches and build output
 	rm -rf .mypy_cache .ruff_cache .pytest_cache dist build
