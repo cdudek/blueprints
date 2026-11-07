@@ -7,8 +7,9 @@ MAKEFLAGS += --warn-undefined-variables --no-builtin-rules
 .DEFAULT_GOAL := help
 
 COMPOSE ?= docker compose
+name ?=
 
-.PHONY: help setup dev format lint typecheck test check clean
+.PHONY: help setup dev format lint typecheck test test-integration check migrate migration clean
 
 help: ## List the targets
 	@awk 'BEGIN { FS = ":[^#]*## " } /^[a-zA-Z0-9_-]+:[^=]*## / { printf "  %-20s %s\n", $$1, $$2 }' $(MAKEFILE_LIST) | sort
@@ -31,7 +32,16 @@ typecheck: ## mypy strict
 test: ## Unit tests: no database, sockets disabled
 	uv run pytest tests/unit -p socket --disable-socket --allow-unix-socket
 
-check: lint typecheck test ## Everything CI runs
+test-integration: ## Integration, worker and concurrency tests against real Postgres (DATABASE_URL=)
+	uv run pytest tests/integration
+
+check: lint typecheck test test-integration ## Everything CI runs
+
+migrate: ## Apply migrations up to head
+	uv run alembic upgrade head
+
+migration: ## Autogenerate a migration (name=)
+	uv run alembic revision --autogenerate -m "$(name)"
 
 clean: ## Remove caches and build output
 	rm -rf .mypy_cache .ruff_cache .pytest_cache dist build

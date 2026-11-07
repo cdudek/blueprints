@@ -4,8 +4,11 @@ version = "1.0.0"
 description = "A modular monolith with doors: the FastAPI blueprint template"
 requires-python = ">=3.14"
 dependencies = [
+    "alembic>=1.20.1",
     "fastapi>=0.162.2",
+    "psycopg[binary]>=3.3.8",
     "pydantic-settings>=2.16.2",
+    "sqlalchemy[asyncio]>=2.1.8",
     "uvicorn>=0.54.0",
 ]
 

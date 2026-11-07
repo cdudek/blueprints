@@ -1,19 +1,23 @@
-"""The web root: builds the FastAPI app and mounts the routers."""
+"""The web root: builds the FastAPI app, binds the engine and mounts the routers."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import health
+from app.api.mount import mount
 from app.config.settings import get_settings
+from app.db.engine import create_engine
+from app.db.transaction import bind_engine
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    get_settings()  # a bad configuration fails at startup, not on the first request
+    engine = create_engine(get_settings().database_url)  # bad settings fail at startup
+    bind_engine(engine)
     yield
+    await engine.dispose()
 
 
 app = FastAPI(title="FastAPI blueprint", version="1.0.0", lifespan=lifespan)
-app.include_router(health.router)
+mount(app)
