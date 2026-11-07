@@ -307,6 +307,12 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
       "text in JSX and literal user-visible attributes",
     ],
     [
+      "src/ui/Chart.stories.tsx",
+      "no-restricted-imports",
+      /src\/ui is a leaf/,
+      "a story importing a package outside uiMayImport and Storybook",
+    ],
+    [
       "src/escape.ts",
       "boundaries/no-unknown-files",
       /does not match any file pattern/,

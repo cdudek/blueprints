@@ -185,6 +185,22 @@ jobs:
           docker logs web
           exit 1
 
+  # Every story of src/ui, checked with axe in the Storybook it renders in.
+  storybook:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm storybook:test
+
   quality-report:
     needs: changes
     if: needs.changes.outputs.code == 'true'
@@ -222,7 +238,7 @@ jobs:
   # The one stable required check. It always reports, whatever was skipped.
   ci:
     if: always()
-    needs: [changes, check, e2e, worker, docker, quality-report, governance]
+    needs: [changes, check, e2e, worker, docker, storybook, quality-report, governance]
     runs-on: ubuntu-latest
     steps:
       - name: Fail unless every needed job passed or was deliberately skipped

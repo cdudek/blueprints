@@ -3,7 +3,7 @@
 // Creates the doors, service, repository, pure rules with a test, schema, types, tables and a
 // component; declares the module and its table in architecture.json; composes the table into
 // src/db/schema.ts; regenerates the diagram. Then run `pnpm db:generate` for the migration.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { embed, renderDiagram } from "./diagram.mjs";
 import { layoutOf, loadArchitecture } from "./lib.mjs";
@@ -110,12 +110,15 @@ export { ${P}List } from "./components/${P}List";
 export { create${P}Schema, type Create${P}Input } from "./${s}.schema";
 export type { ${P}, ${P}Row } from "./${s}.types";
 `,
-  [`components/${P}List.tsx`]: `import { Text } from "${spec(L.ui)}/Text";
+  [`components/${P}List.tsx`]: `import { useTranslations } from "next-intl";
+import { Text } from "${spec(L.ui)}/Text";
 import type { ${P}Row } from "../${s}.types";
 
-// Business component: knows the ${s} type, is built from src/ui, gets its data through props.
+// Business component: knows the ${s} type, is built from src/ui, gets its data through props
+// and its words from its own messages namespace.
 export function ${P}List({ rows }: { rows: ${P}Row[] }) {
-  if (rows.length === 0) return <p>No ${name} yet.</p>;
+  const t = useTranslations("${name}");
+  if (rows.length === 0) return <p>{t("empty")}</p>;
   return (
     <ul>
       {rows.map((row) => (
@@ -138,6 +141,16 @@ for (const [file, text] of Object.entries(files)) {
 arch.modules[name] = { description: `${Ps} (describe this module)` };
 arch.tables[snake(name)] = name;
 writeFileSync(join(root, "architecture.json"), `${JSON.stringify(arch, null, 2)}\n`);
+
+// the module's messages namespace, in every catalog (typed keys come from messages/en.json)
+const messagesDir = join(root, "messages");
+if (existsSync(messagesDir))
+  for (const catalog of readdirSync(messagesDir).filter((f) => f.endsWith(".json"))) {
+    const path = join(messagesDir, catalog);
+    const messages = JSON.parse(readFileSync(path, "utf8"));
+    messages[name] = { empty: `No ${name} yet.` };
+    writeFileSync(path, `${JSON.stringify(messages, null, 2)}\n`);
+  }
 
 // the persistence composition root
 const schemaFile = join(root, arch.srcRoot, L.schemaRoot);

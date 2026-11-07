@@ -13,3 +13,4 @@ coverage
 .DS_Store
 .vitest
 .husky/_
+storybook-static

@@ -64,6 +64,9 @@ describe("pnpm new:module", () => {
       "shipments",
     );
     expect(readFileSync(join(copy, "src/db/schema.ts"), "utf8")).toContain("shipments");
+    expect(JSON.parse(readFileSync(join(copy, "messages/en.json"), "utf8")).shipments).toEqual({
+      empty: "No shipments yet.",
+    });
 
     const bin = (name: string) => join(copy, "node_modules/.bin", name);
     for (const [cmd, args] of [

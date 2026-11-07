@@ -14,8 +14,8 @@
     "entry": ["src/**/*.test.{ts,tsx}", "tests/**/*.test.ts", "tests/setup.ts"]
   },
   "playwright": {
-    "config": ["playwright.config.ts"],
-    "entry": ["tests/e2e/**/*.spec.ts"]
+    "config": ["playwright.config.ts", "playwright.storybook.config.ts"],
+    "entry": ["tests/e2e/**/*.spec.ts", "tests/storybook/**/*.spec.ts"]
   },
   "entry": [
     "scripts/**/*.mjs",

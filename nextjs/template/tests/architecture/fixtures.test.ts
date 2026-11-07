@@ -99,6 +99,7 @@ const intended: Record<string, string[]> = {
   ],
   "src/modules/shipments/shipments.dispatch.service.ts": ["system-operations-from-routes-only"],
   "src/app/hardcoded/page.tsx": ["copy-from-messages"],
+  "src/ui/Chart.stories.tsx": ["ui-leaf"],
 };
 
 describe("each violation is flagged by its intended rules only", () => {
@@ -369,6 +370,7 @@ const specific: [string, string, string, string][] = [
   ["copy-from-messages", "src/app/hardcoded/page.tsx", "Dashboard", "a literal title"],
   ["copy-from-messages", "src/app/hardcoded/page.tsx", "Search orders", "a literal aria-label"],
   ["copy-from-messages", "src/app/hardcoded/page.tsx", "Search", "a literal placeholder"],
+  ["ui-leaf", "src/ui/Chart.stories.tsx", "lodash", "imports only the packages in uiMayImport"],
   // removing or renaming a module: its name stays behind in the policy. A rename is also the pair
   // ghost (a folder nobody declared) and phantom (a declared name with no folder)
   ["modules-declared", "architecture.json", "edge:shipments->couriers", "not a declared module"],

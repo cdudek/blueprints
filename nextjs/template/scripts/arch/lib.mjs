@@ -48,6 +48,9 @@ export function loadArchitecture(root = process.cwd()) {
   return arch;
 }
 
+/** Packages a story under src/ui may import besides uiMayImport: Storybook itself. */
+export const STORYBOOK_PACKAGES = ["storybook", "@storybook"];
+
 /** @param {Architecture} arch */
 export const moduleNames = (arch) => Object.keys(arch.modules);
 

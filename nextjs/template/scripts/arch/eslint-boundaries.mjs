@@ -3,7 +3,14 @@
 // The same historical baseline that the architecture tests read is turned into exact
 // (file -> file) allow policies here, so brownfield debt is admitted once, in one place.
 import boundaries from "eslint-plugin-boundaries";
-import { allowedTargets, doorFiles, layoutOf, moduleNames, moduleOf } from "./lib.mjs";
+import {
+  allowedTargets,
+  doorFiles,
+  layoutOf,
+  moduleNames,
+  moduleOf,
+  STORYBOOK_PACKAGES,
+} from "./lib.mjs";
 
 const SHARED_NO_IO =
   "src/shared does no I/O: read the session or the database in a module (accounts), not here";
@@ -277,16 +284,21 @@ export function buildBoundariesConfig(arch, options = {}) {
       .filter((p) => p !== "server-only")
       .map((name) => ({ name, message: SHARED_NO_IO })),
   );
-  const uiPackages = arch.uiMayImport
-    ? {
-        patterns: [
-          {
-            regex: `^(?!(?:\\.|@/${escape(L.ui)}/|(?:${arch.uiMayImport.map(escape).join("|")})(?:/|$)))`,
-            message: `src/ui is a leaf: it imports only src/ui and ${arch.uiMayImport.join(", ")} (uiMayImport)`,
-          },
-        ],
-      }
-    : {};
+  /** @param {string[]} extra packages allowed on top of uiMayImport */
+  const uiLeaf = (extra = []) =>
+    arch.uiMayImport
+      ? {
+          patterns: [
+            {
+              regex: `^(?!(?:\\.|@/${escape(L.ui)}/|(?:${[...arch.uiMayImport, ...extra].map(escape).join("|")})(?:/|$)))`,
+              message: `src/ui is a leaf: it imports only src/ui and ${arch.uiMayImport.join(", ")} (uiMayImport)`,
+            },
+          ],
+        }
+      : {};
+  const uiPackages = uiLeaf();
+  // a story is a Storybook entry: it may also import Storybook itself
+  const storyPackages = uiLeaf(STORYBOOK_PACKAGES);
   const pure = {
     patterns: [
       { group: ["next", "next/*", "react", "react-dom", "server-only", "node:*"], message: PURE },
@@ -312,6 +324,7 @@ export function buildBoundariesConfig(arch, options = {}) {
     { files: [at(`${L.shared}/**/*.{ts,tsx}`)], bans: bans(...general, icons, css, sharedIo) },
     { files: [at(`${L.ui}/**/*.{ts,tsx}`)], bans: bans(...general, icons, uiPackages) },
     { files: [at(`${L.ui}/icons/**/*.{ts,tsx}`)], bans: bans(...general, uiPackages) },
+    { files: [at(`${L.ui}/**/*.stories.tsx`)], bans: bans(banned, icons, storyPackages) },
   ].map(({ files, bans: rule }, i) => ({
     name: `architecture/import-bans-${i}`,
     files,

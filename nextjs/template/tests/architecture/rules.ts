@@ -25,6 +25,7 @@ import {
   layoutOf,
   moduleNames,
   moduleOf as moduleOfIn,
+  STORYBOOK_PACKAGES,
   type Architecture,
 } from "../../scripts/arch/lib.mjs";
 import {
@@ -831,8 +832,12 @@ export function buildRules(arch: Architecture): ArchRule[] {
       nonNegotiable: 10,
       async check(ctx) {
         const g = graphOf(ctx);
-        const allowedPackage = (p: string) =>
-          !arch.uiMayImport || arch.uiMayImport.some((a) => p === a || p.startsWith(`${a}/`));
+        // a story is a Storybook entry: it may also import Storybook itself
+        const allowedPackage = (p: string, from: string) =>
+          !arch.uiMayImport ||
+          [...arch.uiMayImport, ...(/\.stories\.tsx$/.test(from) ? STORYBOOK_PACKAGES : [])].some(
+            (a) => p === a || p.startsWith(`${a}/`),
+          );
         return g.edges
           .filter((e) => e.from.startsWith(`${UI}/`))
           .flatMap((e) => {
@@ -846,7 +851,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
               // a stylesheet or asset beside the component: it must stay inside src/ui
               const to = posixJoin(e.from, e.specifier);
               if (!to.startsWith(`${UI}/`)) why = `src/ui is a leaf: it never imports ${to}`;
-            } else if (isBuiltin(e.to) || !allowedPackage(e.to))
+            } else if (isBuiltin(e.to) || !allowedPackage(e.to, e.from))
               why = `src/ui imports only the packages in uiMayImport, not ${e.to}`;
             return why ? [{ rule: "ui-leaf", file: e.from, target: e.to, message: why }] : [];
           });
