@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
@@ -21,22 +17,15 @@
     "isolatedModules": true,
     "resolveJsonModule": true,
     "incremental": true,
-    "types": [
-      "node",
-      "vitest/globals"
-    ],
+    "types": ["node", "vitest/globals"],
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@tests/*": [
-        "./tests/*"
-      ]
+      "@/*": ["./src/*"],
+      "@tests/*": ["./tests/*"]
     }
   },
   "include": [
@@ -50,8 +39,5 @@
     "*.ts",
     "*.mjs"
   ],
-  "exclude": [
-    "node_modules",
-    "tests/fixtures"
-  ]
+  "exclude": ["node_modules", "tests/fixtures"]
 }

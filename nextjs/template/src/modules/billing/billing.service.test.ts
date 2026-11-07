@@ -7,7 +7,8 @@ import {
 } from "@/clients/payments/providers/fixture";
 import { db, inTransaction } from "@/db";
 import { policyOf } from "@/shared/access";
-import { signInAs } from "@tests/helpers/auth-mock";
+import type { Session } from "@/shared/auth";
+import { sessionOf } from "@tests/helpers/session";
 import { resetData } from "@tests/helpers/db-mock";
 import { seedOrder } from "@tests/helpers/seed";
 import { billingRepository } from "./billing.repository";
@@ -22,7 +23,6 @@ import { paymentInbox, payments } from "./billing.tables";
 import type { PaymentStatus } from "./billing.types";
 
 vi.mock("@/db", () => import("@tests/helpers/db-mock").then((m) => m.dbModule()));
-vi.mock("@/shared/auth", () => import("@tests/helpers/auth-mock").then((m) => m.authMock));
 
 const provider = () => paymentsClient() as FixturePaymentsClient;
 const only = async () => (await db.select().from(payments))[0];
@@ -32,16 +32,18 @@ const event = (type: string, attemptId: string, providerRef: string, id = `evt_$
 
 async function started(userId = "u1") {
   const orderId = await seedOrder(db, userId);
-  const result = await startPayment({ orderId, userId, amountCents: 1000 });
+  const result = await startPayment(me, { orderId, userId, amountCents: 1000 });
   if (!result.ok) throw new Error("setup failed");
   const payment = await only();
   if (!payment) throw new Error("setup failed");
   return { orderId, payment };
 }
 
+let me: Session | null = sessionOf("u1");
+
 beforeEach(async () => {
   await resetData(db);
-  signInAs("u1");
+  me = sessionOf("u1");
 });
 
 describe("access policies", () => {
@@ -53,8 +55,8 @@ describe("access policies", () => {
   });
 
   it("answers a typed unauthenticated error for a user operation", async () => {
-    signInAs(null);
-    expect(await startPayment({ orderId: "x", userId: "u1", amountCents: 1 })).toEqual({
+    me = null;
+    expect(await startPayment(me, { orderId: "x", userId: "u1", amountCents: 1 })).toEqual({
       ok: false,
       error: "unauthenticated",
     });
@@ -63,7 +65,6 @@ describe("access policies", () => {
 
 describe("priceFor (public)", () => {
   it("validates input and reads the catalog without a session", async () => {
-    signInAs(null);
     expect(await priceFor("widget")).toEqual({ ok: true, value: { unitCents: 1250 } });
     expect(await priceFor("nope")).toEqual({ ok: false, error: "unknown_product" });
     expect(await priceFor("")).toEqual({ ok: false, error: "invalid_product" });
@@ -74,8 +75,8 @@ describe("startPayment", () => {
   it("returns the same attempt and client secret on retry", async () => {
     const orderId = await seedOrder(db, "u1");
     const order = { orderId, userId: "u1", amountCents: 1000 };
-    const first = await startPayment(order);
-    const second = await startPayment(order);
+    const first = await startPayment(me, order);
+    const second = await startPayment(me, order);
     expect(first).toEqual(second);
     expect(await db.select().from(payments)).toHaveLength(1);
     const attempt = await only();
@@ -84,7 +85,7 @@ describe("startPayment", () => {
 
   it("refuses an order that is not the caller's", async () => {
     const orderId = await seedOrder(db, "u2");
-    expect(await startPayment({ orderId, userId: "u2", amountCents: 1000 })).toEqual({
+    expect(await startPayment(me, { orderId, userId: "u2", amountCents: 1000 })).toEqual({
       ok: false,
       error: "forbidden",
     });
@@ -92,14 +93,14 @@ describe("startPayment", () => {
 
   it("refuses a payment for an order that does not exist (foreign key)", async () => {
     await expect(
-      startPayment({ orderId: crypto.randomUUID(), userId: "u1", amountCents: 1 }),
+      startPayment(me, { orderId: crypto.randomUUID(), userId: "u1", amountCents: 1 }),
     ).rejects.toThrow();
   });
 
   it("never gives a cancelled attempt a fresh intent", async () => {
     const { orderId } = await started();
-    await inTransaction((tx) => recordCancellation(orderId, tx));
-    expect(await startPayment({ orderId, userId: "u1", amountCents: 1000 })).toEqual({
+    await inTransaction((tx) => recordCancellation(me, orderId, tx));
+    expect(await startPayment(me, { orderId, userId: "u1", amountCents: 1000 })).toEqual({
       ok: false,
       error: "not_payable",
     });
@@ -110,11 +111,11 @@ describe("recordCancellation", () => {
   it("is idempotent, refunds a captured payment and refuses another user's", async () => {
     const { orderId, payment } = await started();
     await setStatus("succeeded");
-    await inTransaction((tx) => recordCancellation(orderId, tx));
-    await inTransaction((tx) => recordCancellation(orderId, tx));
+    await inTransaction((tx) => recordCancellation(me, orderId, tx));
+    await inTransaction((tx) => recordCancellation(me, orderId, tx));
     expect((await only())?.status).toBe("refund_pending");
-    signInAs("u2");
-    expect(await inTransaction((tx) => recordCancellation(orderId, tx))).toEqual({
+    me = sessionOf("u2");
+    expect(await inTransaction((tx) => recordCancellation(me, orderId, tx))).toEqual({
       ok: false,
       error: "forbidden",
     });
@@ -135,7 +136,7 @@ describe("recordCancellation", () => {
           .where(eq(payments.id, payment.id));
         return real(...args);
       });
-    await inTransaction((tx) => recordCancellation(orderId, tx));
+    await inTransaction((tx) => recordCancellation(me, orderId, tx));
     spy.mockRestore();
     // cancel_pending would have been wrong: the money arrived, so it must be refunded
     expect((await only())?.status).toBe("refund_pending");
@@ -169,7 +170,7 @@ describe("receivePaymentEventFromWebhook", () => {
 
   it("records a refund when success arrives after a cancel", async () => {
     const { orderId, payment } = await started();
-    await inTransaction((tx) => recordCancellation(orderId, tx));
+    await inTransaction((tx) => recordCancellation(me, orderId, tx));
     await receivePaymentEventFromWebhook(
       event("succeeded", payment.id, payment.providerRef ?? ""),
       FIXTURE_SIGNATURE,
@@ -224,7 +225,7 @@ describe("processPaymentWorkFromJob (cancel and refund worker)", () => {
 
   it("cancels the open intent at the provider", async () => {
     const { orderId, payment } = await started();
-    await inTransaction((tx) => recordCancellation(orderId, tx));
+    await inTransaction((tx) => recordCancellation(me, orderId, tx));
     expect(await run()).toEqual({ ok: true, value: { processed: 1, failed: 0 } });
     expect((await only())?.status).toBe("cancelled");
     expect(provider().cancelled).toContain(payment.providerRef);
@@ -233,7 +234,7 @@ describe("processPaymentWorkFromJob (cancel and refund worker)", () => {
   it("refunds a captured payment", async () => {
     const { orderId, payment } = await started();
     await setStatus("succeeded");
-    await inTransaction((tx) => recordCancellation(orderId, tx));
+    await inTransaction((tx) => recordCancellation(me, orderId, tx));
     await run();
     expect((await only())?.status).toBe("refunded");
     expect(provider().refunded).toContain(payment.providerRef);
@@ -241,7 +242,7 @@ describe("processPaymentWorkFromJob (cancel and refund worker)", () => {
 
   it("turns 'already captured' at cancel time into a refund", async () => {
     const { orderId, payment } = await started();
-    await inTransaction((tx) => recordCancellation(orderId, tx));
+    await inTransaction((tx) => recordCancellation(me, orderId, tx));
     provider().captured.add(payment.providerRef ?? "");
     await run();
     expect((await only())?.status).toBe("refund_pending");
@@ -251,7 +252,7 @@ describe("processPaymentWorkFromJob (cancel and refund worker)", () => {
 
   it("retries after a provider failure and counts the attempt", async () => {
     const { orderId } = await started();
-    await inTransaction((tx) => recordCancellation(orderId, tx));
+    await inTransaction((tx) => recordCancellation(me, orderId, tx));
     provider().failNext = true;
     expect(await run()).toEqual({ ok: true, value: { processed: 0, failed: 1 } });
     expect(await only()).toMatchObject({ status: "cancel_pending", attempts: 1 });
@@ -262,7 +263,7 @@ describe("processPaymentWorkFromJob (cancel and refund worker)", () => {
   it("waits for a missing provider reference, then abandons it after the grace period", async () => {
     const orderId = await seedOrder(db, "u1");
     await billingRepository.findOrCreatePayment({ orderId, userId: "u1", amountCents: 1000 });
-    await inTransaction((tx) => recordCancellation(orderId, tx));
+    await inTransaction((tx) => recordCancellation(me, orderId, tx));
     await run();
     expect((await only())?.status).toBe("cancel_pending");
     await processPaymentWorkFromJob(new Date(Date.now() + 11 * 60 * 1000));

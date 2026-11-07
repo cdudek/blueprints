@@ -52,7 +52,7 @@ describe("eslint config is generated from architecture.json", () => {
 
   it("carries the rules-purity bans for *.rules.ts", async () => {
     const config = await effective("src/modules/orders/order.rules.ts");
-    const [, purity] = generated;
+    const purity = generated.find((c) => c.name === "architecture/rules-purity");
     expect(optionsOf(config.rules["no-restricted-syntax"])).toEqual(
       optionsOf(purity?.rules?.["no-restricted-syntax"]),
     );
@@ -180,6 +180,18 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
       "shared importing a module",
     ],
     [
+      "src/shared/calls-client.ts",
+      "boundaries/dependencies",
+      /src\/shared never imports a client/,
+      "shared importing a client",
+    ],
+    [
+      "src/shared/session-io.ts",
+      "no-restricted-imports",
+      /src\/shared does no I\/O/,
+      "shared reading the request",
+    ],
+    [
       "src/modules/orders/imports-app.ts",
       "boundaries/dependencies",
       /Nothing imports src\/app/,
@@ -257,6 +269,7 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
     "src/proxy.ts",
     "src/ui/Button.tsx",
     "src/app/place/PlaceButton.tsx",
+    "src/shared/auth.ts",
   ])("stays quiet on the clean file %s", async (file) => {
     const lint = await lintWith();
     expect(await lint(file)).toEqual([]);

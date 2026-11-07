@@ -5,6 +5,8 @@
 import boundaries from "eslint-plugin-boundaries";
 import { allowedTargets, doorFiles, layoutOf, moduleNames, moduleOf } from "./lib.mjs";
 
+const SHARED_NO_IO =
+  "src/shared does no I/O: read the session or the database in a module (accounts), not here";
 const PURE = "Rules are pure: pass time, randomness and config in from the service";
 const BANNED_GLOBALS = [
   "fetch",
@@ -151,6 +153,11 @@ export function buildBoundariesConfig(arch, options = {}) {
       disallow: { to: { element: { types: ["module", "app", "db"] } } },
       message: "src/shared never imports modules, db or app code",
     },
+    {
+      from: type("shared"),
+      disallow: { to: type("client") },
+      message: "src/shared never imports a client: the module that owns the vendor calls it",
+    },
     ...["repository", "tables", "db"].map((c) => ({
       from: category("component"),
       disallow: { to: category(c) },
@@ -200,6 +207,23 @@ export function buildBoundariesConfig(arch, options = {}) {
         // a file that fits no declared element, or a dependency on one, is an error
         "boundaries/no-unknown-files": "error",
         "boundaries/no-unknown-dependencies": "error",
+      },
+    },
+    {
+      name: "architecture/shared-no-io",
+      files: [at(`${L.shared}/**/*.{ts,tsx}`)],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            paths: arch.serverOnlyPackages
+              .filter((p) => p !== "server-only")
+              .map((name) => ({ name, message: SHARED_NO_IO })),
+            patterns: arch.serverOnlyPackages
+              .filter((p) => p !== "server-only")
+              .map((p) => ({ group: [`${p}/*`], message: SHARED_NO_IO })),
+          },
+        ],
       },
     },
     {

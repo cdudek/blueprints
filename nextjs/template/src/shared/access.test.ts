@@ -1,13 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
+import * as accounts from "@/modules/accounts/server";
 import * as billing from "@/modules/billing/server";
 import * as orders from "@/modules/orders/server";
 import { policyOf } from "./access";
-import { signInAs } from "@tests/helpers/auth-mock";
 
 vi.mock("@/db", () => import("@tests/helpers/db-mock").then((m) => m.dbModule()));
-vi.mock("@/shared/auth", () => import("@tests/helpers/auth-mock").then((m) => m.authMock));
 
-const doors = { billing, orders };
+const doors = { accounts, billing, orders };
 const exported = Object.entries(doors).flatMap(([module, door]) =>
   Object.entries(door).map(([name, fn]) => ({ id: `${module}.${name}`, fn })),
 );
@@ -34,8 +33,7 @@ describe("user operations refuse an anonymous caller with a typed error", () => 
   });
 
   it.each(userOps)("$id", async ({ fn }) => {
-    signInAs(null);
     const call = fn as (...args: unknown[]) => Promise<unknown>;
-    expect(await call({}, {})).toEqual({ ok: false, error: "unauthenticated" });
+    expect(await call(null, {}, {})).toEqual({ ok: false, error: "unauthenticated" });
   });
 });

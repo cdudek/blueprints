@@ -232,8 +232,29 @@
         "resultFile": {
           "$ref": "#/definitions/path",
           "description": "The one shared file a rules file may import. Default: shared/result.ts"
+        },
+        "workflows": {
+          "$ref": "#/definitions/path",
+          "description": "Named cross-module workflows. Default: app/_workflows"
+        },
+        "compositionFolders": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[^/]+$"
+          },
+          "uniqueItems": true,
+          "description": "Folder names inside app/ that hold page composition. Default: _shell, _components"
+        },
+        "worker": {
+          "$ref": "#/definitions/path",
+          "description": "The worker process's entry point. Default: worker.ts"
         }
       }
+    },
+    "sessionModule": {
+      "description": "Optional. The module that reads the signed-in session (accounts in the template). Reading the session is not a workflow step, so the workflow check does not count it.",
+      "$ref": "#/definitions/name"
     }
   },
   "x-schemaVersion": "1.0.0"

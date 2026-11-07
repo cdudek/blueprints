@@ -98,7 +98,7 @@ import { ${camel(s)}Repository as repo } from "./${s}.repository";
 // Every operation declares its access policy (user, public, webhook or job).
 export const listMy${Ps} = operation(
   { access: "user", resource: "the caller's own ${name}" },
-  async (user) => ok(await repo.listForUser(user.id)),
+  async ({ user }) => ok(await repo.listForUser(user.id)),
 );
 `,
   "server.ts": `import "server-only";

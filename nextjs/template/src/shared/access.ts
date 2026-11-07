@@ -1,5 +1,5 @@
 import "server-only";
-import { requireUser, UnauthenticatedError, type SessionUser } from "./auth";
+import { requireUser, UnauthenticatedError, type Session } from "./auth";
 import { err, type Result } from "./result";
 
 /**
@@ -7,7 +7,8 @@ import { err, type Result } from "./result";
  * nothing; the policy does.
  *
  * - user:      a signed-in caller; `resource` names the permission the function checks on the
- *              specific resource (and a behaviour test proves it).
+ *              specific resource (and a behaviour test proves it). The caller passes the session
+ *              as the first argument (read through modules/accounts); no global session exists.
  * - public:    anyone, including anonymous callers; declares its input validation and abuse controls.
  * - webhook:   called only by a route that has verified the sender; `verifiedBy` says how.
  * - job:       called only by a trusted scheduler entry point; `triggeredBy` says which.
@@ -31,8 +32,8 @@ export const policyOf = (fn: unknown): Policy | undefined => registry.get(fn as 
 
 export function operation<A extends unknown[], T, E extends string>(
   policy: UserPolicy,
-  fn: (user: SessionUser, ...args: A) => Promise<Result<T, E>>,
-): (...args: A) => Promise<Result<T, E | AccessError>>;
+  fn: (session: Session, ...args: A) => Promise<Result<T, E>>,
+): (session: Session | null, ...args: A) => Promise<Result<T, E | AccessError>>;
 export function operation<A extends unknown[], T, E extends string>(
   policy: Exclude<Policy, UserPolicy>,
   fn: (...args: A) => Promise<Result<T, E>>,
@@ -44,15 +45,15 @@ export function operation(
   const run = fn as (...args: unknown[]) => Promise<Result<unknown, string>>;
   const wrapped = async (...args: unknown[]) => {
     if (policy.access !== "user") return run(...args);
-    let user: SessionUser;
+    const [session, ...rest] = args as [Session | null, ...unknown[]];
     try {
-      user = await requireUser();
+      requireUser(session);
     } catch (e) {
-      // an expired or missing session is an expected failure, not a crash
+      // a missing or expired session is an expected failure, not a crash
       if (e instanceof UnauthenticatedError) return err("unauthenticated");
       throw e;
     }
-    return run(user, ...args);
+    return run(session, ...rest);
   };
   registry.set(wrapped, policy);
   return wrapped;

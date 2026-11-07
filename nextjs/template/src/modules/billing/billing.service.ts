@@ -37,7 +37,7 @@ export const priceFor = operation(
 // here, outside any database transaction, with the attempt id as idempotency key.
 export const startPayment = operation(
   { access: "user", resource: "the payment attempt of an order the caller owns (AuthorizedOrder)" },
-  async (user, order: AuthorizedOrder) => {
+  async ({ user }, order: AuthorizedOrder) => {
     if (order.userId !== user.id) return err("forbidden");
     const payment = await repo.findOrCreatePayment({
       orderId: order.orderId,
@@ -69,7 +69,7 @@ export const startPayment = operation(
 // it takes a Tx, so it cannot be called without one. The cancel/refund job does the provider work.
 export const recordCancellation = operation(
   { access: "user", resource: "the payment of an order the caller owns" },
-  async (user, orderId: string, tx: Tx) => {
+  async ({ user }, orderId: string, tx: Tx) => {
     const payment = await repo.findPaymentByOrder(orderId, tx);
     if (!payment) return ok(false);
     if (payment.userId !== user.id) return err("forbidden");

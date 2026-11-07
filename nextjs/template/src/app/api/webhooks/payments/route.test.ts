@@ -5,12 +5,11 @@ import { placeOrder } from "@/modules/orders/order.service";
 import { orders } from "@/modules/orders/order.tables";
 import { FIXTURE_SIGNATURE } from "@/clients/payments/providers/fixture";
 import { db } from "@/db";
-import { signInAs } from "@tests/helpers/auth-mock";
+import { sessionOf } from "@tests/helpers/session";
 import { resetData } from "@tests/helpers/db-mock";
 import { POST } from "./route";
 
 vi.mock("@/db", () => import("@tests/helpers/db-mock").then((m) => m.dbModule()));
-vi.mock("@/shared/auth", () => import("@tests/helpers/auth-mock").then((m) => m.authMock));
 
 const request = (body: string, signature?: string) =>
   new Request("http://localhost/api/webhooks/payments", {
@@ -20,7 +19,7 @@ const request = (body: string, signature?: string) =>
   });
 
 async function placedOrder() {
-  const placed = await placeOrder({
+  const placed = await placeOrder(sessionOf("u1"), {
     checkoutId: "00000000-0000-4000-8000-0000000000c1",
     productId: "widget",
     quantity: 1,
@@ -38,7 +37,6 @@ const succeeded = (attemptId: string, providerRef: string) =>
 
 beforeEach(async () => {
   await resetData(db);
-  signInAs("u1");
 });
 
 describe("payments webhook", () => {

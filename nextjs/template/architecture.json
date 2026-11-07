@@ -9,6 +9,9 @@
   },
   "roots": ["proxy.ts"],
   "modules": {
+    "accounts": {
+      "description": "The signed-in session: reads it for pages and actions"
+    },
     "orders": {
       "description": "Placing, listing and cancelling orders"
     },
@@ -16,6 +19,7 @@
       "description": "Prices and payment attempts for orders"
     }
   },
+  "sessionModule": "accounts",
   "edges": [
     {
       "from": "orders",

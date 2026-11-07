@@ -813,6 +813,38 @@ export function buildRules(arch: Architecture): ArchRule[] {
       },
     },
     {
+      id: "shared-no-clients",
+      description: "src/shared never imports a third-party client",
+      nonNegotiable: 10,
+      check: (ctx) =>
+        forbid(
+          ctx,
+          "shared-no-clients",
+          { path: `${SHARED}/**` },
+          { path: `${CLIENTS}/**` },
+          "src/shared stays generic: the module that owns the vendor calls its client",
+        ),
+    },
+    {
+      id: "shared-no-io",
+      description:
+        "src/shared does no I/O: it imports no server-only package but server-only itself (no request, session or database driver)",
+      nonNegotiable: 10,
+      check: (ctx) =>
+        content(ctx, "shared-no-io", { path: `${SHARED}/**` }, (sf) =>
+          specifiers(sf)
+            .filter(
+              (spec) =>
+                spec !== "server-only" &&
+                arch.serverOnlyPackages.some((p) => spec === p || spec.startsWith(`${p}/`)),
+            )
+            .map((spec) => ({
+              target: spec,
+              message: `src/shared does no I/O: read the session or the database in a module, not with ${spec} here`,
+            })),
+        ),
+    },
+    {
       id: "nothing-imports-app",
       description: "Nothing imports src/app",
       check: (ctx) =>
@@ -1314,7 +1346,8 @@ export function buildRules(arch: Architecture): ArchRule[] {
           const touched = new Set(
             specifiers(sf)
               .map((x) => new RegExp(`/${L.modules}/([^/]+)/`).exec(x)?.[1])
-              .filter(Boolean),
+              // reading the session is not a step of a workflow
+              .filter((m) => m && m !== arch.sessionModule),
           );
           if (touched.size < 2) return [];
           return ["@workflow", "retry-safe:", "duplicates:", "recovery:", "survives-restart:"]

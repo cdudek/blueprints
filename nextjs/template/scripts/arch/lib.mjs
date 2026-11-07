@@ -12,6 +12,7 @@ export const BLUEPRINT_VERSION = "1.0.0";
  * @typedef {{
  *   app?: string, modules?: string, ui?: string, shared?: string, db?: string, clients?: string,
  *   dbClient?: string, schemaRoot?: string, serverShared?: string[], resultFile?: string,
+ *   workflows?: string, compositionFolders?: string[], worker?: string,
  * }} LayoutBlock
  * @typedef {{
  *   $schemaVersion: string,
@@ -28,6 +29,7 @@ export const BLUEPRINT_VERSION = "1.0.0";
  *   clients: string[],
  *   serverOnlyPackages: string[],
  *   rulesMayImport: string[],
+ *   sessionModule?: string,
  * }} Architecture
  */
 
@@ -71,6 +73,12 @@ export function layoutOf(arch) {
     serverShared: l.serverShared ?? ["shared/auth.ts", "shared/env.ts", "shared/access.ts"],
     /** the one shared file a rules file may import: the Result type */
     resultFile: l.resultFile ?? "shared/result.ts",
+    /** named cross-module workflows (1.1.0) */
+    workflows: l.workflows ?? "app/_workflows",
+    /** folder names inside app/ that hold page composition (1.1.0) */
+    compositionFolders: l.compositionFolders ?? ["_shell", "_components"],
+    /** the worker process's entry point, a root that may call job operations (1.1.0) */
+    worker: l.worker ?? "worker.ts",
   };
 }
 

@@ -71,6 +71,8 @@ const intended: Record<string, string[]> = {
   "src/modules/orders/relative-door.ts": ["module-doors"],
   "src/shared/bridge.ts": ["module-doors", "shared-no-modules"],
   "src/shared/leak.ts": ["shared-no-modules"],
+  "src/shared/calls-client.ts": ["shared-no-clients"],
+  "src/shared/session-io.ts": ["shared-no-io"],
   "src/ui/BadButton.tsx": ["ui-no-modules"],
   "src/ui/ServerThing.tsx": ["ui-no-server"],
 };
@@ -113,6 +115,7 @@ describe("positive controls: everything else is clean", () => {
       "a service with user and webhook operations and a Tx-taking operation",
     ],
     ["src/db/index.ts", "the one place db.transaction is allowed"],
+    ["src/shared/auth.ts", "a session type and pure checks: server-only but no I/O"],
     ["src/app/place/PlaceButton.tsx", 'a client file importing a "use server" action'],
     ["src/app/place/actions.ts", 'a "use server" file reaching a server door'],
   ])("%s (%s)", (file) => {
@@ -317,6 +320,13 @@ const specific: [string, string, string, string][] = [
   ["ui-no-server", "src/ui/ServerThing.tsx", "server-only", "never imports server code"],
   ["ui-no-modules", "src/ui/BadButton.tsx", "src/modules/orders/public.ts", "no business nouns"],
   ["shared-no-modules", "src/shared/leak.ts", "src/modules/orders/public.ts", "stays generic"],
+  [
+    "shared-no-clients",
+    "src/shared/calls-client.ts",
+    "src/clients/payments/index.ts",
+    "the module that owns the vendor",
+  ],
+  ["shared-no-io", "src/shared/session-io.ts", "next/headers", "src/shared does no I/O"],
   [
     "components-no-persistence",
     "src/modules/orders/components/BadList.tsx",

@@ -37,6 +37,9 @@ describe("layout defaults", () => {
       schemaRoot: "db/schema.ts",
       serverShared: ["shared/auth.ts", "shared/env.ts", "shared/access.ts"],
       resultFile: "shared/result.ts",
+      workflows: "app/_workflows",
+      compositionFolders: ["_shell", "_components"],
+      worker: "worker.ts",
     });
   });
 
