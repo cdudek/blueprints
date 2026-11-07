@@ -1,0 +1,84 @@
+[project]
+name = "fastapi-blueprint"
+version = "1.0.0"
+description = "A modular monolith with doors: the FastAPI blueprint template"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.162.2",
+    "pydantic-settings>=2.16.2",
+    "uvicorn>=0.54.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "app"
+
+[dependency-groups]
+dev = [
+    "fastapi-cli>=0.0.32",
+    "httpx2>=2.16.0",
+    "mypy==2.4.1",
+    "prek==0.5.10",
+    "pytest>=9.2.0",
+    "pytest-socket>=0.8.1",
+    "ruff==0.17.4",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Every family is listed with its reason. No ALL, no preview rules.
+select = [
+    "E", "W", "F", "I",  # real errors and a stable import order
+    "UP",                # 3.14 syntax
+    "B",                 # bugbear: likely bugs
+    "SIM",               # simplifications
+    "S",                 # bandit: hardcoded passwords, SQL from strings, subprocess, verify=False, pickle
+    "C90",               # complexity (mccabe), with ruff's default limit
+    "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR0917",  # size: returns, branches, args, statements, positional args
+    "ASYNC",             # known blocking calls inside async def (a list, not a proof)
+    "FAST",              # FastAPI: Annotated dependencies, redundant response_model, unused path params
+    "TID",               # no relative parent imports; banned APIs below
+    "PT",                # pytest style
+    "RUF",               # ruff's own rules, including RUF100 unused noqa
+    "T20",               # no print
+    "DTZ",               # no naive datetimes
+    "BLE",               # no blind except
+    "LOG",               # logging misuse
+]
+# Not selected: ANN (mypy covers it), D (noise), ERA, TRY, EM, FBT (style, many false positives), full PL.
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"os.environ".msg = "Read settings through app.config.settings; only config/ reads the environment."
+"os.getenv".msg = "Read settings through app.config.settings; only config/ reads the environment."
+"requests".msg = "Blocking HTTP client; use httpx's AsyncClient inside app.clients."
+
+[tool.ruff.lint.per-file-ignores]
+"src/app/config/**" = ["TID251"]  # the one place that reads the environment
+"tests/**" = ["S101"]              # assert is how pytest checks
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+files = ["src", "tests"]
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.pytest]
+minversion = "9.0"
+testpaths = ["tests"]
+addopts = ["--strict-markers", "--strict-config", "--import-mode=importlib"]
+filterwarnings = ["error"]

@@ -1,0 +1,31 @@
+# Run by prek (pre-commit 4 reads the same file). Every hook is local and runs through `uv run`,
+# so tool versions come from uv.lock.
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check --fix
+        entry: uv run ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+      - id: uv-lock
+        name: uv lock --check
+        entry: uv lock --check
+        language: system
+        files: ^(pyproject\.toml|uv\.lock)$
+        pass_filenames: false
+      - id: pre-push-gate
+        name: make lint typecheck
+        entry: make lint typecheck
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
