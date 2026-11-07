@@ -21,8 +21,10 @@ cp .env.example .env
 pnpm check
 ```
 
-`pnpm check` runs everything CI runs: format, lint, typecheck, unit tests, architecture tests, the
-baseline-shrink check, knip, jscpd, a production build and the Playwright smoke test. The tests use
+`pnpm check` runs the checks CI runs: format, lint, typecheck, unit tests, architecture tests, the
+baseline-shrink check, knip, jscpd, a production build, the Playwright smoke and axe tests and axe
+over every Storybook story. CI also starts the worker (`pnpm worker:check`) and builds the three
+images, which need Postgres and a container runtime. The tests use
 an in-process Postgres (PGlite) by default. Set `TEST_DATABASE_URL` to use a real Postgres, and
 `DATABASE_URL` for the end-to-end run (see `.env.example`).
 
@@ -52,6 +54,7 @@ scripts/arch/                eslint config generator, Mermaid diagram generator,
 scripts/quality/             knip and jscpd ratchets, baseline writer and tools, policy-change report, CI path filter
 tests/architecture/          the rules (ArchUnitTS plus a resolved graph), fixtures, eslint tests
 tests/e2e/                   Playwright: smoke and axe over every page, against the production build
+tests/storybook/             axe over every Storybook story
 tests/integration/           tests across modules or a process entry point (the worker)
 tests/fixtures/              deliberate-violation projects, one per rule family, and a 1.0.0 policy
 tests/tooling/               tests for the scripts and the worked slice

@@ -72,8 +72,12 @@ defaults to 1.0.0 behaviour); new rules may report new findings.
   `requireUser(session)` and `requireRole(session, role)`; user operations take the session as
   their first argument.
 - UI: per-file `@/ui/<Component>` imports (no barrel), `ui/styles`, `ui/icons`, Tailwind v4 with
-  semantic tokens and `cva`, `components.json` for shadcn, Storybook with the a11y addon, an axe
-  smoke test, next-intl with English messages.
+  semantic tokens and `cva`, a Radix `ConfirmDialog`, `components.json` for shadcn, Storybook
+  with the a11y addon and axe over every story (`pnpm storybook:test`), axe over every page,
+  next-intl with English messages under `app/[locale]`.
+- The worker runs with plain Node (`pnpm worker`, `pnpm worker:check`): type stripping plus a
+  resolve hook; tsconfig gains `erasableSyntaxOnly` and `verbatimModuleSyntax`. Integration tests
+  for the worker run on real Postgres. CI adds worker, docker and storybook jobs.
 - Production refuses the `fixture` and `noop` payment providers unless `PAYMENTS_STUB=e2e` (the
   E2E run); a configuration-matrix test covers every combination. The cancel/refund job gives up an
   unlinked attempt with one compare-and-set, so a refund a webhook made necessary is never lost.

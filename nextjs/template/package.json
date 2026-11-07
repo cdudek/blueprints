@@ -23,7 +23,7 @@
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
     "storybook:test": "playwright test --config playwright.storybook.config.ts",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm arch && pnpm arch:baseline && pnpm knip && pnpm dup && pnpm build && pnpm e2e",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm arch && pnpm arch:baseline && pnpm knip && pnpm dup && pnpm build && pnpm e2e && pnpm storybook:test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/db-migrate.mjs",
     "prepare": "husky",

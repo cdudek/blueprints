@@ -164,7 +164,9 @@ quality/            baselines, reviewed renames, reviewed duplication exceptions
 scripts/            ops scripts; scripts/arch/ and scripts/quality/ hold the checks
 services/<name>/    another runtime, one folder each, with its own Dockerfile and contract
 src/                the Next.js app
-tests/              architecture/, e2e/, integration/, tooling/, fixtures/, helpers/
+tests/              architecture/, e2e/, integration/, storybook/, tooling/, fixtures/, helpers/
+.storybook/         Storybook for src/ui, with the a11y addon
+components.json     the shadcn CLI, pointed at src/ui
 Dockerfile          three targets: web (standalone), worker, migrate
 architecture.json   the policy (section 13)
 ```
@@ -176,15 +178,17 @@ src/
   proxy.ts                         redirects and headers only (middleware.ts before Next 16); imports no module
   instrumentation.ts               OpenTelemetry and onRequestError; imports no module
   worker.ts                        the worker process: a Postgres queue that calls job operations
-  i18n/                            locale routing, request config and navigation (next-intl); no module
+  i18n/                            routing.ts, request.ts, navigation.ts, global.ts (typed keys): next-intl; no module
   app/                             Next.js only: routing, pages, actions, route handlers
     _shell/
-      providers.tsx                "use client": the one place providers are composed
+      providers.tsx                the one place providers are composed; a server file, so next-intl's provider inherits the messages
       nav.ts                       routes and their message keys
+      MainNav.tsx                  renders nav.ts with the locale-aware Link
     _workflows/
       payment-event.ts             a named cross-module workflow with the four-question header
     [locale]/
-      layout.tsx                   root layout: html, providers, messages
+      layout.tsx                   root layout: validates the locale, html lang, providers, the one stylesheet
+      page.tsx
       orders/
         page.tsx
         actions.ts                 "use server": safeParse, read the session, call one operation or workflow
@@ -232,7 +236,8 @@ flat or extend the check with the folder.
 **Tests.** Unit and service tests sit beside the code (`order.rules.test.ts` next to
 `order.rules.ts`), so a module moves with its tests. `tests/` holds what belongs to no single
 file: `architecture/` (the rules), `e2e/` (Playwright), `integration/` (several modules or a
-process entry point together), `tooling/` (the scripts), `fixtures/` (deliberate-violation
+process entry point together, on real Postgres), `storybook/` (axe over every story),
+`tooling/` (the scripts), `fixtures/` (deliberate-violation
 projects) and `helpers/`.
 
 **Every path is configurable.** The folders above are defaults. An app whose folders differ
@@ -362,8 +367,10 @@ owning module's `<x>.types.ts`; a constant lives in the module that owns the con
 - **One icon door** (`icons-one-door`). Icons live in `ui/icons`; an icon package listed in
   `iconPackages` is imported only there, and callers import `@/ui/icons`. Swapping the package is
   one folder. An icon without a label is decoration (`aria-hidden`).
-- **Providers are composed once** (`providers-composed-once`), in `app/_shell/providers.tsx`
-  (a client file), rendered by root layouts only, wrapping `children`. A provider component is
+- **Providers are composed once** (`providers-composed-once`), in `app/_shell/providers.tsx`,
+  rendered by root layouts only, wrapping `children`. It stays a server file, so next-intl's
+  `NextIntlClientProvider` inherits the request's locale and messages; client providers (a theme,
+  a query cache) nest inside it. A provider component is
   defined in `src/ui` (generic) or in a module's components (domain).
 - **Global CSS has two owners** (`global-css-owners`): `src/ui` and the root layout. Everything
   else styles through `src/ui` primitives, utility classes, or a `.module.css` file.
@@ -378,7 +385,7 @@ owning module's `<x>.types.ts`; a constant lives in the module that owns the con
 
 The template uses **Tailwind CSS v4**:
 
-- Tokens are plain, semantic CSS variables in `ui/styles/theme.css` (`--accent`, `--surface`),
+- Tokens are plain, semantic CSS variables in `ui/styles/theme.css` (`--accent`, `--bg`),
   overridden for the dark theme under `prefers-color-scheme` and `[data-theme]`. `@theme inline`
   maps them to utilities (`bg-accent`), so switching a theme changes variables, not classes.
 - `@import "tailwindcss" source(...)` limits class scanning to `src/`, so prose in `docs/` or a
@@ -386,8 +393,10 @@ The template uses **Tailwind CSS v4**:
 - Variants are closed unions mapped with `cva`; `cn()` (clsx plus tailwind-merge) merges a caller's
   `className`. Both are pure functions, so server components use them too.
 - `components.json` points the shadcn CLI at `src/ui` (`ui`, `lib`, `hooks` aliases), so copied
-  components land in the leaf folder and fall under the same rules. Radix is the headless base for
-  interactive primitives: never hand-roll focus trapping, menus, dialogs or popovers.
+  components land in the leaf folder and fall under the same rules. A shadcn component imports
+  `lucide-react`: list it in `iconPackages` and re-export its icons from `ui/icons`, or point the
+  import at `@/ui/icons`. Radix (`radix-ui`) is the headless base for interactive primitives (the
+  template's `ConfirmDialog`): never hand-roll focus trapping, menus, dialogs or popovers.
 
 **Without Tailwind.** Plain CSS with the same semantic variables works just as well: keep
 `theme.css` and `base.css`, style primitives with classes and `data-*` attributes in a stylesheet
@@ -423,11 +432,15 @@ module components. Adding a language is a messages file and a locale in the rout
   `div` with `onClick`. `role="menu"` only for real menus; a popover with mixed content is a dialog.
 - WCAG 2.2 AA: a visible focus ring token, targets of at least 24 px, `prefers-reduced-motion` in
   `base.css`, text contrast checked in every theme.
-- **axe on real pages:** an E2E smoke test runs `@axe-core/playwright` over every page and fails
-  on any violation.
+- **axe on real pages:** `tests/e2e/a11y.spec.ts` runs `@axe-core/playwright` (WCAG 2.2 AA
+  tags) over every page, signed out and in, with the cancel dialog open, and fails on any
+  violation.
 - **Storybook** (`@storybook/nextjs-vite`) with the a11y addon set to fail: stories sit beside the
-  `src/ui` components they show. Story props-only components; Server Components in Storybook are
-  experimental and Server Actions do not run there.
+  `src/ui` components they show. `tests/storybook/a11y.spec.ts` runs axe on every story of the
+  Storybook index (`pnpm storybook:test`, a CI job); `@storybook/addon-vitest` can replace that
+  run. Story props-only components; Server Components in Storybook are experimental and Server
+  Actions do not run there. A story may import Storybook itself, nothing else outside
+  `uiMayImport`.
 - Automated checks find only part of the issues; keyboard-only use of each new flow is a review
   obligation.
 
