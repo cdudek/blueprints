@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import Ajv from "ajv";
 import { beforeAll, describe, expect, it } from "vitest";
-import { BLUEPRINT_VERSION, findEdgeCycle, loadArchitecture } from "../../scripts/arch/lib.mjs";
+import { BLUEPRINT_VERSION, loadArchitecture } from "../../scripts/arch/lib.mjs";
 import { compareToBaseline, readBaseline } from "../../scripts/quality/baseline.mjs";
 import { buildRules, findingKeys, runAll, type Finding } from "./rules";
 
@@ -28,12 +28,12 @@ describe("policy file", () => {
     );
   });
 
-  it("declares acyclic edges between declared modules, and owners that exist", () => {
+  // cycles between declared edges are the rule declared-edges-acyclic, so they can be baselined
+  it("declares edges between declared modules, and owners that exist", () => {
     for (const e of arch.edges) {
       expect(Object.keys(arch.modules), `${e.from} -> ${e.to}`).toContain(e.from);
       expect(Object.keys(arch.modules), `${e.from} -> ${e.to}`).toContain(e.to);
     }
-    expect(findEdgeCycle(arch)).toBeNull();
     for (const owner of Object.values(arch.tables))
       expect(Object.keys(arch.modules)).toContain(owner);
   });

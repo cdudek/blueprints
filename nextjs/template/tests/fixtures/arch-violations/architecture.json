@@ -36,6 +36,11 @@
       "from": "ledger",
       "to": "billing",
       "reason": "ledger settles through billing"
+    },
+    {
+      "from": "billing",
+      "to": "ledger",
+      "reason": "closes a cycle with ledger -> billing"
     }
   ],
   "tables": {

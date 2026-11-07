@@ -21,7 +21,7 @@ const rulesFor = (file: string) =>
 
 /** file -> the rules that must flag it, and only them. */
 const intended: Record<string, string[]> = {
-  "architecture.json": ["modules-declared", "table-definitions-declared"],
+  "architecture.json": ["declared-edges-acyclic", "modules-declared", "table-definitions-declared"],
   "src/app/alias-door.ts": ["module-doors"],
   "src/app/api/bad/route.ts": ["workflow-header"],
   "src/app/bad-action.ts": ["system-operations-from-routes-only"],
@@ -286,6 +286,8 @@ const specific: [string, string, string, string][] = [
     "owned by billing but defined in ledger",
   ],
   ["table-definitions-declared", "architecture.json", "ghosts", "defined nowhere"],
+  ["declared-edges-acyclic", "architecture.json", "ledger -> billing", "closes a cycle"],
+  ["declared-edges-acyclic", "architecture.json", "billing -> ledger", "closes a cycle"],
   ["schema-composition", "src/db/schema.ts", "src/modules/ledger/ledger.tables.ts", "not composed"],
   [
     "tables-owner-only",

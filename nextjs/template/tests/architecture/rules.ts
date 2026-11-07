@@ -19,6 +19,7 @@ import { projectFiles, type FileInfo, type Violation } from "archunit";
 import ts from "typescript";
 import {
   allowedTargets,
+  cyclicEdges,
   doorFiles,
   globToRegExp,
   layoutOf,
@@ -435,6 +436,20 @@ export function buildRules(arch: Architecture): ArchRule[] {
       },
     },
     // ---------------------------------------------------------------- cycles and dynamic imports
+    {
+      id: "declared-edges-acyclic",
+      description:
+        "No declared edge closes a cycle: two modules that need each other move the shared part to its owner",
+      nonNegotiable: 1,
+      async check() {
+        return cyclicEdges(arch).map((e) => ({
+          rule: "declared-edges-acyclic",
+          file: "architecture.json",
+          target: `${e.from} -> ${e.to}`,
+          message: `the declared edge ${e.from} -> ${e.to} closes a cycle: move the shared responsibility to its owner, or let app/ sequence the two`,
+        }));
+      },
+    },
     {
       id: "no-cycles",
       description: "No import cycles between files (ArchUnitTS, imports only)",

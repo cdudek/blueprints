@@ -84,27 +84,26 @@ export const doorFiles = (arch, role) =>
     .filter(([, r]) => !role || r === role)
     .map(([file]) => file);
 
-/** Finds a cycle in the declared edges, or null. @param {Architecture} arch */
-export function findEdgeCycle(arch) {
-  /** @type {Map<string, number>} 0 = in progress, 1 = done */
-  const state = new Map();
-  /** @param {string} node @param {string[]} stack @returns {string[] | null} */
-  const visit = (node, stack) => {
-    if (state.get(node) === 1) return null;
-    if (state.get(node) === 0) return [...stack.slice(stack.indexOf(node)), node];
-    state.set(node, 0);
-    for (const next of allowedTargets(arch, node)) {
-      const cycle = visit(next, [...stack, node]);
-      if (cycle) return cycle;
+/**
+ * The declared edges that close a cycle: a -> b where b reaches a again. Each is reported on its
+ * own, so a brownfield cycle can be baselined edge by edge; removing an edge never makes another
+ * edge cyclic, so such a baseline only shrinks. @param {Architecture} arch
+ */
+export function cyclicEdges(arch) {
+  const reaches = (/** @type {string} */ from, /** @type {string} */ goal) => {
+    const seen = new Set([from]);
+    const queue = [from];
+    for (let cur = queue.shift(); cur !== undefined; cur = queue.shift()) {
+      if (cur === goal) return true;
+      for (const next of allowedTargets(arch, cur))
+        if (!seen.has(next)) {
+          seen.add(next);
+          queue.push(next);
+        }
     }
-    state.set(node, 1);
-    return null;
+    return false;
   };
-  for (const name of moduleNames(arch)) {
-    const cycle = visit(name, []);
-    if (cycle) return cycle;
-  }
-  return null;
+  return arch.edges.filter((e) => reaches(e.to, e.from));
 }
 
 /** `**` crosses folders, `*` does not. Enough for the policy file's path globs. @param {string} glob */
