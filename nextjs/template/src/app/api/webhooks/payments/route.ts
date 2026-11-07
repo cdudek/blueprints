@@ -1,26 +1,12 @@
-/**
- * Workflow: payment webhook (billing records the event, then orders marks the order paid)
- * Owner: this route sequences the two modules so they never call each other.
- *
- * @workflow payment-webhook
- * retry-safe: yes. A provider retry re-runs both steps; each one is idempotent and state-based.
- * duplicates: no duplicate effect. A repeated event re-applies a transition that already happened.
- * recovery: if orders fails after billing recorded the event, we answer 500; the provider
- *   retries and billing reports the same succeeded state, so orders runs again. An event that
- *   matches no payment attempt is stored in billing's inbox before we answer 200.
- * survives-restart: yes. All state is in the database; nothing is held in memory.
- */
-import { receivePaymentEventFromWebhook } from "@/modules/billing/server";
-import { markPaidFromWebhook } from "@/modules/orders/server";
+// The payment provider's webhook: checks that a signature is present and calls one workflow
+// (app/_workflows/payment-event.ts), which verifies it and sequences billing and orders.
+import { settlePaymentEvent } from "@/app/_workflows/payment-event";
 
 export async function POST(req: Request) {
   const signature = req.headers.get("x-payments-signature");
   if (!signature) return new Response("missing signature", { status: 400 });
 
-  const received = await receivePaymentEventFromWebhook(await req.text(), signature);
-  if (!received.ok) return new Response(received.error, { status: 400 });
-  // an unmatched event is already stored in billing's inbox, so acknowledging it loses nothing
-
-  if (received.value?.status === "succeeded") await markPaidFromWebhook(received.value.orderId);
+  const settled = await settlePaymentEvent(await req.text(), signature);
+  if (!settled.ok) return new Response(settled.error, { status: 400 });
   return new Response(null, { status: 200 });
 }

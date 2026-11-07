@@ -6,7 +6,7 @@ const port = 3100;
 // it tests what ships. The auth stub refuses production unless AUTH_STUB=e2e, and production
 // defaults to the real payments provider, so this config sets both (AUTH_STUB, PAYMENTS_PROVIDER=fixture).
 export default defineConfig({
-  testDir: "./e2e",
+  testDir: "./tests/e2e",
   fullyParallel: true,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",

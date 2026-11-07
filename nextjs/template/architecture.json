@@ -7,7 +7,7 @@
     "public.ts": "browser",
     "server.ts": "server"
   },
-  "roots": ["proxy.ts"],
+  "roots": ["proxy.ts", "instrumentation.ts"],
   "modules": {
     "accounts": {
       "description": "The signed-in session: reads it for pages and actions"

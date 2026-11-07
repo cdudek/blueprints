@@ -34,7 +34,6 @@
     ".next/dev/types/**/*.ts",
     "src",
     "tests",
-    "e2e",
     "scripts",
     "*.ts",
     "*.mjs"

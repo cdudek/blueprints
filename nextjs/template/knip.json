@@ -4,6 +4,7 @@
     "entry": [
       "next.config.ts",
       "src/proxy.ts",
+      "src/instrumentation.ts",
       "src/app/**/{page,layout,route,loading,error,not-found}.{ts,tsx}"
     ]
   },
@@ -13,16 +14,10 @@
   },
   "playwright": {
     "config": ["playwright.config.ts"],
-    "entry": ["e2e/**/*.spec.ts"]
+    "entry": ["tests/e2e/**/*.spec.ts"]
   },
   "entry": ["scripts/**/*.mjs", "tests/stubs/server-only.ts", "src/modules/*/{public,server}.ts"],
-  "project": [
-    "src/**/*.{ts,tsx}",
-    "tests/**/*.ts",
-    "e2e/**/*.ts",
-    "scripts/**/*.mjs",
-    "*.{ts,mjs}"
-  ],
+  "project": ["src/**/*.{ts,tsx}", "tests/**/*.ts", "scripts/**/*.mjs", "*.{ts,mjs}"],
   "ignore": ["tests/fixtures/**"],
   "ignoreDependencies": ["jscpd", "lint-staged"]
 }
