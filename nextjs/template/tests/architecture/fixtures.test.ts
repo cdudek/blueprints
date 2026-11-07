@@ -25,6 +25,9 @@ const rulesFor = (file: string) =>
 const intended: Record<string, string[]> = {
   "architecture.json": ["declared-edges-acyclic", "modules-declared", "table-definitions-declared"],
   "src/app/alias-door.ts": ["module-doors"],
+  "src/app/_workflows/scattered.ts": ["workflow-header"],
+  "src/app/_workflows/copy-a.ts": ["workflow-header"],
+  "src/app/_workflows/copy-b.ts": ["workflow-header"],
   "src/app/api/bad/route.ts": ["workflow-header"],
   "src/app/bad-action.ts": ["system-operations-from-routes-only"],
   "src/app/bad-actions.ts": ["app-no-persistence", "module-doors"],
@@ -125,7 +128,10 @@ describe("positive controls: everything else is clean", () => {
     ["src/worker.ts", "the worker root calling a job operation through a server door"],
     ["src/shared/auth.ts", "a session type and pure checks: server-only but no I/O"],
     ["src/app/place/PlaceButton.tsx", 'a client file importing a "use server" action'],
-    ["src/app/place/actions.ts", 'a "use server" file reaching a server door'],
+    [
+      "src/app/place/actions.ts",
+      'a "use server" file reaching a server door, reading the session module and calling one other',
+    ],
   ])("%s (%s)", (file) => {
     expect(rulesFor(file)).toEqual([]);
   });
@@ -337,6 +343,14 @@ const specific: [string, string, string, string][] = [
     "must be the first statement",
   ],
   ["workflow-header", "src/app/api/bad/route.ts", "@workflow", "workflow header is missing"],
+  ["workflow-header", "src/app/_workflows/scattered.ts", "@workflow", "workflow header is missing"],
+  ["workflow-header", "src/app/_workflows/scattered.ts", "survives-restart:", "is missing"],
+  [
+    "workflow-header",
+    "src/app/_workflows/copy-b.ts",
+    "src/app/_workflows/copy-a.ts",
+    "the same four answers",
+  ],
   ["ui-no-server", "src/ui/ServerThing.tsx", "server-only", "never imports server code"],
   ["ui-no-modules", "src/ui/BadButton.tsx", "src/modules/orders/public.ts", "no business nouns"],
   ["shared-no-modules", "src/shared/leak.ts", "src/modules/orders/public.ts", "stays generic"],

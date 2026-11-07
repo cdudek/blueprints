@@ -28,6 +28,7 @@
       "description": "declared, no files"
     }
   },
+  "sessionModule": "ledger",
   "edges": [
     {
       "from": "orders",

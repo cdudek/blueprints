@@ -170,6 +170,20 @@ async function content(
   ];
 }
 
+/** The comments at the top of a file, above its first statement (after any directives). */
+function headerBlock(sf: ts.SourceFile): string {
+  const isDirective = (st: ts.Statement) =>
+    ts.isExpressionStatement(st) && ts.isStringLiteral(st.expression);
+  const first = sf.statements.find((st) => !isDirective(st));
+  const end = first ? first.getStart(sf) : sf.text.length;
+  const starts = [0, ...sf.statements.filter(isDirective).map((st) => st.end)];
+  return starts
+    .flatMap((pos) => ts.getLeadingCommentRanges(sf.text, pos) ?? [])
+    .filter((r) => r.end <= end)
+    .map((r) => sf.text.slice(r.pos, r.end))
+    .join("\n");
+}
+
 const graphs = new WeakMap<Ctx, Graph>();
 const graphOf = (ctx: Ctx) => {
   let g = graphs.get(ctx);
@@ -1375,27 +1389,62 @@ export function buildRules(arch: Architecture): ArchRule[] {
     {
       id: "workflow-header",
       description:
-        "An action or route that sequences two or more modules documents the four workflow questions",
+        "Every workflow in app/_workflows, and every action or route that sequences two modules, answers the four workflow questions in its header block; no two workflows give the same answers",
       nonNegotiable: 9,
       async check(ctx) {
-        const analyze = (sf: ts.SourceFile, _path: string, text: string): Problem[] => {
-          const touched = new Set(
-            specifiers(sf)
-              .map((x) => new RegExp(`/${L.modules}/([^/]+)/`).exec(x)?.[1])
-              // reading the session is not a step of a workflow
-              .filter((m) => m && m !== arch.sessionModule),
-          );
-          if (touched.size < 2) return [];
-          return ["@workflow", "retry-safe:", "duplicates:", "recovery:", "survives-restart:"]
-            .filter((k) => !text.includes(k))
-            .map((k) => ({ target: k, message: `workflow header is missing ${k}` }));
+        const keys = ["retry-safe", "duplicates", "recovery", "survives-restart"];
+        const answers = new Map<string, string>(); // file -> normalised answers
+        const analyze = (sf: ts.SourceFile, path: string): Problem[] => {
+          const isWorkflow = path.startsWith(`${at(L.workflows)}/`);
+          if (!isWorkflow) {
+            const touched = new Set(
+              specifiers(sf)
+                .map((x) => new RegExp(`/${L.modules}/([^/]+)/`).exec(x)?.[1])
+                // reading the session is not a step of a workflow
+                .filter((m) => m && m !== arch.sessionModule),
+            );
+            if (touched.size < 2) return [];
+          }
+          const header = headerBlock(sf);
+          const problems: Problem[] = [];
+          if (!/@workflow\s+\S+/.test(header))
+            problems.push({
+              target: "@workflow",
+              message: "workflow header is missing @workflow <name>",
+            });
+          for (const k of keys)
+            if (!new RegExp(`(^|\\n)[\\s*/]*${k}:[ \\t]*\\S`).test(header))
+              problems.push({ target: `${k}:`, message: `workflow header is missing ${k}:` });
+          if (!problems.length) {
+            const from = header.search(/retry-safe:|duplicates:|recovery:|survives-restart:/);
+            answers.set(
+              path,
+              header
+                .slice(from)
+                .replace(/[\s*/]+/g, " ")
+                .trim(),
+            );
+          }
+          return problems;
         };
-        const results = await Promise.all(
-          ["route.ts", "actions.ts"].map((name) =>
+        const results = await Promise.all([
+          content(ctx, "workflow-header", { path: `${at(L.workflows)}/**` }, analyze),
+          ...["route.ts", "actions.ts"].map((name) =>
             content(ctx, "workflow-header", { path: `${APP}/**/${name}` }, analyze),
           ),
-        );
-        return results.flat();
+        ]);
+        // a copied header is a header nobody thought about
+        const copies: Finding[] = [];
+        for (const [file, text] of answers)
+          for (const [other, otherText] of answers)
+            if (file !== other && text === otherText)
+              copies.push({
+                rule: "workflow-header",
+                file,
+                target: other,
+                message: `the same four answers as ${other}: answer the questions for this workflow`,
+              });
+        return [...results.flat(), ...copies];
       },
     },
     {
