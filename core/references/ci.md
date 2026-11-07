@@ -55,7 +55,7 @@ IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
 - **CI-23: Every repo defines the same standard targets,** named in kebab-case, so one habit works across stacks. A target with nothing to do prints "not applicable" and exits 0.
   - `setup`: install dependencies from the lockfile, install git hooks.
   - `dev`: run the app locally.
-  - `lint` and `format`: static checks and auto-fix.
+  - `lint` and `format`: static checks and auto-fix. `lint` includes the anti-slop rules ([code-quality](code-quality.md)).
   - `typecheck`: the type checker over all source.
   - `test` and `test-integration`: fast tests; tests needing a database or browser.
   - `arch`: boundary and import rules (see [structure](structure.md)).
