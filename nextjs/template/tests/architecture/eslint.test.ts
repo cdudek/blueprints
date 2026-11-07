@@ -301,6 +301,12 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
       "a message catalog imported outside src/i18n",
     ],
     [
+      "src/app/hardcoded/page.tsx",
+      "no-restricted-syntax",
+      /User-visible text is written in code/,
+      "text in JSX and literal user-visible attributes",
+    ],
+    [
       "src/escape.ts",
       "boundaries/no-unknown-files",
       /does not match any file pattern/,
@@ -360,6 +366,7 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
     "src/ui/icons/index.ts",
     "src/ui/Button.stories.tsx",
     "src/i18n/catalog.ts",
+    "src/app/translated/page.tsx",
   ])("stays quiet on the clean file %s", async (file) => {
     const lint = await lintWith();
     expect(await lint(file)).toEqual([]);

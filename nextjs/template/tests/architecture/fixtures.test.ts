@@ -98,6 +98,7 @@ const intended: Record<string, string[]> = {
     "system-operations-from-routes-only",
   ],
   "src/modules/shipments/shipments.dispatch.service.ts": ["system-operations-from-routes-only"],
+  "src/app/hardcoded/page.tsx": ["copy-from-messages"],
 };
 
 describe("each violation is flagged by its intended rules only", () => {
@@ -129,6 +130,10 @@ describe("positive controls: everything else is clean", () => {
       "an indirect import: the violation is located at the helper",
     ],
     ["src/app/api/hook/route.ts", "a route handler calling a system (webhook) operation"],
+    [
+      "src/app/translated/page.tsx",
+      "text from a translator, and punctuation, numbers and an empty alt that are not copy",
+    ],
     ["src/app/_workflows/settle-payment.ts", "a workflow calling a system operation"],
     [
       "src/app/api/settle/route.ts",
@@ -354,6 +359,16 @@ const specific: [string, string, string, string][] = [
     "missing its door",
   ],
   ["modules-declared", "src/modules/ghost/public.ts", "ghost", "not in architecture.json"],
+  [
+    "copy-from-messages",
+    "src/app/hardcoded/page.tsx",
+    "Welcome back",
+    "text in JSX is written in code",
+  ],
+  ["copy-from-messages", "src/app/hardcoded/page.tsx", "A sleeping cat", "a literal alt"],
+  ["copy-from-messages", "src/app/hardcoded/page.tsx", "Dashboard", "a literal title"],
+  ["copy-from-messages", "src/app/hardcoded/page.tsx", "Search orders", "a literal aria-label"],
+  ["copy-from-messages", "src/app/hardcoded/page.tsx", "Search", "a literal placeholder"],
   // removing or renaming a module: its name stays behind in the policy. A rename is also the pair
   // ghost (a folder nobody declared) and phantom (a declared name with no folder)
   ["modules-declared", "architecture.json", "edge:shipments->couriers", "not a declared module"],
@@ -495,6 +510,12 @@ describe("failure messages name file:line", () => {
     expect(
       lineOf(graph, find("rules-pure-content", "src/modules/orders/impure.rules.ts", "next/cache")),
     ).toBe(4);
+    expect(
+      lineOf(graph, find("copy-from-messages", "src/app/hardcoded/page.tsx", "Welcome back")),
+    ).toBe(5);
+    expect(
+      lineOf(graph, find("copy-from-messages", "src/app/hardcoded/page.tsx", "A sleeping cat")),
+    ).toBe(6);
   });
   it("prints rule, file:line, message and target", () => {
     expect(

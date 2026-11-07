@@ -12,6 +12,18 @@ const GLOBAL_CSS =
   "Global CSS has two owners, src/ui and the root layout: use a ui component or a .module.css";
 const PROVIDERS = "Render providers in app/_shell/providers.tsx, the one place they are composed";
 const PROVIDERS_IMPORT = "Only a root layout renders the providers file";
+const COPY =
+  "User-visible text is written in code: put it in messages/<locale>.json and read it with next-intl (src/ui takes text through props)";
+const copyAttribute = "JSXAttribute[name.name=/^(alt|title|placeholder|aria-label)$/]";
+/** copy-from-messages: text in JSX and literal user-visible attributes. */
+const copySelectors = [
+  { selector: "JSXText[value=/\\p{L}/u]", message: COPY },
+  { selector: `${copyAttribute} > Literal[value=/\\p{L}/u]`, message: COPY },
+  {
+    selector: `${copyAttribute} > JSXExpressionContainer > Literal[value=/\\p{L}/u]`,
+    message: COPY,
+  },
+];
 const PURE = "Rules are pure: pass time, randomness and config in from the service";
 const BANNED_GLOBALS = [
   "fetch",
@@ -354,16 +366,24 @@ export function buildBoundariesConfig(arch, options = {}) {
       },
     },
     {
+      // app/ files also carry the copy selectors: ESLint keeps one option set per rule and file
       name: "architecture/providers-composed-once",
       files: [at(`${L.app}/**/*.tsx`)],
-      ignores: [at(L.providers)],
+      ignores: [at(L.providers), "**/*.stories.tsx", "**/*.test.tsx"],
       rules: {
         "no-restricted-syntax": [
           "error",
           { selector: "JSXOpeningElement[name.name=/Provider$/]", message: PROVIDERS },
           { selector: "JSXOpeningElement[name.property.name=/Provider$/]", message: PROVIDERS },
+          ...copySelectors,
         ],
       },
+    },
+    {
+      name: "architecture/copy-from-messages",
+      files: [at(L.providers), at(`${L.ui}/**/*.tsx`), at(`${L.modules}/*/components/**/*.tsx`)],
+      ignores: ["**/*.stories.tsx", "**/*.test.tsx"],
+      rules: { "no-restricted-syntax": ["error", ...copySelectors] },
     },
     {
       name: "architecture/doors-no-client-directive",

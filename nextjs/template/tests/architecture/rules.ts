@@ -133,6 +133,9 @@ async function forbid(
 
 type Problem = { target: string; message: string };
 
+/** JSX text as a finding target: whitespace collapsed, so reformatting does not churn the key. */
+export const copyText = (text: string) => text.replace(/\s+/g, " ").trim();
+
 /**
  * Runs `analyze` on the syntax tree of every file matching `from`. ArchUnitTS selects the files
  * but reads `file.content` relative to the process cwd, not the tsconfig folder, and silently
@@ -1004,6 +1007,45 @@ export function buildRules(arch: Architecture): ArchRule[] {
             target: e.to,
             message: "a story is an entry for Storybook, never imported by production code",
           }));
+      },
+    },
+    {
+      id: "copy-from-messages",
+      description:
+        "User-visible text in app/, src/ui and module components comes from messages (next-intl) or props: no text in JSX, no literal alt, title, placeholder or aria-label",
+      async check(ctx) {
+        const attributes = new Set(["alt", "title", "placeholder", "aria-label"]);
+        const words = /\p{L}/u;
+        const message = (where: string) =>
+          `${where} is written in code: put it in messages/<locale>.json and read it with next-intl (src/ui takes text through props)`;
+        const scan = (sf: ts.SourceFile, path: string): Problem[] => {
+          if (/\.(stories|test)\.tsx$/.test(path)) return [];
+          const problems: Problem[] = [];
+          walk(sf, (n) => {
+            if (ts.isJsxText(n) && words.test(n.text))
+              problems.push({ target: copyText(n.text), message: message("text in JSX") });
+            if (ts.isJsxAttribute(n) && n.initializer && attributes.has(n.name.getText(sf))) {
+              const init = n.initializer;
+              const literal = ts.isStringLiteral(init)
+                ? init
+                : ts.isJsxExpression(init) &&
+                    init.expression &&
+                    ts.isStringLiteralLike(init.expression)
+                  ? init.expression
+                  : null;
+              if (literal && words.test(literal.text))
+                problems.push({
+                  target: literal.text,
+                  message: message(`a literal ${n.name.getText(sf)}`),
+                });
+            }
+          });
+          return problems;
+        };
+        const paths = [`${APP}/**/*.tsx`, `${UI}/**/*.tsx`, `${M}/*/components/**/*.tsx`];
+        return (
+          await Promise.all(paths.map((path) => content(ctx, "copy-from-messages", { path }, scan)))
+        ).flat();
       },
     },
     {

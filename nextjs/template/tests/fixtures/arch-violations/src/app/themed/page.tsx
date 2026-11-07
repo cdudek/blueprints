@@ -1,4 +1,4 @@
 import { ThemeProvider } from "@/ui/ThemeProvider";
 export default function Themed() {
-  return <ThemeProvider>themed</ThemeProvider>;
+  return <ThemeProvider>{null}</ThemeProvider>;
 }

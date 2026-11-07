@@ -34,7 +34,9 @@ defaults to 1.0.0 behaviour); new rules may report new findings.
   be baselined), `shared-no-clients`, `shared-no-io`, `roots-no-modules`, `composition-folders`,
   `ui-leaf` (replaces `ui-no-modules` and `ui-no-server`), `providers-composed-once`,
   `icons-one-door`, `global-css-owners`, `doors-no-client-directive`, `banned-packages`,
-  `stories-leaf`.
+  `stories-leaf`, `copy-from-messages` (text in JSX and literal `alt`, `title`, `placeholder`,
+  `aria-label` in app/, src/ui and module components). The generated eslint config also lets
+  only src/i18n import a message catalog.
 - Changed: `workflow-header` reads the header block, covers every file in `app/_workflows`, and
   refuses two workflows with the same answers. `system-operations-from-routes-only` accepts the
   worker and workflows (a workflow that calls a system operation is callable only from a route or

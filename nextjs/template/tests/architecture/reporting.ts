@@ -3,7 +3,7 @@
 import ts from "typescript";
 import { walk } from "./ast.ts";
 import type { Graph } from "./graph.ts";
-import type { Finding } from "./rules.ts";
+import { copyText, type Finding } from "./rules.ts";
 
 /** The 1-based line of the first node that names the finding's target; 1 for a file-level one. */
 export function lineOf(graph: Graph, finding: Finding): number {
@@ -17,7 +17,8 @@ export function lineOf(graph: Graph, finding: Finding): number {
         (node.text === finding.target ||
           graph.resolve(node.text, finding.file) === finding.target)) ||
       ((ts.isIdentifier(node) || ts.isPropertyAccessExpression(node)) &&
-        node.getText(sf) === finding.target);
+        node.getText(sf) === finding.target) ||
+      (ts.isJsxText(node) && copyText(node.text) === finding.target);
     if (names) line = sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
   });
   return line || 1;
