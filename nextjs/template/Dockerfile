@@ -18,9 +18,10 @@ FROM deps AS build
 COPY . .
 RUN pnpm build
 
+# worker and migrate need no build scripts (and no husky, a dev dependency)
 FROM base AS prod-deps
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 FROM node:22-slim AS web
 WORKDIR /app
