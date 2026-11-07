@@ -71,6 +71,10 @@ Enforced by: tests/trash.restore.test (or "nothing enforces this yet")
 - **DEC-20: A record is written before approval, never after.** A Migrate or Answer change is not approved, and an autonomous run does not start it, until the record exists.
 - **DEC-21: Records are kept current.** An agent follows a stale record as faithfully as a current one. Mark each record superseded, retired or re-validated (update `Last validated`) when its `Revisit when` condition fires or the code moves on. Retiring a record is a recorded Repair decision; reversing what it decided takes the class of the original decision.
 
+### Hand-backs
+
+- **DEC-22: Implicit-choice and stakeholder questions ride in the Decision4 hand-back.** When handing back, the agent states the choices the change made without being asked (names, defaults, scope cuts) and who else is affected, as part of the hand-back it already writes. No extra record.
+
 ## How to apply
 
 1. Create `docs/adr/` with an index and the first ADRs for the stack choices this blueprint set already made (record deviations, not the defaults).

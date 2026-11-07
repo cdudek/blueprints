@@ -43,6 +43,13 @@ IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
 
 - **CI-18: A review gate that docs promise must exist.** If the workflow is off, the docs say so. A "needs owner approval" tier requires a code-owners file and a required-review rule, or it is not called that.
 
+- **CI-32: AI review also asks CUPID questions,** inside the same review, not as a second pass. Is the change composable (small, with a clear interface)? Does it add a hidden dependency? Does it have a surprising side effect? Does it follow the idiom of the code around it? Does it use the domain vocabulary (see [code-quality](code-quality.md))? Findings use the existing severity levels, tally line and single fix round. No scores.
+
+### Enforcement audit
+
+- **CI-30: Every rule that claims a check has an enforcement row.** Per rule: the checker, what invokes it (hook or job), whether its status is required, and the last run with evidence. Installed, configured, executed and passed are four separate states. A check that is not required, or never ran, means the rule is unenforced and the docs say so (CI-18). A ruleset or required check that needs a manual apply leaves a new gate optional until someone applies it, so the audit lists "applied" too.
+- **CI-31: A monthly harness audit runs independently of the pipeline.** Each rule's check is exercised on its own, so one failing check cannot hide another, and the result is compared with the enforcement rows of CI-30. Gaps become findings with an owner.
+
 ### Pull requests and merge
 
 - **CI-19: The PR template maps each requirement to its proof:** the fact or rule id, the test or screenshot that shows it, and the change folder link.
@@ -88,6 +95,7 @@ check: format-check lint slop typecheck test test-integration arch  ## everythin
 - Automatic: a test or script confirms every `uses:` is a SHA, every job has a timeout, every workflow declares permissions, and the summary job needs all other jobs.
 - Automatic: the `decision4` check (CI-26) passes; the code-owners file lists `boundary-map.yaml`.
 - Automatic: every target in the Make contract exists; commands named in agent files exist.
+- Automatic: the enforcement rows of CI-30 exist for each rule that names a check; the monthly audit (CI-31) ran within the last month.
 - Review: whether a workflow change widens permissions, whether `REVIEW.md` still matches the rules.
 
 ## Mistakes to avoid
@@ -100,4 +108,5 @@ check: format-check lint slop typecheck test test-integration arch  ## everythin
 - A "green" PR handed over while it was behind the default branch and could not merge.
 - A tally line not tied to a commit, so a stale review passed a later push.
 - A PR template with a Decision-Class field nobody validated, so every PR said Undo.
+- A new required check added to the docs but never applied to the repo settings, so merges ignored it.
 - A map edited in a feature PR by the author, lowering the floor of the ground it changed.

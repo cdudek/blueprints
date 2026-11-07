@@ -98,6 +98,8 @@ Rules:
 - **AGENT-21: An agent never reads a secret value, prints the environment, reads `.env` files other than `.env.example`,** puts a value in a command, file, log, commit or message, or asks a human to paste one into the conversation. The settings file carries deny rules for these as an accident guard.
 - **AGENT-22: Agents use non-interactive flags.** Shell aliases can add prompts that hang the session: use `cp -f`, `mv -f`, `rm -f`, `rm -rf`, `-y` for package managers, `-o BatchMode=yes` for ssh and scp, and `CI=1` or the tool's no-prompt switch for installers.
 
+- **AGENT-28: Only repeated lessons become pitfalls, and stale ones are retired.** A mistake seen once stays in the reflection (SDLC-26). A pitfall whose cause no longer exists is removed in the same PR that removes the cause.
+
 ## How to apply
 
 Where the files live:
