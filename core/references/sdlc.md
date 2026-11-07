@@ -46,12 +46,18 @@ Violation | Why needed | Simpler alternative rejected because
 - **SDLC-16: Analyze ends with a coverage table:** each requirement to its task and E2E tag. An unmapped requirement and an unmapped task are both findings.
 - **SDLC-17: The human gate locks facts and checks together.** It fails while any finding is open, any checklist item is unchecked, or any validation row reads "not met". After the gate a change to a fact needs a `Revisions` line and a new approval (DEC-16).
 
+- **SDLC-24: An adversarial pass runs before the plan gate,** after analyze and distinct from it. Analyze checks the documents against each other; this pass challenges the change itself: should it exist at all, what simpler alternative was dropped, which assumptions would break it if they failed, which implicit choices the plan makes without saying so, and who else is affected. Challenges are written to the change folder with a severity. An unresolved Critical challenge blocks the gate (SDLC-17).
+
 ### Build and close
 
 - **SDLC-18: Builders get context packs:** the task, its facts, the plan excerpt and the rule IDs. Not whole files, not the whole folder. Constraints from the data model or a contract are quoted into the task verbatim.
 - **SDLC-19: Checks run by tier.** A feature runs the fast tier: format, lint, slop, typecheck, unit, arch. A milestone runs the full verify command and the deep tier: integration, E2E on a production build, scanners (see [ci](ci.md), [testing](testing.md)).
 - **SDLC-20: A converge pass runs at close.** It compares the result with the locked facts and plan. A checked box is not evidence; evidence is a passing test, a screenshot or a diff. Findings are missing, partial, contradicts or unrequested, each with a source reference. Converge appends fix tasks and never rewrites old ones. A run that changes nothing means converged.
 - **SDLC-21: Autonomous builds close only up to the class approved at the gate** (AGENT-24). Above it, prepare the hand-back for the class and stop.
+
+- **SDLC-25: Each change records operational metrics,** reusing the verify report rather than a new tool: checks run and their outcomes, retries, review rounds, compute time against waiting time, and findings still open. They go in the change folder at close, so a slow or retry-heavy change is visible.
+- **SDLC-26: Each change ends with a short reflection:** what surprised us, what the process cost, what to change. A lesson that repeats becomes a pitfall (AGENT-28), not a longer process.
+- **SDLC-27: An unfamiliar area may get a mapping pilot before planning.** A short, tool-neutral pass that maps the subsystem (entry points, data it owns, who calls it) into the change folder. Optional; skip it where the area is known.
 
 ### Bugs
 
@@ -61,7 +67,7 @@ Violation | Why needed | Simpler alternative rejected because
 ## How to apply
 
 1. Adopt the tool once per product. Its adopt step installs the files it owns (see [agent-files](agent-files.md), [ci](ci.md)); the blueprint adds its sections on top. Do not build a second process beside it.
-2. Order per change: intent, clarify, facts and checklist, plan with rules check, analyze, human gate, build by feature, converge at milestone close, PR.
+2. Order per change: intent, clarify, facts and checklist, plan with rules check, analyze, adversarial pass, human gate, build by feature, converge at milestone close, metrics and reflection, PR.
 3. Keep the change folder small. Do not add an artifact a rule above does not ask for; more Markdown is not more control.
 4. When the tool or a rule here changes, change both in one PR and re-run a sample change.
 
@@ -69,6 +75,7 @@ Violation | Why needed | Simpler alternative rejected because
 
 - Automatic: a change folder has intent, facts, plan and checklist before source edits (hook, see [agent-files](agent-files.md)); each fact has an E2E tag and the tag resolves to a test; the coverage table has no unmapped row; the checklist has no unchecked item at the gate.
 - Automatic: the PR lists the rule IDs the folder cites (DEC-17).
+- Automatic: the gate fails while a Critical adversarial challenge is open (SDLC-24); the close step finds the metrics section.
 - Review: whether a question was worth its slot, whether an assumption is safe, whether converge found real gaps or only ticked boxes.
 
 ## Mistakes to avoid
@@ -80,4 +87,5 @@ Violation | Why needed | Simpler alternative rejected because
 - Builders handed the whole folder, who then reworked decisions already locked.
 - A checked box taken as proof, with no test behind it.
 - A bug marked verified from reading the diff, never from running the reproduction.
+- An adversarial pass that only restated analyze findings, so the change itself was never challenged.
 - Two process tools in one repo, each with its own folder and gate.

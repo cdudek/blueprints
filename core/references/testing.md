@@ -46,6 +46,9 @@ Tests are the proof for every rule and every requirement. The idea: a test that 
 - **TEST-17: List callers before changing shared code.** Before changing a shared component or function, list its callers and the e2e locators that depend on its role and words.
 - **TEST-18: Never game a check.** No sleep, wrapper or special case added only to make a test pass. Fix the cause. Tests for hooks and CI scripts exist too.
 
+- **TEST-19: Every gate and hook has negative fixtures.** Forbidden edits, stale locks, missing evidence and below-floor classes must fail; permitted paths must pass. A gate tested only on the happy path is not known to block anything.
+- **TEST-20: Agent tooling is tested in layers.** Structure and contract (files, frontmatter, declared tools), trigger discrimination (the right prompts activate it, near misses do not), and a few end-to-end runs in a sandbox. Skipped layers are reported, not hidden (TEST-6).
+
 ## How to apply
 
 1. Create the layers in this order: unit and guard tests, integration with real Postgres, then e2e on a production build with the mail harness.
@@ -67,4 +70,5 @@ Tests are the proof for every rule and every requirement. The idea: a test that 
 - A source-text test mistaken for a behavior test; the behavior broke and it still passed.
 - Spot-fixing one site and leaving the same defect in ten others.
 - A fresh seeded database used to claim a migration was safe.
+- A hook that blocked nothing in practice, because only the allowed case was ever tested.
 - Fixed sleeps added to quiet a flaky test, which later hid a real race.

@@ -52,6 +52,15 @@ Credit: Decision4 by Habitat Thinking, CC BY 4.0. [DECISION4.md v1.0.1](https://
 <!-- renovate: datasource=github-tags depName=github/spec-kit -->
 spec-kit v1.3.2
 
+### ai-literacy-superpowers
+
+- **URL:** https://github.com/Habitat-Thinking/ai-literacy-superpowers
+- **Pinned:** 0.92.0, commit a50b8136e8e170a828b7a61aa3e8815475b56bc9.
+- **Takes:** ideas only, restated: adversarial pass before the plan gate, enforcement audit with separate installed, configured, executed and passed states, monthly independent harness audit, negative fixtures and layered agent-tooling tests, CUPID review questions, per-change metrics and reflection, subsystem mapping pilot, pitfall hygiene. See [sdlc](sdlc.md), [ci](ci.md), [testing](testing.md).
+- **Skips:** the orchestrator, integration agent, auto-enforcer, the HARNESS.md master file, badges, the 81 observatory signals and session sentinels.
+- **Licence:** Apache-2.0.
+- **Tracking:** commit pin; manual re-check.
+
 ### anti-slop
 
 - **URL:** https://github.com/dmmulroy/anti-slop

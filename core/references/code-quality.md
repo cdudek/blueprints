@@ -42,6 +42,8 @@ Agents degrade code over many iterations while tests stay green. SlopCodeBench (
 - **CQ-22 Refactor checkpoints.** After every few feature PRs to the same module, or when a dispatcher or entry function keeps growing, the next change in that module is a refactor that lowers its erosion before new behaviour lands.
 - **CQ-23 Prompts are not the guardrail.** Agent instructions may ask for simple code, but the CI step decides. Never lower a metric gate because a prompt "already covers it".
 
+- **CQ-24 AI review adds design questions.** Composability, hidden dependencies, surprising side effects, idiom and domain vocabulary are checked inside the existing review (see [ci](ci.md) CI-32). They are questions, not scores.
+
 ### The ruleset
 
 - **CQ-12 TypeScript products vendor anti-slop.** Install it with its agent skill (`npx skills add dmmulroy/anti-slop --skill install-anti-slop`, then ask the agent to install anti-slop). It copies the rules into the repo (for example `tools/oxlint/anti-slop/`), adds Oxlint and its plugin package at matching exact versions, enables every generic rule as an error, and validates the result.
