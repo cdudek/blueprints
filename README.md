@@ -1,33 +1,24 @@
 # Blueprints
 
-Architecture blueprints for building applications, each with a runnable template that enforces its
-own rules. This repository is the only home of these blueprints; copies elsewhere are not
-maintained.
+Documents an AI agent follows to set up and grow a new product: how things are structured, which defaults apply, and why. Point an agent at a blueprint and say "create a project from this". The blueprints describe; they never implement, so they do not go stale with the next framework release.
 
 ## Available blueprints
 
-| Blueprint             | What it is                                                                                                   |
-| --------------------- | ------------------------------------------------------------------------------------------------------------ |
-| [`nextjs/`](./nextjs) | A modular monolith for Next.js App Router with TypeScript, Postgres and drizzle (Prisma works the same way). |
-| [`fastapi/`](./fastapi) | A modular monolith for FastAPI with Python 3.14, Postgres (async SQLAlchemy, Alembic) and a Procrastinate worker. |
-| [`common/`](./common) | Shared parts, not a blueprint: the secrets CLI, Terraform module, Make contract and naming every blueprint vendors. |
+| Blueprint | What it is |
+| --- | --- |
+| [`core/`](./core) | Stack-agnostic. Start with [`core/BLUEPRINT.md`](./core/BLUEPRINT.md); it links to one reference per topic. |
+| [`nextjs/`](./nextjs) | The default stack: a modular monolith on Next.js, TypeScript and Postgres. Being converted to docs only. |
+| [`fastapi/`](./fastapi) | A modular monolith on FastAPI and Postgres, for products that need Python. Being converted to docs only. |
 
-## How to start from a blueprint
+## How to use a blueprint
 
-1. Read the blueprint's `ARCHITECTURE.md`. It states the rules, why they exist, and what is checked by
-   a tool and what is left to review.
-2. Copy the template folder into a new repository and run its `check` script. A fresh copy passes
-   everything.
-3. Replace the example modules with your own. Every rule keeps failing the build on violations from
-   the first commit.
-4. For an existing application, follow the brownfield section of the blueprint's `README.md`:
-   freeze today's violations as a baseline that can only shrink.
+1. Tell the agent to read `core/BLUEPRINT.md` and the stack blueprint, then follow the build order.
+2. The agent opens each reference when it reaches that step, applies its rules and sets up its checks.
+3. For an existing product, the agent reads the reference for the area it changes and follows its "How to apply".
 
 ## Conventions in this repository
 
-- A blueprint is a document plus a template. The document is the single source of truth for the rules;
-  the template carries each rule as working code and a deliberate-violation test.
-- Templates pin their tool versions and carry their own changelog. Upgrade by copying the new scripts
-  and following the changelog.
-- Nothing here is specific to a company, product, or cloud account or project. `common/` targets GCP
-  in 1.0.0 behind a backend seam, with no account, project or organisation ids.
+- Docs only: prose, annotated folder trees and short pseudocode. No runnable code, configs, tests or CI for applications.
+- Version-agnostic: libraries are named, versions are not. Agents use the latest stable version at build time.
+- Every reference has `read-when` and `skip-when` frontmatter and rules with stable IDs, so products, reviews and tests can cite them.
+- The layout mirrors a Claude Code skill (entry file plus `references/`), so a blueprint can become a plugin later.
