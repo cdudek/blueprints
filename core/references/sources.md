@@ -33,6 +33,17 @@ Decision4 v1.0.1
 
 Credit: Decision4 by Habitat Thinking, CC BY 4.0. [DECISION4.md v1.0.1](https://github.com/Habitat-Thinking/decision4/blob/v1.0.1/DECISION4.md).
 
+### spec-kit
+
+- **URL:** https://github.com/github/spec-kit
+- **Pinned:** 1.3.2 (2026-11-06).
+- **Takes:** ideas only, restated: rule IDs as a constitution with a justified-violations table, coverage table, read-only analyze, converge, requirements checklist, budgeted clarify, stage purity, context packs, bug lifecycle. It is the alternative tool to the owner's sdlc-run skill. See [sdlc](sdlc.md).
+- **Licence:** MIT.
+- **Tracking:** Renovate on the tag; a new major is an ADR-level change.
+
+<!-- renovate: datasource=github-tags depName=github/spec-kit -->
+spec-kit v1.3.2
+
 ### anti-slop
 
 - **URL:** https://github.com/dmmulroy/anti-slop

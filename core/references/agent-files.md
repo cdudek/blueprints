@@ -84,6 +84,10 @@ Rules:
   - PR fields: "Every PR carries Decision-Class, Put-right, Answerer and Class-Change as the PR template asks" (see [ci](ci.md)).
   - Ceiling: "An autonomous run closes only up to the class approved at the plan gate. The default ceiling is Undo. Above it, prepare the handoff and stop."
 
+### Files the sdlc tool installs
+
+- **AGENT-25: The sdlc tool's adopt step installs the process files,** so there is one way: the CLAUDE.md process section, `REVIEW.md`, the code-owners file, the review workflows, the PR template and the process hooks (see [sdlc](sdlc.md)). The blueprint adds its own sections on top (the table of AGENT-3, the overriding rules, the Decision4 contract, pitfalls, secret hooks). Do not write a second copy of what the tool installed.
+
 ### Agent safety around secrets
 
 - **AGENT-18: The real boundary is credentials, not rules.** An agent session runs with no cloud credentials, or with a separate identity that can only list secrets, not read their values. Code that runs with a secret can read it, so real values are only used in a context the agent cannot steer. See [env-and-secrets](env-and-secrets.md).
@@ -112,7 +116,8 @@ repo/
   src/clients/CLAUDE.md      scoped: how external clients are built and faked
 ```
 
-1. Create `CLAUDE.md` with the table, the overriding rules (including AGENT-4), the Decision4 contract and product lines (AGENT-23, AGENT-24), pitfalls (start empty) and the real verify command. Create `AGENTS.md` that imports it.
+0. Run the sdlc tool's adopt step first (AGENT-25), then add the blueprint sections to what it installed.
+1. Create `CLAUDE.md` (or extend the installed one) with the table, the overriding rules (including AGENT-4), the Decision4 contract and product lines (AGENT-23, AGENT-24), pitfalls (start empty) and the real verify command. Create `AGENTS.md` that imports it.
 2. Create `REVIEW.md`, `docs/working-agreements.md` and the hook scripts; wire them in `.claude/settings.json`.
 3. Add frontmatter to every doc as it is written.
 4. When a mistake happens twice, add it to the pitfalls with its incident. When a convention changes, search for the old guidance and retire it in the same PR.

@@ -57,6 +57,7 @@ Build every product as a modular monolith: one deployable, split inside into mod
   - Answer: production data and its credentials, legal pages, user email addresses, payments, deletion jobs, production IAM and DNS, signing keys.
   - Repair: an internal module, `clients/`, shared config. Undo: copy, styling, tests, docs.
 - **STR-27 The map marks ground, not decisions.** Each entry gives the floor, one line of put-right and the answerer. An agent proposes a class at or above the floor and logs a map gap on unmapped ground. Changing the map needs the owner's review.
+- **STR-28 The map covers its own trust ground at Migrate.** One entry (answerer: the owner) selects `boundary-map.yaml`, `.github/**`, the agent hooks and settings, and the repo's gate scripts. Restoring a floor or a gate needs the owner, so lowering one is never a side effect of a feature PR. List only paths that exist.
 
 ### Size
 

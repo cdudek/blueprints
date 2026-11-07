@@ -55,8 +55,8 @@ docs/ux/                  interaction.md, information-architecture.md, glossary,
 
 ## Changing an existing product
 
-Find the reference for the area you touch, follow its "How to apply" for changes, and run its checks. When a rule here no longer fits a product, record the exception as an ADR in that product. When it no longer fits any product, change this blueprint.
+Run the change through the per-change process in [sdlc](references/sdlc.md) (the owner's sdlc-run skill by default). Find the reference for the area you touch, follow its "How to apply" for changes, and run its checks. When a rule here no longer fits a product, record the exception as an ADR in that product. When it no longer fits any product, change this blueprint.
 
 ## All references
 
-product, design, ux, interaction, copy, structure, clients, stack, data-and-migrations, compatibility, auth, security, forms, email, env-and-secrets, naming, code-quality, i18n, tracking, seo, legal, agent-files, decisions, testing, ci, release-and-deploy, observability, mcp, sources. All live in [references/](references/).
+product, design, ux, interaction, copy, structure, clients, stack, data-and-migrations, compatibility, auth, security, forms, email, env-and-secrets, naming, code-quality, i18n, tracking, seo, legal, agent-files, decisions, testing, ci, release-and-deploy, observability, mcp, sdlc, sources. All live in [references/](references/).
