@@ -28,6 +28,10 @@ def bind_engine(engine: AsyncEngine) -> None:
     _sessionmaker[:] = [async_sessionmaker(engine, expire_on_commit=False)]
 
 
+def is_bound() -> bool:
+    return bool(_sessionmaker)
+
+
 @asynccontextmanager
 async def in_transaction() -> AsyncIterator[Tx]:
     if _open.get():

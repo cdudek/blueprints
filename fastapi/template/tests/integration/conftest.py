@@ -14,11 +14,15 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
+from procrastinate import App
 from sqlalchemy import create_engine as create_sync_engine
 from sqlalchemy import text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from app import worker
+from app.clients.payments import get_payments
+from app.clients.payments.providers.fixture import FixturePayments
 from app.config.settings import get_settings
 from app.db.engine import create_engine
 from app.db.transaction import Tx, bind_engine
@@ -87,3 +91,30 @@ async def tx(engine: AsyncEngine) -> AsyncIterator[Tx]:
 def bound_db(engine: AsyncEngine) -> AsyncEngine:
     bind_engine(engine)
     return engine
+
+
+@pytest.fixture
+def payments() -> Iterator[FixturePayments]:
+    """The process-wide fixture provider, fresh per test: the oracle of charges."""
+    get_payments.cache_clear()
+    provider = get_payments()
+    assert isinstance(provider, FixturePayments)
+    yield provider
+    get_payments.cache_clear()
+
+
+@pytest.fixture
+async def jobs(
+    bound_db: AsyncEngine, database_url: str, monkeypatch: pytest.MonkeyPatch
+) -> AsyncIterator[App]:
+    """The worker's app, opened on this module's database."""
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    get_settings.cache_clear()
+    async with worker.app.open_async():
+        yield worker.app
+    get_settings.cache_clear()
+
+
+async def run_worker(app: App) -> None:
+    """Runs every job that is due, then returns."""
+    await app.run_worker_async(wait=False, install_signal_handlers=False, listen_notify=False)

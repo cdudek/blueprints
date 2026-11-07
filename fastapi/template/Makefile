@@ -9,7 +9,7 @@ MAKEFLAGS += --warn-undefined-variables --no-builtin-rules
 COMPOSE ?= docker compose
 name ?=
 
-.PHONY: help setup dev format lint typecheck test test-integration check migrate migration clean
+.PHONY: help setup dev run-worker format lint typecheck test test-integration check migrate migration clean
 
 help: ## List the targets
 	@awk 'BEGIN { FS = ":[^#]*## " } /^[a-zA-Z0-9_-]+:[^=]*## / { printf "  %-20s %s\n", $$1, $$2 }' $(MAKEFILE_LIST) | sort
@@ -19,6 +19,9 @@ setup: ## Install the locked dependencies and the pre-commit and pre-push hooks
 
 dev: ## Run the API with reload, fixture providers and the compose Postgres (COMPOSE=)
 	$(COMPOSE) up -d --wait db && uv run fastapi dev src/app/main.py
+
+run-worker: ## Run the job worker (never inside the web process)
+	uv run procrastinate --app=app.worker.app worker
 
 format: ## Format and apply safe lint fixes
 	uv run ruff format && uv run ruff check --fix

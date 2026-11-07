@@ -23,6 +23,7 @@ class FaultInjectedError(Exception):
 class FixturePayments:
     def __init__(self) -> None:
         self.charges: dict[str, ChargeResult] = {}
+        self.charged_references: list[str] = []  # one entry per real charge
         self.calls = 0
         self.script: list[Outcome] = []
         self.raise_after_charge = False
@@ -40,6 +41,7 @@ class FixturePayments:
                 raise PaymentUnavailableError("provider unavailable")
             result = ChargeResult(provider_reference=f"fx_{len(self.charges) + 1}")
             self.charges[idempotency_key] = result
+            self.charged_references.append(reference)
             if outcome == "unknown_after_send":
                 raise PaymentOutcomeUnknownError("timeout after send")
         if self.raise_after_charge:

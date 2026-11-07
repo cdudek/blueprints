@@ -57,11 +57,13 @@ async def move_if(
     return result.scalar_one_or_none() is not None
 
 
-async def requested_before(tx: Tx, older_than: timedelta) -> Sequence[uuid.UUID]:
+async def unfinished_before(tx: Tx, older_than: timedelta) -> Sequence[uuid.UUID]:
+    """`requested` or `processing` rows untouched for longer than `older_than`."""
+    last_touched = func.coalesce(PaymentRequest.claimed_at, PaymentRequest.created_at)
     result = await tx.scalars(
         select(PaymentRequest.id).where(
-            PaymentRequest.status == Status.REQUESTED,
-            PaymentRequest.created_at < func.now() - older_than,
+            PaymentRequest.status.in_([Status.REQUESTED, Status.PROCESSING]),
+            last_touched < func.now() - older_than,
         )
     )
     return result.all()

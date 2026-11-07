@@ -3,7 +3,7 @@
 import uuid
 
 from app.db.transaction import Tx
-from app.modules.billing import repository
+from app.modules.billing import jobs, repository
 from app.modules.billing.models import PaymentRequest, PaymentRequestStatus
 from app.modules.billing.schemas import PaymentRequestOut
 from app.shared.access import operation
@@ -13,11 +13,14 @@ from app.shared.access import operation
 async def request_payment(
     tx: Tx, order_id: uuid.UUID, amount_cents: int, currency: str
 ) -> PaymentRequestOut:
-    """Writes the durable intent to charge once. The caller's transaction commits it."""
+    """Writes the durable intent to charge once and defers its job, both in the caller's
+    transaction: they commit together or not at all."""
     request = PaymentRequest(
         order_id=order_id,
         amount_cents=amount_cents,
         currency=currency,
         status=PaymentRequestStatus.REQUESTED,
     )
-    return PaymentRequestOut.model_validate(await repository.add(tx, request))
+    row = await repository.add(tx, request)
+    await jobs.wake(tx, row.id)
+    return PaymentRequestOut.model_validate(row)

@@ -35,11 +35,17 @@ def record_revision(ctx: MigrationContext, step: MigrationInfo, **_kw: Any) -> N
         conn.execute(delete(schema_history).where(schema_history.c.revision == revision))
 
 
+def include_name(name: str | None, type_: str, _parents: dict[str, str | None]) -> bool:
+    """The job queue's objects come from its vendored schema, not from our models."""
+    return not (type_ == "table" and name is not None and name.startswith("procrastinate_"))
+
+
 def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=metadata,
         on_version_apply=record_revision,
+        include_name=include_name,
         compare_type=True,
     )
     with context.begin_transaction():

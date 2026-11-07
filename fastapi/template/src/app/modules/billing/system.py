@@ -88,5 +88,5 @@ async def record_retryable_failure(tx: Tx, request_id: uuid.UUID, error: str) ->
 
 @operation(access="system")
 async def requests_to_wake(tx: Tx, older_than: timedelta) -> Sequence[uuid.UUID]:
-    """`requested` rows whose wake-up job may have been lost."""
-    return await repository.requested_before(tx, older_than)
+    """Unfinished requests whose job may be gone: failed for good, or never retried."""
+    return await repository.unfinished_before(tx, older_than)
