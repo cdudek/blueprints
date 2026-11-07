@@ -2,12 +2,13 @@
 // not by line numbers, so edits elsewhere in a file do not churn the key.
 // Rule: no new duplication above the threshold in .jscpd.json. Extract only when the two copies
 // change for the same reason; otherwise rename or restructure them so they stop matching.
-// Usage: node scripts/quality/jscpd-ratchet.mjs [--cwd <dir>] [--baseline <file>]
+// Usage: node scripts/quality/jscpd-ratchet.mjs [--cwd <dir>] [--baseline <file>] [--write-baseline]
+// --write-baseline records today's clones: only for adopting the blueprint or a reviewed tool upgrade.
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { arg, binOf, fatal, numbered, ratchet } from "./baseline.mjs";
+import { arg, binOf, fatal, numbered, ratchet, writeBaseline } from "./baseline.mjs";
 
 const cwd = resolve(arg("cwd", "."));
 const baseline = resolve(cwd, arg("baseline", "quality/jscpd-baseline.json"));
@@ -58,5 +59,7 @@ for (const f of stale)
     `jscpd: STALE exception ${f} (the clone is gone: delete it from quality/jscpd-exceptions.json)`,
   );
 
-const code = ratchet("jscpd", numbered(found.filter((f) => !excepted.has(f))), baseline);
+const keys = numbered(found.filter((f) => !excepted.has(f)));
+if (process.argv.includes("--write-baseline")) writeBaseline(baseline, keys);
+const code = ratchet("jscpd", keys, baseline);
 process.exit(code || (stale.length ? 1 : 0));

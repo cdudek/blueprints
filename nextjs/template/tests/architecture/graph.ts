@@ -5,7 +5,7 @@
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import ts from "typescript";
 import { readFileSync } from "node:fs";
-import { walk } from "./ast";
+import { walk } from "./ast.ts";
 
 type EdgeForm = "import" | "export-from" | "dynamic" | "require";
 export type Edge = {

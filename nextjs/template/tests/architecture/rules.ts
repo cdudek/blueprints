@@ -37,8 +37,8 @@ import {
   parse,
   specifiers,
   walk,
-} from "./ast";
-import { buildGraph, cycles, reach, type Graph } from "./graph";
+} from "./ast.ts";
+import { buildGraph, cycles, reach, type Graph } from "./graph.ts";
 
 export type Ctx = { arch: Architecture; tsconfig: string; root: string };
 export type Finding = { rule: string; file: string; target: string; message: string };

@@ -33,12 +33,6 @@ export function compareToBaseline(current, baseline) {
   };
 }
 
-/** Lines a baseline gained against its previous version. @param {string[]} before @param {string[]} after */
-export function gainedEntries(before, after) {
-  const old = new Set(before);
-  return after.filter((k) => !old.has(k)).sort();
-}
-
 /** Name of the gate in output, the keys found now, the baseline file. Returns the exit code. */
 export function ratchet(name, current, baselinePath) {
   const { added, stale } = compareToBaseline(current, readBaseline(baselinePath));
@@ -97,7 +91,62 @@ export function readRenames(path = "quality/baseline-renames.json") {
   return Array.isArray(renames) ? renames : [];
 }
 
-/** @param {string[]} entries @param {{ from: string, to: string }[]} renames */
+/**
+ * Rewrites whole path fields, never substrings, so renaming `a.ts` leaves `data.ts` alone.
+ * Keys: architecture `rule|file|target#n`, knip `file:type:name`, jscpd `file:file:hash#n`.
+ * @param {string[]} entries @param {{ from: string, to: string }[]} renames
+ */
 export function applyRenames(entries, renames) {
-  return entries.map((e) => renames.reduce((acc, r) => acc.split(r.from).join(r.to), e));
+  for (const { from, to } of renames)
+    if (typeof from !== "string" || typeof to !== "string" || !from.trim() || !to.trim())
+      throw new Error("rename paths must be non-empty strings");
+  return entries.map((entry) =>
+    renames.reduce((key, { from, to }) => {
+      const delimiter = key.includes("|") ? "|" : ":";
+      const fields = key.split(delimiter);
+      const clone = delimiter === ":" && /^[0-9a-f]{12}(#\d+)?$/.test(fields[2] ?? "");
+      const unusedFile = delimiter === ":" && fields[1] === "files" && fields[0] === from;
+      const pathFields = delimiter === "|" ? [1, 2] : clone ? [0, 1] : unusedFile ? [0, 2] : [0];
+      for (const i of pathFields) {
+        const field = fields[i] ?? "";
+        if (field === from) fields[i] = to;
+        // an architecture target that is a file keeps its #n suffix
+        else if (delimiter === "|" && i === 2 && field.replace(/#\d+$/, "") === from)
+          fields[i] = `${to}${field.slice(from.length)}`;
+      }
+      // a clone's two files stay sorted, as the ratchet writes them
+      if (clone) [fields[0], fields[1]] = [fields[0] ?? "", fields[1] ?? ""].sort();
+      return fields.join(delimiter);
+    }, entry),
+  );
+}
+
+/**
+ * Lines `after` gained against `before`, once reviewed renames are applied. A move rewrites the
+ * line; a split (its source file still exists) lets each line stay or move, but only once, so
+ * copying a finding into both files is still a gain.
+ * @param {string[]} before @param {string[]} after
+ * @param {{ from: string, to: string }[]} moves @param {{ from: string, to: string }[]} splits
+ */
+export function gainedAfterRenames(before, after, moves, splits = []) {
+  const available = new Set(applyRenames(before, moves));
+  /** @type {Map<string, string>} the split form of a line -> the line */
+  const moved = new Map();
+  for (const line of available) {
+    const [to] = applyRenames([line], splits);
+    if (to && to !== line) moved.set(to, line);
+  }
+  return after
+    .filter((key) => {
+      const line = available.has(key) ? key : moved.get(key);
+      if (line === undefined || !available.has(line)) return true;
+      available.delete(line);
+      return false;
+    })
+    .sort();
+}
+
+/** The branch a baseline is compared with: BASELINE_BASE_REF, else origin/main. */
+export function baseRef() {
+  return process.env.BASELINE_BASE_REF || "origin/main";
 }

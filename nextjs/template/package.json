@@ -25,6 +25,7 @@
     "knip": "node scripts/quality/knip-ratchet.mjs",
     "dup": "node scripts/quality/jscpd-ratchet.mjs",
     "arch:baseline": "node scripts/quality/baseline-shrinks.mjs",
+    "arch:baseline:write": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/quality/arch-baseline-write.mjs",
     "arch:diagram": "node scripts/arch/diagram.mjs",
     "arch:diagram:check": "node scripts/arch/diagram.mjs --check",
     "arch:report": "vitest run --config vitest.report.config.ts",
