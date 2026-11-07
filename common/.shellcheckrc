@@ -1,2 +1,0 @@
-# Lets `# shellcheck source=` paths resolve relative to the file that sources them.
-source-path=SCRIPTDIR
