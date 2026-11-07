@@ -10,6 +10,7 @@ import {
   gainedAfterRenames,
   numbered,
 } from "../../scripts/quality/baseline.mjs";
+import { needsCodeChecks } from "../../scripts/quality/needs-code-checks.mjs";
 
 const root = resolve(__dirname, "../..");
 const node = (script: string, args: string[], env: Record<string, string> = {}, cwd = root) =>
@@ -367,5 +368,23 @@ describe("policy-changes", () => {
     expect(listed.stdout).toContain("changed: quality/baseline-renames.json");
     expect(listed.stdout).toContain("changed: quality/jscpd-exceptions.json");
     expect(run("no-such-ref").status).toBe(0);
+  });
+});
+
+describe("CI path filter", () => {
+  it("skips the heavy jobs only for prose", () => {
+    expect(needsCodeChecks(["README.md", "docs/worked-slice.md", "LICENSE"])).toBe(false);
+    expect(needsCodeChecks(["README.md", "src/app/page.tsx"])).toBe(true);
+    expect(needsCodeChecks([])).toBe(true);
+  });
+  it("never treats the generated diagram, quality/ or the policy files as docs", () => {
+    for (const p of [
+      "docs/architecture.md",
+      "quality/arch-baseline.json",
+      "quality/README.md",
+      "architecture.json",
+      "architecture.schema.json",
+    ])
+      expect(needsCodeChecks([p]), p).toBe(true);
   });
 });
