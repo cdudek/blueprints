@@ -160,6 +160,29 @@ describe("jscpd ratchet", () => {
     expect(node("scripts/quality/jscpd-ratchet.mjs", ["--cwd", dir]).status).toBe(1);
   });
 
+  it("keys a clone by repo-relative paths, so same-named files in two roots stay apart", () => {
+    const dir = mkdtempSync(join(tmpdir(), "dup-roots-"));
+    const block = readFileSync(join(root, "tests/fixtures/dup-violation/copy-a.ts"), "utf8");
+    for (const d of ["one", "two"]) {
+      mkdirSync(join(dir, d));
+      writeFileSync(join(dir, d, "same.ts"), block);
+    }
+    writeFileSync(
+      join(dir, ".jscpd.json"),
+      JSON.stringify({
+        path: ["one", "two"],
+        format: ["typescript"],
+        minTokens: 50,
+        minLines: 5,
+        reporters: ["json"],
+        output: "./reports/jscpd",
+      }),
+    );
+    writeFileSync(join(dir, "package.json"), "{}");
+    const result = node("scripts/quality/jscpd-ratchet.mjs", ["--cwd", dir]);
+    expect(result.stderr).toMatch(/NEW\s+one\/same\.ts:two\/same\.ts:[0-9a-f]{12}#1/);
+  });
+
   it("writes today's clones with --write-baseline, then passes", () => {
     const dir = mkdtempSync(join(tmpdir(), "dup-"));
     for (const n of ["copy-a.ts", "copy-b.ts", ".jscpd.json", "package.json"])
