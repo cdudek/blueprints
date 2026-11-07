@@ -6,9 +6,14 @@ heartbeating back in the queue (Procrastinate's documented recipe).
 
 from procrastinate import JobContext
 
+from app.clients.payments import get_payments
+from app.config.logging import configure_logging
+from app.config.settings import get_settings
 from app.db.queue import STALLED_AFTER_SECONDS, queue
 from app.modules.billing import jobs as billing_jobs
 
+configure_logging(get_settings().log_level)
+get_payments()  # a missing provider secret fails the worker at startup, not at the first charge
 app = queue
 
 

@@ -1,5 +1,5 @@
-# Run by prek (pre-commit 4 reads the same file). Every hook is local and runs through `uv run`,
-# so tool versions come from uv.lock.
+# Run by prek (pre-commit 4 reads the same file). Every hook is local. Python tools run through
+# `uv run`, so their versions come from uv.lock; gitleaks is the pinned binary (see README).
 default_install_hook_types: [pre-commit, pre-push]
 default_stages: [pre-commit]
 
@@ -16,6 +16,11 @@ repos:
         entry: uv run ruff format --force-exclude
         language: system
         types_or: [python, pyi]
+      - id: gitleaks
+        name: gitleaks (staged changes)
+        entry: gitleaks git --pre-commit --staged --redact --no-banner
+        language: system
+        pass_filenames: false
       - id: uv-lock
         name: uv lock --check
         entry: uv lock --check

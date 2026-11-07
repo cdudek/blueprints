@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.mount import mount
+from app.config.logging import configure_logging
 from app.config.settings import get_settings
 from app.db.engine import create_engine
 from app.db.transaction import bind_engine
@@ -13,7 +14,9 @@ from app.db.transaction import bind_engine
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    engine = create_engine(get_settings().database_url)  # bad settings fail at startup
+    settings = get_settings()  # bad settings fail at startup
+    configure_logging(settings.log_level)
+    engine = create_engine(settings.database_url)
     bind_engine(engine)
     yield
     await engine.dispose()

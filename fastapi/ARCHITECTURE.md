@@ -45,8 +45,8 @@ the same file is invisible once the pair is baselined.
 | Expand migrations are additive | AST over each revision (`migration_phases`): every file sets `PHASE`; an `expand` upgrade calls no `op.drop_*` or `op.rename_table`, renames no column, tightens no column to `NOT NULL`, changes no type; a `contract` file sets `LAST_USE_REMOVED_IN` | raw SQL (`op.execute()`, `exec_driver_sql()`): allowed only with a `# reviewed: <reason>` comment on the line above, listed by `make arch` | marked raw SQL |
 | Suppressions only shrink | `scripts/quality/suppressions.py`, compared with the merge base: lint suppression comments and type ignores per file and code (comment tokens only), ruff per-file-ignores entries, `.gitleaksignore` lines; a file new since the merge base is adopted; a git error fails closed | none | policy-log entries (build step 10; until then every increase fails) |
 | Baselines only shrink, policy never loosens silently | arrives with `baseline_shrinks.py` and `policy_changes.py` (build step 10) | none | policy-log entries |
-| No secrets committed | arrives with the gitleaks hook and history scan (build step 8); ruff S105 to S107 today | secrets in runtime output beyond the redaction list | `.gitleaksignore` fingerprints, counted |
-| Declared secrets match `Settings` | arrives with the drift test (build step 8) | none | none |
+| No secrets committed | gitleaks 8.30.1 on staged changes (pre-commit hook) and over the full history (`make secrets-scan` in `make check`), each proven by a planted key built at run time (`tests/tooling/test_gitleaks.py`); ruff S105 to S107 | secrets in runtime output beyond the redaction list | `.gitleaksignore` fingerprints, counted |
+| Declared secrets match `Settings` | the `SecretStr` fields of `Settings` equal `tools/common/secrets/secrets env-names`, and `.env.example` lists every setting by name without a value (`tests/architecture/test_secrets.py`) | none | none |
 | Readiness means schema compatibility | arrives with the readiness tests (build step 9) | none | none |
 
 Until the policy file exists (build step 10), the declared table owners and the public routes are

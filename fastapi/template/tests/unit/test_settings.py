@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from pydantic import SecretStr
 
 from app.config.settings import Settings
 
@@ -33,3 +34,16 @@ def test_missing_secrets_dir_is_skipped_without_a_warning(monkeypatch: pytest.Mo
 def test_unknown_init_field_is_refused() -> None:
     with pytest.raises(ValueError, match="Extra inputs are not permitted"):
         Settings.model_validate({"not_a_setting": "x"})
+
+
+def test_production_refuses_fixture_providers(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+
+    with pytest.raises(ValueError, match="production uses the real payments provider"):
+        Settings()
+
+
+def test_secrets_are_secret_str_fields() -> None:
+    assert Settings.secret_fields() == ["payments_api_key"]
+    planted = "planted-value-that-must-never-appear"
+    assert planted not in repr(Settings(payments_api_key=SecretStr(planted)))
