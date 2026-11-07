@@ -13,7 +13,7 @@ The pipeline is the same checks a developer runs locally, run again where nobody
 
 ### One command, one gate
 
-- **CI-1: There is one verify command: format check, lint, typecheck, test.** Local runs and CI call the same command. When it fails, fix the code, not the test or the check.
+- **CI-1: There is one verify command: format check, lint, slop, typecheck, test.** Local runs and CI call the same command. When it fails, fix the code, not the test or the check.
 - **CI-2: Targets follow a fixed contract** (see "Make contract" below), so every repo and every agent uses the same names.
 - **CI-3: One required summary check gates the merge.** It depends on all real jobs and fails if any failed or was skipped by mistake. Branch protection requires only that one.
 - **CI-4: Docs-only PRs skip code checks** but still run the summary check, so the PR can merge. Detect by changed paths; a mixed PR runs everything.
@@ -49,13 +49,15 @@ IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
 - **CI-20: Squash merge, with a Conventional Commit title.** The title decides the release type (see [release-and-deploy](release-and-deploy.md)). One change per PR.
 - **CI-21: Arm auto-merge on every PR that can merge on green.** Hand a PR to the owner only when it needs a human judgment. Check the merge state (behind, blocked, clean) before saying it is ready; green checks are not the same as mergeable.
 - **CI-22: Branch from a freshly fetched default branch,** never from a stale local copy.
+- **CI-24: Slop is its own CI job, part of the required check.** It runs the `slop` target: anti-slop lint rules plus the slop metrics compared with the merge base. It fails on its own, so a slop regression is visible as such and cannot hide behind a green test run. It posts the metric deltas on the PR.
 
 ### Make contract
 
 - **CI-23: Every repo defines the same standard targets,** named in kebab-case, so one habit works across stacks. A target with nothing to do prints "not applicable" and exits 0.
   - `setup`: install dependencies from the lockfile, install git hooks.
   - `dev`: run the app locally.
-  - `lint` and `format`: static checks and auto-fix. `lint` includes the anti-slop rules ([code-quality](code-quality.md)).
+  - `lint` and `format`: static checks and auto-fix.
+  - `slop`: the anti-slop rules and the slop metrics, its own step and its own CI job (see [code-quality](code-quality.md)).
   - `typecheck`: the type checker over all source.
   - `test` and `test-integration`: fast tests; tests needing a database or browser.
   - `arch`: boundary and import rules (see [structure](structure.md)).
@@ -65,7 +67,7 @@ IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
   Each stack maps these names to its own tools; the names stay fixed. Agent files name these targets, not raw tool commands.
 
 ```make
-check: format-check lint typecheck test test-integration arch  ## everything CI runs
+check: format-check lint slop typecheck test test-integration arch  ## everything CI runs
 ```
 
 ## How to apply
