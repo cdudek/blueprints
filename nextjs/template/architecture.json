@@ -7,7 +7,7 @@
     "public.ts": "browser",
     "server.ts": "server"
   },
-  "roots": ["proxy.ts", "instrumentation.ts"],
+  "roots": ["proxy.ts", "instrumentation.ts", "worker.ts"],
   "modules": {
     "accounts": {
       "description": "The signed-in session: reads it for pages and actions"
@@ -41,7 +41,8 @@
     "next/headers",
     "postgres",
     "drizzle-orm/postgres-js",
-    "drizzle-orm/pglite"
+    "drizzle-orm/pglite",
+    "graphile-worker"
   ],
   "rulesMayImport": ["zod"],
   "uiMayImport": ["react", "react-dom", "next/link", "next/image"],

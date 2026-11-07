@@ -12,6 +12,8 @@ export type TestDb = {
   db: DbClient;
   /** "pglite" in-process, or "postgres" when TEST_DATABASE_URL is set (CI). */
   kind: "pglite" | "postgres";
+  /** The connection string of this file's own database (Postgres only), for a second client. */
+  url?: string;
   close: () => Promise<void>;
 };
 
@@ -42,6 +44,7 @@ export async function createTestDb(): Promise<TestDb> {
   return {
     db,
     kind: "postgres",
+    url: own.toString(),
     close: async () => {
       await client.end();
       await admin.unsafe(`DROP DATABASE ${name} WITH (FORCE)`);

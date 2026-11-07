@@ -5,6 +5,7 @@
       "next.config.ts",
       "src/proxy.ts",
       "src/instrumentation.ts",
+      "src/worker.ts",
       "src/app/**/{page,layout,route,loading,error,not-found}.{ts,tsx}"
     ]
   },

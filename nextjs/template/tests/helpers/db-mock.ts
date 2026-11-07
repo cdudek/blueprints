@@ -10,6 +10,8 @@ export async function dbModule() {
   afterAll(() => test.close());
   return {
     db: test.db,
+    /** Test-only: this file's database URL (Postgres only), for a client that is not drizzle. */
+    testUrl: test.url,
     inTransaction: <R>(fn: (tx: Tx) => Promise<R>) =>
       test.db.transaction((tx) => fn(tx as unknown as Tx)),
   };

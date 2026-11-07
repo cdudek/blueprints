@@ -5,12 +5,14 @@
   "type": "module",
   "packageManager": "pnpm@10.34.5",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.18.0"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "worker": "node --disable-warning=ExperimentalWarning scripts/worker.mjs",
+    "worker:check": "node --disable-warning=ExperimentalWarning scripts/worker.mjs --check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",

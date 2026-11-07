@@ -14,8 +14,10 @@ import type { PlaceOrderInput } from "./order.schema";
 import type { Order, PlaceOrderError, PlaceOrderSuccess } from "./order.types";
 
 class RolledBack extends Error {
-  constructor(readonly code: "forbidden" | "unauthenticated") {
+  readonly code: "forbidden" | "unauthenticated";
+  constructor(code: "forbidden" | "unauthenticated") {
     super(code);
+    this.code = code;
   }
 }
 

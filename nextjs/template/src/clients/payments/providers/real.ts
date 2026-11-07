@@ -20,7 +20,10 @@ type Options = {
  * its responses to the port's types here. The factory builds this only in production.
  */
 export class RealPaymentsClient implements PaymentsClient {
-  constructor(private readonly options: Options) {}
+  private readonly options: Options;
+  constructor(options: Options) {
+    this.options = options;
+  }
 
   private async call(path: string, body: unknown, idempotencyKey?: string): Promise<Response> {
     const response = await this.options.fetch(`https://payments.example.invalid/v1/${path}`, {
