@@ -27,6 +27,11 @@ async def count_rows(engine: AsyncEngine, order_id: uuid.UUID) -> tuple[int, int
     return orders or 0, requests or 0
 
 
+async def count_jobs(engine: AsyncEngine) -> int:
+    async with engine.connect() as conn:
+        return await conn.scalar(text("SELECT count(*) FROM procrastinate_jobs")) or 0
+
+
 async def test_order_and_payment_request_commit_together(bound_db: AsyncEngine) -> None:
     order = await place_order(ALICE, OrderCreate(amount_cents=2500, currency="EUR"))
 
@@ -48,9 +53,11 @@ async def test_a_failing_payment_request_rolls_back_the_order(
         raise RuntimeError("billing failed after writing")
 
     monkeypatch.setattr(billing, "request_payment", write_then_fail)
+    jobs_before = await count_jobs(bound_db)
 
     with pytest.raises(RuntimeError, match="billing failed after writing"):
         await place_order(ALICE, OrderCreate(amount_cents=2500, currency="EUR"))
 
-    assert created, "both writes happened before the failure"
+    assert created, "both writes and the job deferral happened before the failure"
     assert await count_rows(bound_db, created[0]) == (0, 0)
+    assert await count_jobs(bound_db) == jobs_before
