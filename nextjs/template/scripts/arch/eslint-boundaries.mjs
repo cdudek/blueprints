@@ -63,6 +63,7 @@ export function buildBoundariesConfig(arch, options = {}) {
     { type: "ui", pattern: at(L.ui), partialMatch: false },
     { type: "shared", pattern: at(L.shared), partialMatch: false },
     { type: "db", pattern: at(L.db), partialMatch: false },
+    { type: "i18n", pattern: at(L.i18n), partialMatch: false },
     { type: "client", pattern: at(`${L.clients}/*`), capture: ["client"], partialMatch: false },
     { type: "module", pattern: at(`${L.modules}/*`), capture: ["module"], partialMatch: false },
   ];
@@ -169,9 +170,9 @@ export function buildBoundariesConfig(arch, options = {}) {
     },
     {
       from: type("ui"),
-      disallow: { to: { element: { types: ["module", "client", "app", "db", "shared"] } } },
+      disallow: { to: { element: { types: ["module", "client", "app", "db", "shared", "i18n"] } } },
       message:
-        "src/ui is the project's design system and a leaf: it never imports modules, shared, clients, db or app code",
+        "src/ui is the project's design system and a leaf: it never imports modules, shared, i18n, clients, db or app code",
     },
     // the providers file is rendered by root layouts only
     { disallow: { to: category("providers") }, message: PROVIDERS_IMPORT },
@@ -201,10 +202,11 @@ export function buildBoundariesConfig(arch, options = {}) {
       from: category("composition"),
       disallow: { to: { element: { types: ["module", "shared", "db", "client", "app"] } } },
       message:
-        "A composition folder imports only src/ui, browser doors and other composition files: the page passes data and actions as props",
+        "A composition folder imports only src/ui, src/i18n, browser doors and other composition files: the page passes data and actions as props",
     },
     { from: category("composition"), allow: { to: category("browser-door") } },
     { from: category("composition"), allow: { to: category("composition") } },
+    { from: category("composition"), allow: { to: type("i18n") } },
     // Declared read exceptions: one reader FILE, one owner module's tables (names are checked
     // by the architecture tests; an import check cannot tell a read from a write).
     ...arch.readExceptions.flatMap((x) => {

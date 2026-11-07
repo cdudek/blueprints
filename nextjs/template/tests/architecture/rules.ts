@@ -453,7 +453,9 @@ export function buildRules(arch: Architecture): ArchRule[] {
       nonNegotiable: 2,
       async check(ctx) {
         const top1 = (p: string) => p.split("/")[0] ?? p;
-        const known = new Set([L.app, L.ui, L.shared, L.db, L.modules, L.clients].map(top1));
+        const known = new Set(
+          [L.app, L.ui, L.shared, L.db, L.modules, L.clients, L.i18n].map(top1),
+        );
         return graphOf(ctx).files.flatMap((f) => {
           const parts = f.slice(src.length + 1).split("/");
           const [top, second] = parts;
@@ -1055,7 +1057,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
     {
       id: "composition-folders",
       description:
-        "Composition folders (app/**/_shell, app/**/_components) import src/ui, browser doors and other composition files only: never a server door or an action; data and actions arrive as props",
+        "Composition folders (app/**/_shell, app/**/_components) import src/ui, src/i18n, browser doors and other composition files only: never a server door or an action; data and actions arrive as props",
       nonNegotiable: 10,
       async check(ctx) {
         const g = graphOf(ctx);
@@ -1067,7 +1069,10 @@ export function buildRules(arch: Architecture): ArchRule[] {
             .slice(0, -1)
             .some((part) => L.compositionFolders.includes(part));
         const allowed = (f: string) =>
-          f.startsWith(`${UI}/`) || doorRole(f) === "browser" || isComposition(f);
+          f.startsWith(`${UI}/`) ||
+          f.startsWith(`${at(L.i18n)}/`) ||
+          doorRole(f) === "browser" ||
+          isComposition(f);
         const isAction = (f: string) => {
           const sf = g.sources.get(f);
           return !!sf && hasDirective(sf, "use server");
@@ -1085,7 +1090,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
                 ? "a composition folder never calls a server door: the page passes the data in as props"
                 : isAction(e.to)
                   ? "a composition folder never imports an action: the page passes it in as a prop"
-                  : "a composition folder imports only src/ui, browser doors and other composition files",
+                  : "a composition folder imports only src/ui, src/i18n, browser doors and other composition files",
           }));
       },
     },

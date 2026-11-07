@@ -54,10 +54,7 @@
         "pattern": "^[A-Za-z0-9.-]+\\.tsx?$"
       },
       "additionalProperties": {
-        "enum": [
-          "browser",
-          "server"
-        ]
+        "enum": ["browser", "server"]
       }
     },
     "modules": {
@@ -69,9 +66,7 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "description"
-        ],
+        "required": ["description"],
         "properties": {
           "description": {
             "type": "string",
@@ -86,11 +81,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "from",
-          "to",
-          "reason"
-        ],
+        "required": ["from", "to", "reason"],
         "properties": {
           "from": {
             "$ref": "#/definitions/name"
@@ -117,11 +108,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "file",
-          "table",
-          "reason"
-        ],
+        "required": ["file", "table", "reason"],
         "properties": {
           "file": {
             "type": "string",
@@ -143,11 +130,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "path",
-          "rules",
-          "reason"
-        ],
+        "required": ["path", "rules", "reason"],
         "properties": {
           "path": {
             "type": "string",
@@ -270,6 +253,10 @@
         "providers": {
           "$ref": "#/definitions/path",
           "description": "The one file that composes providers. Default: app/_shell/providers.tsx"
+        },
+        "i18n": {
+          "$ref": "#/definitions/path",
+          "description": "Locale routing, request config and navigation. Default: i18n"
         }
       }
     },

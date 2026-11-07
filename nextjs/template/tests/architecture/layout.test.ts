@@ -41,6 +41,7 @@ describe("layout defaults", () => {
       compositionFolders: ["_shell", "_components"],
       worker: "worker.ts",
       providers: "app/_shell/providers.tsx",
+      i18n: "i18n",
     });
   });
 

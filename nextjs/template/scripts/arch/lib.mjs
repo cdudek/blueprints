@@ -13,6 +13,7 @@ export const BLUEPRINT_VERSION = "1.1.0";
  *   app?: string, modules?: string, ui?: string, shared?: string, db?: string, clients?: string,
  *   dbClient?: string, schemaRoot?: string, serverShared?: string[], resultFile?: string,
  *   workflows?: string, compositionFolders?: string[], worker?: string, providers?: string,
+ *   i18n?: string,
  * }} LayoutBlock
  * @typedef {{
  *   $schemaVersion: string,
@@ -84,6 +85,8 @@ export function layoutOf(arch) {
     worker: l.worker ?? "worker.ts",
     /** the one file that composes providers, rendered by root layouts only (1.1.0) */
     providers: l.providers ?? "app/_shell/providers.tsx",
+    /** locale routing, request config and navigation (1.1.0) */
+    i18n: l.i18n ?? "i18n",
   };
 }
 
