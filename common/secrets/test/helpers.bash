@@ -62,3 +62,20 @@ assert_no_leak() {
   if grep -qF "$PLANTED" "$STUB_STATE/argv.log"; then echo "leak in argv"; return 1; fi
   if grep -rqF "$PLANTED" "$APP" "$TMPDIR"; then echo "leak in a file"; return 1; fi
 }
+
+# seed_healthy: dev in a clean state: every declared secret has an enabled, pinned, live version.
+seed_healthy() {
+  seed_version shop-payments-api-key-dev 1 ENABLED "$(days_ago 1)" "$PLANTED"
+  seed_version shop-session-signing-key-dev 1 ENABLED "$(days_ago 1)" generated-value
+  seed_version shop-error-tracker-upload-token-dev 1 ENABLED "$(days_ago 1)" ci-value
+  mkdir -p "$APP/secret-versions"
+  echo '{"error-tracker-upload-token": "1", "payments-api-key": "1"}' >"$APP/secret-versions/dev.json"
+  seed_service services shop-web-dev shop-payments-api-key-dev 1
+  seed_service services shop-web-dev shop-session-signing-key-dev 1
+  seed_service jobs shop-migrate-dev shop-payments-api-key-dev 1
+  mkdir -p "$STUB_STATE/iam/shop-dev"
+  printf '%s\n' shop-web-dev@shop-dev.iam.gserviceaccount.com 123-compute@developer.gserviceaccount.com \
+    >"$STUB_STATE/iam/shop-dev/service-accounts.txt"
+  echo '{"bindings": [{"role": "roles/secretmanager.secretAccessor", "members": ["serviceAccount:shop-web-dev@shop-dev.iam.gserviceaccount.com"]}]}' \
+    >"$STUB_STATE/iam/shop-dev/shop-payments-api-key-dev.json"
+}
