@@ -343,3 +343,29 @@ describe("baseline-shrinks", () => {
     expect(result.status).toBe(2);
   });
 });
+
+describe("policy-changes", () => {
+  it("lists reviewed renames and duplication exceptions with the baselines, and never fails", () => {
+    const dir = mkdtempSync(join(tmpdir(), "policy-"));
+    const git = (...a: string[]) => execFileSync("git", a, { cwd: dir, encoding: "utf8" });
+    git("init", "-q", "-b", "main");
+    git("config", "user.email", "t@example.com");
+    git("config", "user.name", "t");
+    mkdirSync(join(dir, "quality"));
+    writeFileSync(join(dir, "quality/baseline-renames.json"), '{ "renames": [] }');
+    git("add", "-A");
+    git("commit", "-q", "-m", "base");
+    git("checkout", "-q", "-b", "feature");
+    writeFileSync(join(dir, "quality/baseline-renames.json"), '{ "renames": [1] }');
+    writeFileSync(join(dir, "quality/jscpd-exceptions.json"), '{ "exceptions": [] }');
+    git("add", "-A");
+    git("commit", "-q", "-m", "change");
+    const run = (ref: string) =>
+      node("scripts/quality/policy-changes.mjs", [], { BASELINE_BASE_REF: ref }, dir);
+    const listed = run("main");
+    expect(listed.status).toBe(0);
+    expect(listed.stdout).toContain("changed: quality/baseline-renames.json");
+    expect(listed.stdout).toContain("changed: quality/jscpd-exceptions.json");
+    expect(run("no-such-ref").status).toBe(0);
+  });
+});
