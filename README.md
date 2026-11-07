@@ -9,6 +9,7 @@ maintained.
 | Blueprint             | What it is                                                                                                   |
 | --------------------- | ------------------------------------------------------------------------------------------------------------ |
 | [`nextjs/`](./nextjs) | A modular monolith for Next.js App Router with TypeScript, Postgres and drizzle (Prisma works the same way). |
+| [`common/`](./common) | Shared parts, not a blueprint: the secrets CLI, Terraform module, Make contract and naming every blueprint vendors. |
 
 ## How to start from a blueprint
 
@@ -27,4 +28,5 @@ maintained.
   the template carries each rule as working code and a deliberate-violation test.
 - Templates pin their tool versions and carry their own changelog. Upgrade by copying the new scripts
   and following the changelog.
-- Nothing here is specific to a company, product or cloud account.
+- Nothing here is specific to a company, product, or cloud account or project. `common/` targets GCP
+  in 1.0.0 behind a backend seam, with no account, project or organisation ids.
