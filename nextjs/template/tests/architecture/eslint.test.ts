@@ -234,6 +234,18 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
       "instrumentation.ts importing a module",
     ],
     [
+      "src/app/orders/_components/LoadsOrders.tsx",
+      "boundaries/dependencies",
+      /A composition folder imports only/,
+      "composition calling a server door",
+    ],
+    [
+      "src/app/orders/_components/ImportsAction.tsx",
+      "boundaries/dependencies",
+      /A composition folder imports only/,
+      "composition importing an action",
+    ],
+    [
       "src/escape.ts",
       "boundaries/no-unknown-files",
       /does not match any file pattern/,
@@ -277,6 +289,7 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
     "src/app/place/PlaceButton.tsx",
     "src/shared/auth.ts",
     "src/worker.ts",
+    "src/app/_shell/Frame.tsx",
   ])("stays quiet on the clean file %s", async (file) => {
     const lint = await lintWith();
     expect(await lint(file)).toEqual([]);

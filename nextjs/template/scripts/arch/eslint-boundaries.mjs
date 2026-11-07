@@ -64,6 +64,14 @@ export function buildBoundariesConfig(arch, options = {}) {
 
   const files = [
     { pattern: doors.map((d) => at(`${L.modules}/*/${d}`)), category: "door" },
+    {
+      pattern: doorFiles(arch, "browser").map((d) => at(`${L.modules}/*/${d}`)),
+      category: "browser-door",
+    },
+    {
+      pattern: L.compositionFolders.map((c) => at(`${L.app}/**/${c}/**`)),
+      category: "composition",
+    },
     { pattern: "**/*.tables.ts", category: "tables" },
     { pattern: "**/*.repository.ts", category: "repository" },
     { pattern: "**/*.service.ts", category: "service" },
@@ -177,6 +185,15 @@ export function buildBoundariesConfig(arch, options = {}) {
       disallow: { to: category(c) },
       message: "app/ goes through a module's server.ts: no repository, tables or db",
     })),
+    // composition folders: src/ui, browser doors and other composition files; data and actions as props
+    {
+      from: category("composition"),
+      disallow: { to: { element: { types: ["module", "shared", "db", "client", "app"] } } },
+      message:
+        "A composition folder imports only src/ui, browser doors and other composition files: the page passes data and actions as props",
+    },
+    { from: category("composition"), allow: { to: category("browser-door") } },
+    { from: category("composition"), allow: { to: category("composition") } },
     // Declared read exceptions: one reader FILE, one owner module's tables (names are checked
     // by the architecture tests; an import check cannot tell a read from a write).
     ...arch.readExceptions.flatMap((x) => {

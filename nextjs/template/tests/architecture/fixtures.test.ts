@@ -25,6 +25,8 @@ const rulesFor = (file: string) =>
 const intended: Record<string, string[]> = {
   "architecture.json": ["declared-edges-acyclic", "modules-declared", "table-definitions-declared"],
   "src/app/alias-door.ts": ["module-doors"],
+  "src/app/orders/_components/LoadsOrders.tsx": ["composition-folders"],
+  "src/app/orders/_components/ImportsAction.tsx": ["composition-folders"],
   "src/app/_workflows/scattered.ts": ["workflow-header"],
   "src/app/_workflows/copy-a.ts": ["workflow-header"],
   "src/app/_workflows/copy-b.ts": ["workflow-header"],
@@ -126,6 +128,7 @@ describe("positive controls: everything else is clean", () => {
     ],
     ["src/db/index.ts", "the one place db.transaction is allowed"],
     ["src/worker.ts", "the worker root calling a job operation through a server door"],
+    ["src/app/_shell/Frame.tsx", "composition from src/ui, a browser door and a sibling"],
     ["src/shared/auth.ts", "a session type and pure checks: server-only but no I/O"],
     ["src/app/place/PlaceButton.tsx", 'a client file importing a "use server" action'],
     [
@@ -361,6 +364,18 @@ const specific: [string, string, string, string][] = [
     "the module that owns the vendor",
   ],
   ["shared-no-io", "src/shared/session-io.ts", "next/headers", "src/shared does no I/O"],
+  [
+    "composition-folders",
+    "src/app/orders/_components/LoadsOrders.tsx",
+    "src/modules/orders/server.ts",
+    "never calls a server door",
+  ],
+  [
+    "composition-folders",
+    "src/app/orders/_components/ImportsAction.tsx",
+    "src/app/place/actions.ts",
+    "never imports an action",
+  ],
   [
     "components-no-persistence",
     "src/modules/orders/components/BadList.tsx",

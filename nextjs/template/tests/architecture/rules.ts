@@ -876,6 +876,43 @@ export function buildRules(arch: Architecture): ArchRule[] {
         ),
     },
     {
+      id: "composition-folders",
+      description:
+        "Composition folders (app/**/_shell, app/**/_components) import src/ui, browser doors and other composition files only: never a server door or an action; data and actions arrive as props",
+      nonNegotiable: 10,
+      async check(ctx) {
+        const g = graphOf(ctx);
+        const isComposition = (f: string) =>
+          f.startsWith(`${APP}/`) &&
+          f
+            .slice(APP.length + 1)
+            .split("/")
+            .slice(0, -1)
+            .some((part) => L.compositionFolders.includes(part));
+        const allowed = (f: string) =>
+          f.startsWith(`${UI}/`) || doorRole(f) === "browser" || isComposition(f);
+        const isAction = (f: string) => {
+          const sf = g.sources.get(f);
+          return !!sf && hasDirective(sf, "use server");
+        };
+        // erased type imports are fine: they carry no data and no call
+        return g.edges
+          .filter((e) => e.kind === "runtime" && !e.external && isComposition(e.from))
+          .filter((e) => !allowed(e.to))
+          .map((e) => ({
+            rule: "composition-folders",
+            file: e.from,
+            target: e.to,
+            message:
+              doorRole(e.to) === "server"
+                ? "a composition folder never calls a server door: the page passes the data in as props"
+                : isAction(e.to)
+                  ? "a composition folder never imports an action: the page passes it in as a prop"
+                  : "a composition folder imports only src/ui, browser doors and other composition files",
+          }));
+      },
+    },
+    {
       id: "nothing-imports-app",
       description: "Nothing imports src/app",
       check: (ctx) =>
