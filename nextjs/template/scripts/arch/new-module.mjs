@@ -3,10 +3,10 @@
 // Creates the doors, service, repository, pure rules with a test, schema, types, tables and a
 // component; declares the module and its table in architecture.json; composes the table into
 // src/db/schema.ts; regenerates the diagram. Then run `pnpm db:generate` for the migration.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { embed, renderDiagram } from "./diagram.mjs";
-import { loadArchitecture } from "./lib.mjs";
+import { layoutOf, loadArchitecture } from "./lib.mjs";
 
 const root = process.cwd();
 const [name, ...rest] = process.argv.slice(2);
@@ -29,8 +29,11 @@ const snake = (s) => s.replace(/-/g, "_");
 const P = pascal(singular);
 const Ps = pascal(name);
 const s = singular;
-const dir = join(root, "src/modules", name);
 const arch = loadArchitecture(root);
+const L = layoutOf(arch);
+const dir = join(root, arch.srcRoot, L.modules, name);
+/** the import specifier of a file under srcRoot: "db/index.ts" -> "@/db" */
+const spec = (p) => `@/${p.replace(/(\/index)?\.tsx?$/, "")}`;
 if (existsSync(dir) || arch.modules[name] || arch.tables[snake(name)]) {
   console.error(`module ${name} (or its table) already exists`);
   process.exit(1);
@@ -76,7 +79,7 @@ describe("isValid${P}Name", () => {
 `,
   [`${s}.repository.ts`]: `import "server-only";
 import { desc, eq } from "drizzle-orm";
-import { db, type DbClient } from "@/db";
+import { db, type DbClient } from "${spec(L.dbClient)}";
 import { ${camel(name)} } from "./${s}.tables";
 import type { ${P} } from "./${s}.types";
 
@@ -88,14 +91,14 @@ export const ${camel(s)}Repository = {
 };
 `,
   [`${s}.service.ts`]: `import "server-only";
-import { operation } from "@/shared/access";
-import { ok } from "@/shared/result";
+import { operation } from "${spec(`${L.shared}/access.ts`)}";
+import { ok } from "${spec(L.resultFile)}";
 import { ${camel(s)}Repository as repo } from "./${s}.repository";
 
 // Every operation declares its access policy (user, public, webhook or job).
 export const listMy${Ps} = operation(
   { access: "user", resource: "the caller's own ${name}" },
-  async (user) => ok(await repo.listForUser(user.id)),
+  async ({ user }) => ok(await repo.listForUser(user.id)),
 );
 `,
   "server.ts": `import "server-only";
@@ -107,12 +110,15 @@ export { ${P}List } from "./components/${P}List";
 export { create${P}Schema, type Create${P}Input } from "./${s}.schema";
 export type { ${P}, ${P}Row } from "./${s}.types";
 `,
-  [`components/${P}List.tsx`]: `import { Text } from "@/ui";
+  [`components/${P}List.tsx`]: `import { useTranslations } from "next-intl";
+import { Text } from "${spec(L.ui)}/Text";
 import type { ${P}Row } from "../${s}.types";
 
-// Business component: knows the ${s} type, is built from src/ui, gets its data through props.
+// Business component: knows the ${s} type, is built from src/ui, gets its data through props
+// and its words from its own messages namespace.
 export function ${P}List({ rows }: { rows: ${P}Row[] }) {
-  if (rows.length === 0) return <p>No ${name} yet.</p>;
+  const t = useTranslations("${name}");
+  if (rows.length === 0) return <p>{t("empty")}</p>;
   return (
     <ul>
       {rows.map((row) => (
@@ -136,12 +142,22 @@ arch.modules[name] = { description: `${Ps} (describe this module)` };
 arch.tables[snake(name)] = name;
 writeFileSync(join(root, "architecture.json"), `${JSON.stringify(arch, null, 2)}\n`);
 
+// the module's messages namespace, in every catalog (typed keys come from messages/en.json)
+const messagesDir = join(root, "messages");
+if (existsSync(messagesDir))
+  for (const catalog of readdirSync(messagesDir).filter((f) => f.endsWith(".json"))) {
+    const path = join(messagesDir, catalog);
+    const messages = JSON.parse(readFileSync(path, "utf8"));
+    messages[name] = { empty: `No ${name} yet.` };
+    writeFileSync(path, `${JSON.stringify(messages, null, 2)}\n`);
+  }
+
 // the persistence composition root
-const schemaFile = join(root, "src/db/schema.ts");
+const schemaFile = join(root, arch.srcRoot, L.schemaRoot);
 let schema = readFileSync(schemaFile, "utf8");
 schema = schema.replace(
   /(import \* as [^\n]+\n)(?!import)/,
-  `$1import * as ${camel(name)} from "@/modules/${name}/${s}.tables";\n`,
+  `$1import * as ${camel(name)} from "@/${L.modules}/${name}/${s}.tables";\n`,
 );
 schema = schema.replace(
   /export const schema = \{([^}]*)\};/,
@@ -154,5 +170,5 @@ const docFile = join(root, "docs/architecture.md");
 writeFileSync(docFile, embed(readFileSync(docFile, "utf8"), renderDiagram(arch)));
 
 console.log(
-  `created src/modules/${name}. Next: pnpm db:generate, describe the module in architecture.json, declare any edge it needs, pnpm check`,
+  `created ${arch.srcRoot}/${L.modules}/${name}. Next: pnpm db:generate, describe the module in architecture.json, declare any edge it needs, pnpm check`,
 );

@@ -5,7 +5,9 @@
 import { resolve } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { loadArchitecture } from "../../scripts/arch/lib.mjs";
-import { buildRules, runAll, type Finding } from "./rules";
+import { buildGraph } from "./graph.ts";
+import { lineOf, located } from "./reporting.ts";
+import { buildRules, runAll, type Finding } from "./rules.ts";
 
 const root = resolve(__dirname, "../fixtures/arch-violations");
 const arch = loadArchitecture(root);
@@ -21,15 +23,22 @@ const rulesFor = (file: string) =>
 
 /** file -> the rules that must flag it, and only them. */
 const intended: Record<string, string[]> = {
-  "architecture.json": ["modules-declared", "table-definitions-declared"],
+  "architecture.json": ["declared-edges-acyclic", "modules-declared", "table-definitions-declared"],
   "src/app/alias-door.ts": ["module-doors"],
+  "src/app/orders/_components/LoadsOrders.tsx": ["composition-folders"],
+  "src/app/orders/_components/ImportsAction.tsx": ["composition-folders"],
+  "src/app/_workflows/scattered.ts": ["workflow-header"],
+  "src/app/_workflows/copy-a.ts": ["workflow-header"],
+  "src/app/_workflows/copy-b.ts": ["workflow-header"],
   "src/app/api/bad/route.ts": ["workflow-header"],
   "src/app/bad-action.ts": ["system-operations-from-routes-only"],
   "src/app/bad-actions.ts": ["app-no-persistence", "module-doors"],
   "src/app/ns.ts": ["system-operations-from-routes-only"],
   "src/app/reads-orders-table.ts": ["app-no-persistence", "tables-owner-only"],
+  "src/app/settle-action.ts": ["system-operations-from-routes-only"],
   "src/db/schema.ts": ["schema-composition"],
   "src/escape.ts": ["module-doors-complete", "roots-classified"],
+  "src/instrumentation.ts": ["roots-no-modules"],
   "src/modules/billing/direct-provider.ts": ["providers-in-client-folder"],
   "src/modules/billing/dyn-edge.ts": ["declared-edges-complete"],
   "src/modules/billing/reads-orders-table.ts": ["declared-edges", "tables-owner-only"],
@@ -60,6 +69,7 @@ const intended: Record<string, string[]> = {
   "src/modules/orders/imports-app.ts": ["nothing-imports-app"],
   "src/modules/orders/impure.rules.ts": ["rules-pure-closure", "rules-pure-content"],
   "src/modules/orders/indirect.rules.ts": ["rules-pure-closure"],
+  "src/modules/orders/late.repository.ts": ["server-only-in-server-files"],
   "src/modules/orders/order.admin.service.ts": ["system-operations-from-routes-only"],
   "src/modules/orders/reads-payments-bad.ts": ["tables-owner-only"],
   "src/modules/orders/reads-payments-ok.ts": ["tables-owner-only"],
@@ -68,8 +78,28 @@ const intended: Record<string, string[]> = {
   "src/modules/orders/relative-door.ts": ["module-doors"],
   "src/shared/bridge.ts": ["module-doors", "shared-no-modules"],
   "src/shared/leak.ts": ["shared-no-modules"],
-  "src/ui/BadButton.tsx": ["ui-no-modules"],
-  "src/ui/ServerThing.tsx": ["ui-no-server"],
+  "src/shared/calls-client.ts": ["shared-no-clients"],
+  "src/shared/session-io.ts": ["shared-no-io"],
+  "src/ui/BadButton.tsx": ["ui-leaf"],
+  "src/ui/ServerThing.tsx": ["ui-leaf"],
+  "src/ui/UsesShared.tsx": ["ui-leaf"],
+  "src/ui/Gallery.tsx": ["stories-leaf"],
+  "src/app/orders/layout.tsx": ["providers-composed-once"],
+  "src/app/themed/page.tsx": ["providers-composed-once"],
+  "src/app/styled/page.tsx": ["global-css-owners"],
+  "src/modules/orders/components/WithIcon.tsx": ["icons-one-door"],
+  "src/modules/catalog/public.ts": ["doors-no-client-directive"],
+  "src/modules/billing/uses-axios.ts": ["banned-packages"],
+  "package.json": ["banned-packages"],
+  "src/hooks/useThing.ts": ["roots-classified"],
+  // a third module, added the way the generator adds one, with the gaps a review found
+  "src/modules/shipments/shipments.service.ts": [
+    "access-declared",
+    "system-operations-from-routes-only",
+  ],
+  "src/modules/shipments/shipments.dispatch.service.ts": ["system-operations-from-routes-only"],
+  "src/app/hardcoded/page.tsx": ["copy-from-messages"],
+  "src/ui/Chart.stories.tsx": ["ui-leaf"],
 };
 
 describe("each violation is flagged by its intended rules only", () => {
@@ -102,6 +132,15 @@ describe("positive controls: everything else is clean", () => {
     ],
     ["src/app/api/hook/route.ts", "a route handler calling a system (webhook) operation"],
     [
+      "src/app/translated/page.tsx",
+      "text from a translator, and punctuation, numbers and an empty alt that are not copy",
+    ],
+    ["src/app/_workflows/settle-payment.ts", "a workflow calling a system operation"],
+    [
+      "src/app/api/settle/route.ts",
+      "a route handler calling a workflow that calls a system operation",
+    ],
+    [
       "src/modules/orders/order.service.ts",
       "a user operation using inTransaction and passing tx to billing",
     ],
@@ -110,6 +149,22 @@ describe("positive controls: everything else is clean", () => {
       "a service with user and webhook operations and a Tx-taking operation",
     ],
     ["src/db/index.ts", "the one place db.transaction is allowed"],
+    ["src/worker.ts", "the worker root calling a job operation through a server door"],
+    ["src/app/_shell/Frame.tsx", "composition from src/ui, a browser door and a sibling"],
+    ["src/ui/Card.tsx", "src/ui importing react and a sibling"],
+    ["src/ui/ThemeProvider.tsx", "src/ui defining a provider"],
+    ["src/app/_shell/providers.tsx", "the one file that renders providers"],
+    ["src/app/layout.tsx", "the root layout: global CSS and the providers"],
+    ["src/app/(shop)/layout.tsx", "a route-group root layout rendering the providers"],
+    ["src/modules/orders/components/Styled.tsx", "a CSS module"],
+    ["src/ui/icons/index.ts", "the icon door importing the icon package, no directive"],
+    ["src/ui/Button.stories.tsx", "a story importing its component"],
+    ["src/shared/auth.ts", "a session type and pure checks: server-only but no I/O"],
+    ["src/app/place/PlaceButton.tsx", 'a client file importing a "use server" action'],
+    [
+      "src/app/place/actions.ts",
+      'a "use server" file reaching a server door, reading the session module and calling one other',
+    ],
   ])("%s (%s)", (file) => {
     expect(rulesFor(file)).toEqual([]);
   });
@@ -227,6 +282,12 @@ const specific: [string, string, string, string][] = [
   ["system-operations-from-routes-only", "src/app/ns.ts", "billing.*", "by name"],
   [
     "system-operations-from-routes-only",
+    "src/app/settle-action.ts",
+    "src/app/_workflows/settle-payment.ts",
+    "only a route handler or the worker may call it",
+  ],
+  [
+    "system-operations-from-routes-only",
     "src/modules/orders/order.admin.service.ts",
     "billing.settleFromWebhook",
     "must not call",
@@ -283,6 +344,8 @@ const specific: [string, string, string, string][] = [
     "owned by billing but defined in ledger",
   ],
   ["table-definitions-declared", "architecture.json", "ghosts", "defined nowhere"],
+  ["declared-edges-acyclic", "architecture.json", "ledger -> billing", "closes a cycle"],
+  ["declared-edges-acyclic", "architecture.json", "billing -> ledger", "closes a cycle"],
   ["schema-composition", "src/db/schema.ts", "src/modules/ledger/ledger.tables.ts", "not composed"],
   [
     "tables-owner-only",
@@ -297,13 +360,112 @@ const specific: [string, string, string, string][] = [
     "missing its door",
   ],
   ["modules-declared", "src/modules/ghost/public.ts", "ghost", "not in architecture.json"],
+  [
+    "copy-from-messages",
+    "src/app/hardcoded/page.tsx",
+    "Welcome back",
+    "text in JSX is written in code",
+  ],
+  ["copy-from-messages", "src/app/hardcoded/page.tsx", "A sleeping cat", "a literal alt"],
+  ["copy-from-messages", "src/app/hardcoded/page.tsx", "Dashboard", "a literal title"],
+  ["copy-from-messages", "src/app/hardcoded/page.tsx", "Search orders", "a literal aria-label"],
+  ["copy-from-messages", "src/app/hardcoded/page.tsx", "Search", "a literal placeholder"],
+  ["ui-leaf", "src/ui/Chart.stories.tsx", "lodash", "imports only the packages in uiMayImport"],
+  // removing or renaming a module: its name stays behind in the policy. A rename is also the pair
+  // ghost (a folder nobody declared) and phantom (a declared name with no folder)
+  ["modules-declared", "architecture.json", "edge:shipments->couriers", "not a declared module"],
+  ["modules-declared", "architecture.json", "table:parcels", "removed or renamed module"],
+  ["modules-declared", "architecture.json", "phantom", "has no files"],
+  [
+    "access-declared",
+    "src/modules/shipments/shipments.service.ts",
+    "listShipments",
+    "not wrapped in operation",
+  ],
+  [
+    "system-operations-from-routes-only",
+    "src/modules/shipments/shipments.service.ts",
+    "shipments.receiveCarrierEvent",
+    "a user operation must not call the system operation",
+  ],
+  [
+    "system-operations-from-routes-only",
+    "src/modules/shipments/shipments.dispatch.service.ts",
+    "shipments.receiveCarrierEvent",
+    "a user operation must not call the system operation",
+  ],
   ["roots-classified", "src/escape.ts", "escape.ts", "fits no declared root"],
+  [
+    "roots-no-modules",
+    "src/instrumentation.ts",
+    "src/modules/orders/server.ts",
+    "instrumentation.ts imports no module",
+  ],
   ["use-server-only-in-app", "src/modules/orders/actions.ts", "use server", "actions live in app"],
   ["server-only-in-server-files", "src/modules/ledger/server.ts", "server-only", "missing"],
+  [
+    "server-only-in-server-files",
+    "src/modules/orders/late.repository.ts",
+    "server-only",
+    "must be the first statement",
+  ],
   ["workflow-header", "src/app/api/bad/route.ts", "@workflow", "workflow header is missing"],
-  ["ui-no-server", "src/ui/ServerThing.tsx", "server-only", "never imports server code"],
-  ["ui-no-modules", "src/ui/BadButton.tsx", "src/modules/orders/public.ts", "no business nouns"],
+  ["workflow-header", "src/app/_workflows/scattered.ts", "@workflow", "workflow header is missing"],
+  ["workflow-header", "src/app/_workflows/scattered.ts", "survives-restart:", "is missing"],
+  [
+    "workflow-header",
+    "src/app/_workflows/copy-b.ts",
+    "src/app/_workflows/copy-a.ts",
+    "the same four answers",
+  ],
+  ["ui-leaf", "src/ui/ServerThing.tsx", "server-only", "only the packages in uiMayImport"],
+  ["ui-leaf", "src/ui/ServerThing.tsx", "src/db/index.ts", "src/ui is a leaf"],
+  ["ui-leaf", "src/ui/BadButton.tsx", "src/modules/orders/public.ts", "no business nouns"],
+  ["ui-leaf", "src/ui/UsesShared.tsx", "src/shared/result.ts", "src/ui is a leaf"],
+  ["stories-leaf", "src/ui/Gallery.tsx", "src/ui/Button.stories.tsx", "never imported"],
+  [
+    "providers-composed-once",
+    "src/app/themed/page.tsx",
+    "ThemeProvider",
+    "the one place providers",
+  ],
+  [
+    "providers-composed-once",
+    "src/app/orders/layout.tsx",
+    "src/app/_shell/providers.tsx",
+    "only a root layout",
+  ],
+  ["global-css-owners", "src/app/styled/page.tsx", "./page.css", "two owners"],
+  ["icons-one-door", "src/modules/orders/components/WithIcon.tsx", "lucide-react", "@/ui/icons"],
+  [
+    "doors-no-client-directive",
+    "src/modules/catalog/public.ts",
+    "use client",
+    "not a client boundary",
+  ],
+  ["banned-packages", "src/modules/billing/uses-axios.ts", "axios", "injected fetch"],
+  ["banned-packages", "package.json", "axios", "banned here"],
+  ["roots-classified", "src/hooks/useThing.ts", "hooks", "ui/hooks"],
   ["shared-no-modules", "src/shared/leak.ts", "src/modules/orders/public.ts", "stays generic"],
+  [
+    "shared-no-clients",
+    "src/shared/calls-client.ts",
+    "src/clients/payments/index.ts",
+    "the module that owns the vendor",
+  ],
+  ["shared-no-io", "src/shared/session-io.ts", "next/headers", "src/shared does no I/O"],
+  [
+    "composition-folders",
+    "src/app/orders/_components/LoadsOrders.tsx",
+    "src/modules/orders/server.ts",
+    "never calls a server door",
+  ],
+  [
+    "composition-folders",
+    "src/app/orders/_components/ImportsAction.tsx",
+    "src/app/place/actions.ts",
+    "never imports an action",
+  ],
   [
     "components-no-persistence",
     "src/modules/orders/components/BadList.tsx",
@@ -329,6 +491,42 @@ describe("each rule reports its specific diagnostic", () => {
         `${f.message} ${f.target}`.includes(text),
     );
     expect(hit, `${rule} should flag ${file} (${target}) with "${text}"`).toBeDefined();
+  });
+});
+
+describe("failure messages name file:line", () => {
+  const graph = buildGraph(resolve(root, "tsconfig.json"), root);
+  const find = (rule: string, file: string, target: string) =>
+    findings.find((f) => f.rule === rule && f.file === file && f.target === target)!;
+
+  it("points at the import, the global or the call that broke the rule", () => {
+    expect(
+      lineOf(
+        graph,
+        find("module-doors", "src/app/alias-door.ts", "src/modules/billing/billing.service.ts"),
+      ),
+    ).toBe(1);
+    expect(
+      lineOf(graph, find("rules-pure-content", "src/modules/orders/impure.rules.ts", "Date.now")),
+    ).toBe(6);
+    expect(
+      lineOf(graph, find("rules-pure-content", "src/modules/orders/impure.rules.ts", "next/cache")),
+    ).toBe(4);
+    expect(
+      lineOf(graph, find("copy-from-messages", "src/app/hardcoded/page.tsx", "Welcome back")),
+    ).toBe(5);
+    expect(
+      lineOf(graph, find("copy-from-messages", "src/app/hardcoded/page.tsx", "A sleeping cat")),
+    ).toBe(6);
+  });
+  it("prints rule, file:line, message and target", () => {
+    expect(
+      located(graph, [
+        find("rules-pure-content", "src/modules/orders/impure.rules.ts", "Math.random"),
+      ]),
+    ).toEqual([
+      "rules-pure-content src/modules/orders/impure.rules.ts:7: pass randomness in (Math.random)",
+    ]);
   });
 });
 

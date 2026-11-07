@@ -52,7 +52,7 @@ describe("eslint config is generated from architecture.json", () => {
 
   it("carries the rules-purity bans for *.rules.ts", async () => {
     const config = await effective("src/modules/orders/order.rules.ts");
-    const [, purity] = generated;
+    const purity = generated.find((c) => c.name === "architecture/rules-purity");
     expect(optionsOf(config.rules["no-restricted-syntax"])).toEqual(
       optionsOf(purity?.rules?.["no-restricted-syntax"]),
     );
@@ -180,6 +180,18 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
       "shared importing a module",
     ],
     [
+      "src/shared/calls-client.ts",
+      "boundaries/dependencies",
+      /src\/shared never imports a client/,
+      "shared importing a client",
+    ],
+    [
+      "src/shared/session-io.ts",
+      "no-restricted-imports",
+      /src\/shared does no I\/O/,
+      "shared reading the request",
+    ],
+    [
       "src/modules/orders/imports-app.ts",
       "boundaries/dependencies",
       /Nothing imports src\/app/,
@@ -216,6 +228,91 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
       "app importing persistence",
     ],
     [
+      "src/instrumentation.ts",
+      "boundaries/dependencies",
+      /import no module/,
+      "instrumentation.ts importing a module",
+    ],
+    [
+      "src/app/orders/_components/LoadsOrders.tsx",
+      "boundaries/dependencies",
+      /A composition folder imports only/,
+      "composition calling a server door",
+    ],
+    [
+      "src/app/orders/_components/ImportsAction.tsx",
+      "boundaries/dependencies",
+      /A composition folder imports only/,
+      "composition importing an action",
+    ],
+    [
+      "src/ui/UsesShared.tsx",
+      "boundaries/dependencies",
+      /src\/ui is the project's design system and a leaf/,
+      "ui importing shared",
+    ],
+    [
+      "src/ui/ServerThing.tsx",
+      "no-restricted-imports",
+      /uiMayImport/,
+      "ui importing a package outside uiMayImport",
+    ],
+    ["src/ui/Gallery.tsx", "no-restricted-imports", /A story is an entry/, "importing a story"],
+    [
+      "src/app/themed/page.tsx",
+      "no-restricted-syntax",
+      /Render providers in/,
+      "a page rendering a provider",
+    ],
+    [
+      "src/app/orders/layout.tsx",
+      "boundaries/dependencies",
+      /Only a root layout/,
+      "a nested layout rendering the providers file",
+    ],
+    [
+      "src/app/styled/page.tsx",
+      "no-restricted-imports",
+      /Global CSS has two owners/,
+      "a page importing global CSS",
+    ],
+    [
+      "src/modules/orders/components/WithIcon.tsx",
+      "no-restricted-imports",
+      /Import icons from @\/ui\/icons/,
+      "an icon package outside the icon door",
+    ],
+    [
+      "src/modules/catalog/public.ts",
+      "no-restricted-syntax",
+      /A door is not a client boundary/,
+      "a door with a client directive",
+    ],
+    [
+      "src/modules/billing/uses-axios.ts",
+      "no-restricted-imports",
+      /axios is banned here/,
+      "a banned package",
+    ],
+    [
+      "src/app/reads-messages.ts",
+      "boundaries/dependencies",
+      /Message catalogs are read through src\/i18n/,
+      "a message catalog imported outside src/i18n",
+    ],
+    [
+      "src/app/hardcoded/page.tsx",
+      "no-restricted-syntax",
+      /User-visible text is written in code/,
+      "text in JSX and literal user-visible attributes",
+    ],
+    [
+      "src/ui/Chart.stories.tsx",
+      "no-restricted-imports",
+      /src\/ui is a leaf/,
+      "a story importing a package outside uiMayImport and Storybook",
+    ],
+    [
       "src/escape.ts",
       "boundaries/no-unknown-files",
       /does not match any file pattern/,
@@ -234,10 +331,16 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
 
   it("fails for the intended rule family only", async () => {
     const lint = await lintWith();
-    for (const [file, ruleId] of mustFail) {
-      const family = ruleId.startsWith("boundaries/") ? "boundaries/" : ruleId;
+    const familyOf = (ruleId: string) =>
+      ruleId.startsWith("boundaries/") ? "boundaries/" : ruleId;
+    for (const [file] of mustFail) {
+      // a file may carry violations of several families on purpose; each has its own row
+      const families = mustFail.filter(([f]) => f === file).map(([, r]) => familyOf(r));
       const others = (await lint(file)).filter(
-        (m) => m.ruleId && !m.ruleId.startsWith(family) && !m.ruleId.startsWith("no-restricted"),
+        (m) =>
+          m.ruleId &&
+          !families.some((f) => m.ruleId!.startsWith(f)) &&
+          !m.ruleId.startsWith("no-restricted"),
       );
       expect(
         others.map((m) => m.ruleId),
@@ -256,6 +359,20 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
     "src/db/schema.ts",
     "src/proxy.ts",
     "src/ui/Button.tsx",
+    "src/app/place/PlaceButton.tsx",
+    "src/shared/auth.ts",
+    "src/worker.ts",
+    "src/app/_shell/Frame.tsx",
+    "src/ui/Card.tsx",
+    "src/ui/ThemeProvider.tsx",
+    "src/app/_shell/providers.tsx",
+    "src/app/layout.tsx",
+    "src/app/(shop)/layout.tsx",
+    "src/modules/orders/components/Styled.tsx",
+    "src/ui/icons/index.ts",
+    "src/ui/Button.stories.tsx",
+    "src/i18n/catalog.ts",
+    "src/app/translated/page.tsx",
   ])("stays quiet on the clean file %s", async (file) => {
     const lint = await lintWith();
     expect(await lint(file)).toEqual([]);

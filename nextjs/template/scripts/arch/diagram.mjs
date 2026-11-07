@@ -1,7 +1,8 @@
 // Writes a Mermaid diagram of architecture.json (modules, declared edges, table owners) into
 // docs/architecture.md between the markers. `--check` fails when the committed diagram is stale.
 import { readFileSync, writeFileSync } from "node:fs";
-import { loadArchitecture } from "./lib.mjs";
+import { pathToFileURL } from "node:url";
+import { loadArchitecture, moduleOf } from "./lib.mjs";
 
 const START = "<!-- architecture-diagram:start -->";
 const END = "<!-- architecture-diagram:end -->";
@@ -24,9 +25,10 @@ export function renderDiagram(arch) {
       .join("<br/>");
     lines.push(`  ${name}["${label}"]`);
   }
-  for (const e of arch.edges) lines.push(`  ${e.from} -->|calls server.ts| ${e.to}`);
+  // an edge covers both doors: calling server.ts and importing public.ts
+  for (const e of arch.edges) lines.push(`  ${e.from} -->|uses a door| ${e.to}`);
   for (const x of arch.readExceptions)
-    lines.push(`  ${x.reader} -.->|reads ${x.table}| ${arch.tables[x.table]}`);
+    lines.push(`  ${moduleOf(arch, x.file)} -.->|reads ${x.table}| ${arch.tables[x.table]}`);
   for (const c of arch.clients) lines.push(`  client_${c}[("client: ${c}")]:::port`);
   lines.push("  classDef port stroke-dasharray: 4 2");
   return ["```mermaid", ...lines, "```"].join("\n");
@@ -40,7 +42,8 @@ export function embed(doc, diagram) {
   return `${doc.slice(0, a + START.length)}\n${diagram}\n${doc.slice(b)}`;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// a URL comparison, so a path with spaces or other escaped characters still runs the script
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const file = "docs/architecture.md";
   const current = readFileSync(file, "utf8");
   const next = embed(current, renderDiagram(loadArchitecture()));

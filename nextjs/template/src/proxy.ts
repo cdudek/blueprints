@@ -1,11 +1,16 @@
-import { NextResponse } from "next/server";
+import createMiddleware from "next-intl/middleware";
+import type { NextRequest } from "next/server";
+import { routing } from "@/i18n/routing";
 
-// Headers and redirects only. Auth and permission checks live in services.
-export function proxy() {
-  const response = NextResponse.next();
+const localize = createMiddleware(routing);
+
+// Locale routing, headers and redirects only. Auth and permission checks live in services.
+export function proxy(request: NextRequest) {
+  const response = localize(request);
   response.headers.set("x-content-type-options", "nosniff");
   response.headers.set("referrer-policy", "strict-origin-when-cross-origin");
   return response;
 }
 
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };
+// Everything but API routes, Next.js internals and files with an extension.
+export const config = { matcher: ["/((?!api|trpc|_next|_vercel|.*\\..*).*)"] };

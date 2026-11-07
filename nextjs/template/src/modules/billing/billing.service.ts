@@ -8,7 +8,7 @@ import {
   afterCancelAttempt,
   afterCancellation,
   afterProviderEvent,
-  canAbandonUnlinked,
+  unlinkedAbandonCutoff,
 } from "./billing.rules";
 import { attemptIdSchema, productIdSchema } from "./billing.schema";
 import type {
@@ -37,7 +37,7 @@ export const priceFor = operation(
 // here, outside any database transaction, with the attempt id as idempotency key.
 export const startPayment = operation(
   { access: "user", resource: "the payment attempt of an order the caller owns (AuthorizedOrder)" },
-  async (user, order: AuthorizedOrder) => {
+  async ({ user }, order: AuthorizedOrder) => {
     if (order.userId !== user.id) return err("forbidden");
     const payment = await repo.findOrCreatePayment({
       orderId: order.orderId,
@@ -69,7 +69,7 @@ export const startPayment = operation(
 // it takes a Tx, so it cannot be called without one. The cancel/refund job does the provider work.
 export const recordCancellation = operation(
   { access: "user", resource: "the payment of an order the caller owns" },
-  async (user, orderId: string, tx: Tx) => {
+  async ({ user }, orderId: string, tx: Tx) => {
     const payment = await repo.findPaymentByOrder(orderId, tx);
     if (!payment) return ok(false);
     if (payment.userId !== user.id) return err("forbidden");
@@ -131,7 +131,8 @@ export const receivePaymentEventFromWebhook = operation(
 );
 
 // Drains cancel and refund work with the provider, with retries: a failure leaves the row for
-// the next run. Triggered by the cron route.
+// the next run. Each provider call carries a key derived from the persisted attempt id, so a
+// retry, a second worker or a job that ran twice never cancels or refunds twice.
 export const processPaymentWorkFromJob = operation(
   { access: "job", triggeredBy: "app/api/cron/payments/route.ts, authenticated with CRON_SECRET" },
   async (now: Date) => {
@@ -140,17 +141,20 @@ export const processPaymentWorkFromJob = operation(
       try {
         if (payment.status === "cancel_pending") {
           if (!payment.providerRef) {
-            // nothing to cancel yet: wait for the reference, or give up after the grace period
-            if (canAbandonUnlinked(payment.createdAt, now))
-              await repo.applyTransition(payment.id, () => "cancelled");
+            // nothing to cancel yet: wait for the reference, or give up after the grace period.
+            // The row read above may be stale, so the repository re-checks everything atomically.
+            await repo.abandonUnlinked(payment.id, unlinkedAbandonCutoff(now));
             continue;
           }
-          const { result } = await paymentsClient().cancelIntent(payment.providerRef);
+          const { result } = await paymentsClient().cancelIntent(
+            payment.providerRef,
+            `${payment.id}:cancel`,
+          );
           await repo.applyTransition(payment.id, (s) =>
             s === "cancel_pending" ? afterCancelAttempt(result) : s,
           );
         } else if (payment.providerRef) {
-          await paymentsClient().refund(payment.providerRef);
+          await paymentsClient().refund(payment.providerRef, `${payment.id}:refund`);
           await repo.applyTransition(payment.id, (s) => (s === "refund_pending" ? "refunded" : s));
         }
         summary.processed += 1;

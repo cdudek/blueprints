@@ -1,8 +1,8 @@
 import "server-only";
-import { cookies } from "next/headers";
-import { getEnv } from "./env";
 
-type Role = "customer" | "admin";
+// The session type and pure checks, nothing more. Reading the session (a cookie, an auth library
+// that persists to the database) lives in a module: modules/accounts in this template.
+export type Role = "customer" | "admin";
 export type SessionUser = { id: string; role: Role };
 export type Session = { user: SessionUser };
 
@@ -13,28 +13,14 @@ export class UnauthenticatedError extends Error {
   }
 }
 
-// STUB: reads a cookie so the example runs. Replace with your real session library
-// (Auth.js, Clerk, your own) before production; this refuses to run there.
-export async function getSession(): Promise<Session | null> {
-  const env = getEnv();
-  if (env.NODE_ENV === "production" && env.AUTH_STUB !== "e2e") {
-    throw new Error("shared/auth.ts is a stub: wire a real session before production");
-  }
-  const jar = await cookies();
-  const id = jar.get("stub-user")?.value;
-  if (!id) return null;
-  return { user: { id, role: jar.get("stub-role")?.value === "admin" ? "admin" : "customer" } };
-}
-
-export async function requireUser(): Promise<SessionUser> {
-  const session = await getSession();
+export function requireUser(session: Session | null): SessionUser {
   if (!session) throw new UnauthenticatedError();
   return session.user;
 }
 
 /** @public For admin-only operations: call it first in the service function. */
-export async function requireRole(role: Role): Promise<SessionUser> {
-  const user = await requireUser();
+export function requireRole(session: Session | null, role: Role): SessionUser {
+  const user = requireUser(session);
   if (user.role !== role) throw new Error(`requires role ${role}`);
   return user;
 }

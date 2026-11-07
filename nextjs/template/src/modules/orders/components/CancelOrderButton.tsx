@@ -1,39 +1,41 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { Button } from "@/ui";
+import { Button } from "@/ui/Button";
+import { ConfirmDialog } from "@/ui/ConfirmDialog";
+import { IconX } from "@/ui/icons";
 import type { CancelOrderResponse } from "../order.types";
-
-const MESSAGES: Record<Extract<CancelOrderResponse, { ok: false }>["error"], string> = {
-  unauthenticated: "Please sign in again.",
-  forbidden: "You cannot cancel this order.",
-  invalid_input: "Invalid order.",
-  not_found: "Order not found.",
-  not_cancellable: "This order can no longer be cancelled.",
-  window_closed: "The cancel window has closed.",
-  changed: "The order changed. Reload and try again.",
-};
 
 type Props = { orderId: string; action: (id: string) => Promise<CancelOrderResponse> };
 
 export function CancelOrderButton({ orderId, action }: Props) {
+  const t = useTranslations("orders");
   const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Extract<CancelOrderResponse, { ok: false }>["error"] | null>(
+    null,
+  );
   return (
     <>
-      <Button
-        variant="secondary"
-        disabled={pending}
-        onClick={() =>
+      <ConfirmDialog
+        trigger={
+          <Button variant="secondary" disabled={pending}>
+            <IconX /> {t("cancel.button")}
+          </Button>
+        }
+        title={t("cancel.title")}
+        description={t("cancel.description")}
+        dismiss={t("cancel.dismiss")}
+        confirm={t("cancel.confirm")}
+        onConfirm={() =>
           start(async () => {
             const result = await action(orderId);
-            setError(result.ok ? null : MESSAGES[result.error]);
+            setError(result.ok ? null : result.error);
           })
         }
-      >
-        Cancel
-      </Button>
-      {error ? <span role="alert">{error}</span> : null}
+      />
+      {/* the UI branches on the kind of failure; the words come from messages */}
+      {error ? <span role="alert">{t(`errors.${error}`)}</span> : null}
     </>
   );
 }

@@ -3,7 +3,7 @@ import {
   afterCancelAttempt,
   afterCancellation,
   afterProviderEvent,
-  canAbandonUnlinked,
+  unlinkedAbandonCutoff,
 } from "./billing.rules";
 
 describe("afterCancellation", () => {
@@ -45,10 +45,10 @@ describe("afterCancelAttempt", () => {
   });
 });
 
-describe("canAbandonUnlinked", () => {
-  const created = new Date("2026-01-01T00:00:00Z");
-  it("waits out the grace period before giving up on a missing provider reference", () => {
-    expect(canAbandonUnlinked(created, new Date("2026-01-01T00:05:00Z"))).toBe(false);
-    expect(canAbandonUnlinked(created, new Date("2026-01-01T00:11:00Z"))).toBe(true);
+describe("unlinkedAbandonCutoff", () => {
+  it("gives up on a missing provider reference only after a ten-minute grace period", () => {
+    expect(unlinkedAbandonCutoff(new Date("2026-01-01T00:11:00Z"))).toEqual(
+      new Date("2026-01-01T00:01:00Z"),
+    );
   });
 });

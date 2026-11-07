@@ -20,7 +20,10 @@ type Options = {
  * its responses to the port's types here. The factory builds this only in production.
  */
 export class RealPaymentsClient implements PaymentsClient {
-  constructor(private readonly options: Options) {}
+  private readonly options: Options;
+  constructor(options: Options) {
+    this.options = options;
+  }
 
   private async call(path: string, body: unknown, idempotencyKey?: string): Promise<Response> {
     const response = await this.options.fetch(`https://payments.example.invalid/v1/${path}`, {
@@ -46,14 +49,14 @@ export class RealPaymentsClient implements PaymentsClient {
     return { providerRef: body.id, clientSecret: body.client_secret };
   }
 
-  async cancelIntent(providerRef: string): Promise<CancelResult> {
-    const response = await this.call(`intents/${providerRef}/cancel`, {});
+  async cancelIntent(providerRef: string, idempotencyKey: string): Promise<CancelResult> {
+    const response = await this.call(`intents/${providerRef}/cancel`, {}, idempotencyKey);
     const body = (await response.json()) as { status: string };
     return { result: body.status === "succeeded" ? "already_succeeded" : "cancelled" };
   }
 
-  async refund(providerRef: string): Promise<void> {
-    await this.call("refunds", { intent: providerRef }, `refund-${providerRef}`);
+  async refund(providerRef: string, idempotencyKey: string): Promise<void> {
+    await this.call("refunds", { intent: providerRef }, idempotencyKey);
   }
 
   parseEvent(rawBody: string, signature: string): PaymentEvent {

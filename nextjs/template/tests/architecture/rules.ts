@@ -3,7 +3,7 @@
 // tree (architecture.test.ts) and the deliberate-violation fixtures (fixtures.test.ts).
 //
 // Three views of the code, because each has blind spots (the coverage matrix is in
-// ARCHITECTURE.md section 11):
+// ARCHITECTURE.md section 13):
 //   1. ArchUnitTS: precise folder-to-folder rules and cycles over top-level `import … from`.
 //      It cannot see `export … from`, dynamic import() or node_modules.
 //   2. A TypeScript-resolved graph (graph.ts): imports, re-exports, literal dynamic imports,
@@ -13,16 +13,19 @@
 //      decide: purity of globals, transaction discipline, access policies, door contents.
 // eslint-plugin-boundaries (generated from the same file) gives editor feedback on dependencies.
 import { builtinModules } from "node:module";
-import { readFileSync } from "node:fs";
-import { isAbsolute, join, relative } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, isAbsolute, join, normalize, relative } from "node:path";
 import { projectFiles, type FileInfo, type Violation } from "archunit";
 import ts from "typescript";
 import {
   allowedTargets,
+  cyclicEdges,
   doorFiles,
   globToRegExp,
+  layoutOf,
   moduleNames,
-  moduleOf,
+  moduleOf as moduleOfIn,
+  STORYBOOK_PACKAGES,
   type Architecture,
 } from "../../scripts/arch/lib.mjs";
 import {
@@ -31,20 +34,20 @@ import {
   hasDirective,
   identifiersIn,
   importedBindings,
-  importsServerOnly,
+  serverOnlyMarker,
   isValueReference,
   parse,
   specifiers,
   walk,
-} from "./ast";
-import { buildGraph, cycles, reach, type Graph } from "./graph";
+} from "./ast.ts";
+import { buildGraph, cycles, reach, type Graph } from "./graph.ts";
 
 export type Ctx = { arch: Architecture; tsconfig: string; root: string };
 export type Finding = { rule: string; file: string; target: string; message: string };
 export type ArchRule = {
   id: string;
   description: string;
-  /** Number in ARCHITECTURE.md section 12. */
+  /** Number in ARCHITECTURE.md section 14. */
   nonNegotiable?: number;
   /**
    * Never admitted to a baseline, even in a brownfield repo: leaking server code or secrets into
@@ -131,6 +134,9 @@ async function forbid(
 
 type Problem = { target: string; message: string };
 
+/** JSX text as a finding target: whitespace collapsed, so reformatting does not churn the key. */
+export const copyText = (text: string) => text.replace(/\s+/g, " ").trim();
+
 /**
  * Runs `analyze` on the syntax tree of every file matching `from`. ArchUnitTS selects the files
  * but reads `file.content` relative to the process cwd, not the tsconfig folder, and silently
@@ -168,6 +174,46 @@ async function content(
   ];
 }
 
+/** The comments at the top of a file, above its first statement (after any directives). */
+function headerBlock(sf: ts.SourceFile): string {
+  const isDirective = (st: ts.Statement) =>
+    ts.isExpressionStatement(st) && ts.isStringLiteral(st.expression);
+  const first = sf.statements.find((st) => !isDirective(st));
+  const end = first ? first.getStart(sf) : sf.text.length;
+  const starts = [0, ...sf.statements.filter(isDirective).map((st) => st.end)];
+  return starts
+    .flatMap((pos) => ts.getLeadingCommentRanges(sf.text, pos) ?? [])
+    .filter((r) => r.end <= end)
+    .map((r) => sf.text.slice(r.pos, r.end))
+    .join("\n");
+}
+
+/** A relative specifier joined onto the folder of the file that wrote it, posix. */
+const posixJoin = (from: string, specifier: string) =>
+  posix(normalize(join(dirname(from), specifier)));
+
+/** Where the folders of a layer-first tree belong instead (roots-classified). */
+const LAYER_HINTS: Record<string, string> = {
+  hooks:
+    "a generic hook goes to ui/hooks, a domain hook beside its component in modules/<m>/components",
+  contexts:
+    "a generic context lives in ui/, a domain one in its module's components; providers are composed in app/_shell/providers.tsx",
+  providers: "providers are composed once, in app/_shell/providers.tsx",
+  stores:
+    "server state is Server Components plus actions; client state is useState, useReducer or the URL; a client cache stays in one module's components",
+  utils:
+    "a generic helper goes to ui/lib or a named file in shared/, a domain helper to <x>.rules.ts",
+  lib: "a generic helper goes to ui/lib or a named file in shared/, a domain helper to <x>.rules.ts",
+  types: "a type lives in its module's <x>.types.ts, a generic one in shared/",
+  config:
+    "environment values come from shared/env.ts, navigation from app/_shell/nav.ts, a constant from the module that owns it",
+  services: "a service is <x>.service.ts in its module; a vendor sits behind a port in clients/",
+  components:
+    "a component with a business noun goes to its module's components/, one without to ui/, a page part to app/**/_components",
+  common:
+    "a component with a business noun goes to its module's components/, one without to ui/, a page part to app/**/_components",
+};
+
 const graphs = new WeakMap<Ctx, Graph>();
 const graphOf = (ctx: Ctx) => {
   let g = graphs.get(ctx);
@@ -175,25 +221,36 @@ const graphOf = (ctx: Ctx) => {
   return g;
 };
 
-const modulePath = (src: string, name: string) => `${src}/modules/${name}/**`;
 const isBuiltin = (name: string) =>
   name.startsWith("node:") || builtinModules.includes(name.split("/")[0] ?? "");
 
 export function buildRules(arch: Architecture): ArchRule[] {
   const src = arch.srcRoot;
+  const L = layoutOf(arch);
+  // every folder through the layout block: architecture.json may move any of them
+  const at = (p: string) => `${src}/${p}`;
+  const M = at(L.modules);
+  const APP = at(L.app);
+  const UI = at(L.ui);
+  const SHARED = at(L.shared);
+  const CLIENTS = at(L.clients);
+  const moduleOf = (file: string) => moduleOfIn(arch, file);
+  const modulePath = (name: string) => `${M}/${name}/**`;
+  /** the import specifier of a folder or file under srcRoot */
+  const spec = (p: string) => `@/${p.replace(/(\/index)?\.tsx?$/, "")}`;
   const modules = moduleNames(arch);
   const doorNames = doorFiles(arch);
   const serverDoorNames = doorFiles(arch, "server");
   const browserDoorNames = doorFiles(arch, "browser");
-  const door = (m: string) => doorNames.map((d) => `${src}/modules/${m}/${d}`);
-  const db = `${src}/db/**`;
-  const sharedServer = [`${src}/shared/auth.ts`, `${src}/shared/env.ts`, `${src}/shared/access.ts`];
+  const door = (m: string) => doorNames.map((d) => `${M}/${m}/${d}`);
+  const db = `${at(L.db)}/**`;
+  const sharedServer = L.serverShared.map(at);
 
   // ---- roles, by path ----
   const isServiceFile = (f: string) => /\.service\.ts$/.test(f);
-  const isRoutes = (f: string) => new RegExp(`^${src}/app/.*route\\.ts$`).test(f);
+  const isRoutes = (f: string) => new RegExp(`^${APP}/.*route\\.ts$`).test(f);
   const doorRole = (f: string) => {
-    const m = new RegExp(`^${src}/modules/[^/]+/([^/]+)$`).exec(f);
+    const m = new RegExp(`^${M}/[^/]+/([^/]+)$`).exec(f);
     return m && arch.doors[m[1] ?? ""];
   };
   const serverReason = (node: string, external: boolean): string | null => {
@@ -205,8 +262,8 @@ export function buildRules(arch: Architecture): ArchRule[] {
     }
     if (/\.(service|repository|tables)\.ts$/.test(node))
       return "a service, repository or table file";
-    if (node.startsWith(`${src}/db/`)) return "the persistence layer";
-    if (node.startsWith(`${src}/clients/`)) return "a third-party client";
+    if (node.startsWith(`${at(L.db)}/`)) return "the persistence layer";
+    if (node.startsWith(`${CLIENTS}/`)) return "a third-party client";
     if (sharedServer.includes(node)) return "server-only shared code";
     if (doorRole(node) === "server") return "a server door";
     return null;
@@ -249,9 +306,22 @@ export function buildRules(arch: Architecture): ArchRule[] {
       const own = serverReason(root, false);
       if (own) findings.push({ rule, file: root, target: root, message: `${what} is ${own}` });
     }
+    // A "use server" file is a boundary: a client that imports it gets a reference to the action,
+    // and the file's own imports stay on the server (react.dev/reference/rsc/use-server).
+    const useServer = new Set(
+      [...g.sources].filter(([, sf]) => hasDirective(sf, "use server")).map(([f]) => f),
+    );
     // per root: a file reached from two roots is reported for each, with its own path
-    const reachedAll = roots.flatMap((root) => reach(g, [root]));
+    const reachedAll = roots.flatMap((root) =>
+      reach(
+        g,
+        [root],
+        (e) => e.kind === "runtime",
+        (f) => useServer.has(f),
+      ),
+    );
     for (const r of reachedAll) {
+      if (useServer.has(r.node)) continue;
       const reason = serverReason(r.node, r.external);
       if (reason)
         findings.push({
@@ -271,28 +341,29 @@ export function buildRules(arch: Architecture): ArchRule[] {
     return findings;
   };
 
+  /** Top-level `const x = operation({ access: "webhook" | "job" }, ...)` names in one file. */
+  const systemOpsIn = (sf: ts.SourceFile) =>
+    sf.statements.filter(ts.isVariableStatement).flatMap((stmt) =>
+      stmt.declarationList.declarations.flatMap((d) => {
+        const init = d.initializer;
+        if (
+          !ts.isIdentifier(d.name) ||
+          !init ||
+          !ts.isCallExpression(init) ||
+          !ts.isIdentifier(init.expression) ||
+          init.expression.text !== "operation"
+        )
+          return [];
+        const access = accessOf(init);
+        return access === "webhook" || access === "job" ? [d.name.text] : [];
+      }),
+    );
   const systemOps = (ctx: Ctx) => {
     const ops = new Map<string, Set<string>>();
     for (const [file, sf] of graphOf(ctx).sources) {
       const m = moduleOf(file);
       if (!m || !isServiceFile(file)) continue;
-      for (const stmt of sf.statements) {
-        if (!ts.isVariableStatement(stmt)) continue;
-        for (const d of stmt.declarationList.declarations) {
-          const init = d.initializer;
-          if (
-            ts.isIdentifier(d.name) &&
-            init &&
-            ts.isCallExpression(init) &&
-            ts.isIdentifier(init.expression) &&
-            init.expression.text === "operation"
-          ) {
-            const access = accessOf(init);
-            if (access === "webhook" || access === "job")
-              (ops.get(m) ?? ops.set(m, new Set()).get(m)!).add(d.name.text);
-          }
-        }
-      }
+      for (const name of systemOpsIn(sf)) (ops.get(m) ?? ops.set(m, new Set()).get(m)!).add(name);
     }
     return ops;
   };
@@ -324,7 +395,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
         const findings = await content(
           ctx,
           "modules-declared",
-          { path: `${src}/modules/**` },
+          { path: `${M}/**` },
           (_sf, path) => {
             const name = moduleOf(path) ?? "";
             seen.add(name);
@@ -354,14 +425,49 @@ export function buildRules(arch: Architecture): ArchRule[] {
             }));
         });
         const clients = arch.clients
-          .filter((c) => !g.files.some((f) => f.startsWith(`${src}/clients/${c}/providers/`)))
+          .filter((c) => !g.files.some((f) => f.startsWith(`${CLIENTS}/${c}/providers/`)))
           .map((c) => ({
             rule: "modules-declared",
             file: "architecture.json",
             target: `client:${c}`,
             message: `client ${c} has no providers/ folder`,
           }));
-        return [...findings, ...missing, ...clients];
+        // a role that selects no file would let every rule over it pass without checking anything
+        const roles: Record<string, string> = {
+          rules: `${src}/**/*.rules.ts`,
+          service: `${src}/**/*.service.ts`,
+          repository: `${src}/**/*.repository.ts`,
+          tables: `${M}/*/*.tables.ts`,
+          components: `${M}/*/components/**`,
+        };
+        const uncovered = Object.entries(roles)
+          .filter(([, glob]) => !g.files.some((f) => globToRegExp(glob).test(f)))
+          .map(([role, glob]) => ({
+            rule: "modules-declared",
+            file: "architecture.json",
+            target: `role:${role}`,
+            message: `the ${role} role (${glob}) selects no file: create one, or correct the layout`,
+          }));
+        // removing or renaming a module leaves its name behind in edges, owners and the session key
+        const named: [string, string][] = [
+          ...arch.edges.flatMap((e): [string, string][] => [
+            [e.from, `edge:${e.from}->${e.to}`],
+            [e.to, `edge:${e.from}->${e.to}`],
+          ]),
+          ...Object.entries(arch.tables).map(([t, m]): [string, string] => [m, `table:${t}`]),
+          ...(arch.sessionModule
+            ? [[arch.sessionModule, "sessionModule"] as [string, string]]
+            : []),
+        ];
+        const stale = named
+          .filter(([m]) => !declared.has(m))
+          .map(([m, where]) => ({
+            rule: "modules-declared",
+            file: "architecture.json",
+            target: where,
+            message: `${where} names ${m}, which is not a declared module: a removed or renamed module left it behind`,
+          }));
+        return [...findings, ...missing, ...clients, ...uncovered, ...stale];
       },
     },
     {
@@ -370,7 +476,10 @@ export function buildRules(arch: Architecture): ArchRule[] {
         "Every production file sits in app, ui, shared, db, a declared module or client, or a declared root file",
       nonNegotiable: 2,
       async check(ctx) {
-        const known = new Set(["app", "ui", "shared", "db", "modules", "clients"]);
+        const top1 = (p: string) => p.split("/")[0] ?? p;
+        const known = new Set(
+          [L.app, L.ui, L.shared, L.db, L.modules, L.clients, L.i18n].map(top1),
+        );
         return graphOf(ctx).files.flatMap((f) => {
           const parts = f.slice(src.length + 1).split("/");
           const [top, second] = parts;
@@ -378,8 +487,8 @@ export function buildRules(arch: Architecture): ArchRule[] {
             parts.length === 1
               ? arch.roots.includes(top ?? "")
               : known.has(top ?? "") &&
-                (top !== "modules" || modules.includes(second ?? "")) &&
-                (top !== "clients" || arch.clients.includes(second ?? ""));
+                (top !== L.modules || modules.includes(second ?? "")) &&
+                (top !== L.clients || arch.clients.includes(second ?? ""));
           return ok
             ? []
             : [
@@ -387,14 +496,29 @@ export function buildRules(arch: Architecture): ArchRule[] {
                   rule: "roots-classified",
                   file: f,
                   target: top ?? f,
-                  message:
-                    "this file fits no declared root: move it or declare it in architecture.json",
+                  message: `this file fits no declared root: ${
+                    LAYER_HINTS[top ?? ""] ?? "move it or declare it in architecture.json"
+                  }`,
                 },
               ];
         });
       },
     },
     // ---------------------------------------------------------------- cycles and dynamic imports
+    {
+      id: "declared-edges-acyclic",
+      description:
+        "No declared edge closes a cycle: two modules that need each other move the shared part to its owner",
+      nonNegotiable: 1,
+      async check() {
+        return cyclicEdges(arch).map((e) => ({
+          rule: "declared-edges-acyclic",
+          file: "architecture.json",
+          target: `${e.from} -> ${e.to}`,
+          message: `the declared edge ${e.from} -> ${e.to} closes a cycle: move the shared responsibility to its owner, or let app/ sequence the two`,
+        }));
+      },
+    },
     {
       id: "no-cycles",
       description: "No import cycles between files (ArchUnitTS, imports only)",
@@ -445,9 +569,9 @@ export function buildRules(arch: Architecture): ArchRule[] {
             forbid(
               ctx,
               "module-doors",
-              { path: `${src}/**`, except: [modulePath(src, m)] },
+              { path: `${src}/**`, except: [modulePath(m)] },
               // table files are judged by tables-owner-only
-              { path: modulePath(src, m), except: [...door(m), `${src}/modules/${m}/*.tables.ts`] },
+              { path: modulePath(m), except: [...door(m), `${M}/${m}/*.tables.ts`] },
               `Enter ${m} through ${doorNames.join(" or ")}, not its internals`,
             ),
           ),
@@ -468,13 +592,10 @@ export function buildRules(arch: Architecture): ArchRule[] {
               forbid(
                 ctx,
                 "declared-edges",
-                { path: modulePath(src, m) },
+                { path: modulePath(m) },
                 {
-                  path: `${src}/modules/**`,
-                  except: [
-                    modulePath(src, m),
-                    ...allowedTargets(arch, m).map((t) => modulePath(src, t)),
-                  ],
+                  path: `${M}/**`,
+                  except: [modulePath(m), ...allowedTargets(arch, m).map((t) => modulePath(t))],
                 },
                 `${m} has no declared edge to this module`,
               ),
@@ -544,10 +665,13 @@ export function buildRules(arch: Architecture): ArchRule[] {
         const results = await Promise.all(
           modules.flatMap((m) =>
             Object.entries(arch.doors).map(([name, role]) =>
-              content(ctx, "door-exports", { path: `${src}/modules/${m}/${name}` }, (sf, path) => {
+              content(ctx, "door-exports", { path: `${M}/${m}/${name}` }, (sf, path) => {
                 const problems: Problem[] = [];
                 for (const stmt of sf.statements) {
                   if (ts.isImportDeclaration(stmt) && !stmt.importClause) continue; // import "server-only"
+                  // a directive is judged by doors-no-client-directive
+                  if (ts.isExpressionStatement(stmt) && ts.isStringLiteral(stmt.expression))
+                    continue;
                   if (
                     !ts.isExportDeclaration(stmt) ||
                     !stmt.moduleSpecifier ||
@@ -597,7 +721,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
       nonNegotiable: 3,
       async check(ctx) {
         const from = { path: `${src}/**/*.rules.ts` };
-        const banned = [`${src}/**/*.repository.ts`, `${src}/**/*.service.ts`, db, `${src}/app/**`];
+        const banned = [`${src}/**/*.repository.ts`, `${src}/**/*.service.ts`, db, `${APP}/**`];
         const results = await Promise.all(
           banned.map((to) =>
             forbid(
@@ -621,7 +745,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
         const g = graphOf(ctx);
         const roots = g.files.filter((f) => /\.rules\.ts$/.test(f));
         const okFile = (f: string) =>
-          /\.(rules|types|schema)\.ts$/.test(f) || f === `${src}/shared/result.ts`;
+          /\.(rules|types|schema)\.ts$/.test(f) || f === at(L.resultFile);
         const okPackage = (p: string) =>
           arch.rulesMayImport.some((a) => p === a || p.startsWith(`${a}/`));
         return roots
@@ -702,43 +826,231 @@ export function buildRules(arch: Architecture): ArchRule[] {
     },
     // ---------------------------------------------------------------- ui, shared, app, components
     {
-      id: "ui-no-modules",
+      id: "ui-leaf",
       description:
-        "src/ui never imports modules (it is the project's own design system: no business nouns)",
+        "src/ui is a leaf: it imports only src/ui and the packages in uiMayImport, never a module, shared, client, db or app file",
       nonNegotiable: 10,
-      check: (ctx) =>
-        forbid(
-          ctx,
-          "ui-no-modules",
-          { path: `${src}/ui/**` },
-          { path: modulePath(src, "*") },
-          "src/ui has no business nouns",
-        ),
+      async check(ctx) {
+        const g = graphOf(ctx);
+        // a story is a Storybook entry: it may also import Storybook itself
+        const allowedPackage = (p: string, from: string) =>
+          !arch.uiMayImport ||
+          [...arch.uiMayImport, ...(/\.stories\.tsx$/.test(from) ? STORYBOOK_PACKAGES : [])].some(
+            (a) => p === a || p.startsWith(`${a}/`),
+          );
+        return g.edges
+          .filter((e) => e.from.startsWith(`${UI}/`))
+          .flatMap((e) => {
+            let why: string | null = null;
+            if (!e.external) {
+              if (!e.to.startsWith(`${UI}/`))
+                why = moduleOf(e.to)
+                  ? "src/ui has no business nouns: it never imports a module"
+                  : `src/ui is a leaf: it never imports ${e.to}`;
+            } else if (e.specifier.startsWith(".")) {
+              // a stylesheet or asset beside the component: it must stay inside src/ui
+              const to = posixJoin(e.from, e.specifier);
+              if (!to.startsWith(`${UI}/`)) why = `src/ui is a leaf: it never imports ${to}`;
+            } else if (isBuiltin(e.to) || !allowedPackage(e.to, e.from))
+              why = `src/ui imports only the packages in uiMayImport, not ${e.to}`;
+            return why ? [{ rule: "ui-leaf", file: e.from, target: e.to, message: why }] : [];
+          });
+      },
     },
     {
-      id: "ui-no-server",
-      description: "src/ui never imports clients, db, auth, env, access, server-only or app code",
+      id: "providers-composed-once",
+      description:
+        "Providers are rendered in one file (layout.providers), which only root layouts import; src/ui and module components may define them",
       nonNegotiable: 10,
-      neverBaseline: true,
       async check(ctx) {
-        const banned = [`${src}/clients/**`, `${src}/app/**`, db, ...sharedServer];
-        const deps = await Promise.all(
-          banned.map((to) =>
-            forbid(
-              ctx,
-              "ui-no-server",
-              { path: `${src}/ui/**` },
-              { path: to },
-              "src/ui never imports server code",
+        const g = graphOf(ctx);
+        const providers = at(L.providers);
+        const rootLayout = new RegExp(`^${APP}/(?:(?:\\([^/]+\\)|\\[[^/]+\\])/)*layout\\.tsx$`);
+        const mayDefine = (f: string) =>
+          f === providers ||
+          f.startsWith(`${UI}/`) ||
+          new RegExp(`^${M}/[^/]+/components/`).test(f);
+        const findings: Finding[] = [];
+        for (const [file, sf] of g.sources) {
+          if (mayDefine(file) || !file.endsWith(".tsx")) continue;
+          walk(sf, (n) => {
+            if (!(ts.isJsxOpeningElement(n) || ts.isJsxSelfClosingElement(n))) return;
+            const tag = n.tagName.getText(sf);
+            if (/Provider$/.test(tag))
+              findings.push({
+                rule: "providers-composed-once",
+                file,
+                target: tag,
+                message: `render ${tag} in ${providers}, the one place providers are composed`,
+              });
+          });
+        }
+        for (const e of g.edges)
+          if (e.to === providers && !rootLayout.test(e.from))
+            findings.push({
+              rule: "providers-composed-once",
+              file: e.from,
+              target: e.to,
+              message: `only a root layout renders ${providers}`,
+            });
+        return findings;
+      },
+    },
+    {
+      id: "icons-one-door",
+      description: "Icon packages (iconPackages) are imported only under ui/icons, the icon door",
+      async check(ctx) {
+        const icons = arch.iconPackages ?? [];
+        return graphOf(ctx)
+          .edges.filter(
+            (e) =>
+              e.external &&
+              icons.some((p) => e.to === p || e.to.startsWith(`${p}/`)) &&
+              !e.from.startsWith(`${UI}/icons/`),
+          )
+          .map((e) => ({
+            rule: "icons-one-door",
+            file: e.from,
+            target: e.to,
+            message: `import icons from ${spec(`${L.ui}/icons`)}, the one place ${e.to} is imported`,
+          }));
+      },
+    },
+    {
+      id: "global-css-owners",
+      description:
+        "A global stylesheet (.css, not .module.css) is imported only in src/ui and root layouts",
+      async check(ctx) {
+        const rootLayout = new RegExp(`^${APP}/(?:(?:\\([^/]+\\)|\\[[^/]+\\])/)*layout\\.tsx$`);
+        return graphOf(ctx)
+          .edges.filter(
+            (e) =>
+              /\.css$/.test(e.specifier) &&
+              !/\.module\.css$/.test(e.specifier) &&
+              !e.from.startsWith(`${UI}/`) &&
+              !rootLayout.test(e.from),
+          )
+          .map((e) => ({
+            rule: "global-css-owners",
+            file: e.from,
+            target: e.specifier,
+            message:
+              "global CSS has two owners, src/ui and the root layout: use a ui component or a .module.css here",
+          }));
+      },
+    },
+    {
+      id: "doors-no-client-directive",
+      description:
+        'No door carries "use client": not a module door, not the icon door (it would make every re-export client code)',
+      nonNegotiable: 2,
+      async check(ctx) {
+        const doors = [...modules.flatMap((m) => door(m)), `${UI}/icons/index.ts`];
+        const results = await Promise.all(
+          doors.map((path) =>
+            content(ctx, "doors-no-client-directive", { path }, (sf) =>
+              hasDirective(sf, "use client")
+                ? [
+                    {
+                      target: "use client",
+                      message:
+                        'a door is not a client boundary: put "use client" on the component file that needs it',
+                    },
+                  ]
+                : [],
             ),
           ),
         );
-        const serverOnly = await content(ctx, "ui-no-server", { path: `${src}/ui/**` }, (sf) =>
-          specifiers(sf).includes("server-only")
-            ? [{ target: "server-only", message: "src/ui never imports server code" }]
-            : [],
-        );
-        return [...deps.flat(), ...serverOnly];
+        return results.flat();
+      },
+    },
+    {
+      id: "banned-packages",
+      description: "No dependency or import names a package in bannedPackages",
+      async check(ctx) {
+        const banned = Object.entries(arch.bannedPackages ?? {});
+        if (!banned.length) return [];
+        const hit = (name: string) => banned.find(([b]) => name === b || name.startsWith(`${b}/`));
+        const findings: Finding[] = [];
+        const pkgFile = join(ctx.root, "package.json");
+        if (existsSync(pkgFile)) {
+          const pkg = JSON.parse(readFileSync(pkgFile, "utf8"));
+          for (const name of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })) {
+            const b = hit(name);
+            if (b)
+              findings.push({
+                rule: "banned-packages",
+                file: "package.json",
+                target: name,
+                message: `${name} is banned here: ${b[1]}`,
+              });
+          }
+        }
+        for (const e of graphOf(ctx).edges) {
+          const b = e.external ? hit(e.to) : undefined;
+          if (b)
+            findings.push({
+              rule: "banned-packages",
+              file: e.from,
+              target: e.to,
+              message: `${e.to} is banned here: ${b[1]}`,
+            });
+        }
+        return findings;
+      },
+    },
+    {
+      id: "stories-leaf",
+      description:
+        "Nothing imports a story (*.stories.*): stories are tooling entries, never production code",
+      async check(ctx) {
+        return graphOf(ctx)
+          .edges.filter((e) => !e.external && /\.stories\.[jt]sx?$/.test(e.to))
+          .map((e) => ({
+            rule: "stories-leaf",
+            file: e.from,
+            target: e.to,
+            message: "a story is an entry for Storybook, never imported by production code",
+          }));
+      },
+    },
+    {
+      id: "copy-from-messages",
+      description:
+        "User-visible text in app/, src/ui and module components comes from messages (next-intl) or props: no text in JSX, no literal alt, title, placeholder or aria-label",
+      async check(ctx) {
+        const attributes = new Set(["alt", "title", "placeholder", "aria-label"]);
+        const words = /\p{L}/u;
+        const message = (where: string) =>
+          `${where} is written in code: put it in messages/<locale>.json and read it with next-intl (src/ui takes text through props)`;
+        const scan = (sf: ts.SourceFile, path: string): Problem[] => {
+          if (/\.(stories|test)\.tsx$/.test(path)) return [];
+          const problems: Problem[] = [];
+          walk(sf, (n) => {
+            if (ts.isJsxText(n) && words.test(n.text))
+              problems.push({ target: copyText(n.text), message: message("text in JSX") });
+            if (ts.isJsxAttribute(n) && n.initializer && attributes.has(n.name.getText(sf))) {
+              const init = n.initializer;
+              const literal = ts.isStringLiteral(init)
+                ? init
+                : ts.isJsxExpression(init) &&
+                    init.expression &&
+                    ts.isStringLiteralLike(init.expression)
+                  ? init.expression
+                  : null;
+              if (literal && words.test(literal.text))
+                problems.push({
+                  target: literal.text,
+                  message: message(`a literal ${n.name.getText(sf)}`),
+                });
+            }
+          });
+          return problems;
+        };
+        const paths = [`${APP}/**/*.tsx`, `${UI}/**/*.tsx`, `${M}/*/components/**/*.tsx`];
+        return (
+          await Promise.all(paths.map((path) => content(ctx, "copy-from-messages", { path }, scan)))
+        ).flat();
       },
     },
     {
@@ -747,11 +1059,11 @@ export function buildRules(arch: Architecture): ArchRule[] {
       nonNegotiable: 10,
       async check(ctx) {
         const results = await Promise.all(
-          [modulePath(src, "*"), `${src}/app/**`, db].map((to) =>
+          [modulePath("*"), `${APP}/**`, db].map((to) =>
             forbid(
               ctx,
               "shared-no-modules",
-              { path: `${src}/shared/**` },
+              { path: `${SHARED}/**` },
               { path: to },
               "src/shared stays generic",
             ),
@@ -761,14 +1073,103 @@ export function buildRules(arch: Architecture): ArchRule[] {
       },
     },
     {
+      id: "roots-no-modules",
+      description:
+        "Root files other than the worker (proxy.ts, instrumentation.ts) import no module: they run before any session exists",
+      nonNegotiable: 2,
+      async check(ctx) {
+        const roots = arch.roots.filter((r) => r !== L.worker).map(at);
+        return graphOf(ctx)
+          .edges.filter((e) => roots.includes(e.from) && !e.external && moduleOf(e.to))
+          .map((e) => ({
+            rule: "roots-no-modules",
+            file: e.from,
+            target: e.to,
+            message: `${e.from.slice(src.length + 1)} imports no module: only ${L.worker} and app/ call operations`,
+          }));
+      },
+    },
+    {
+      id: "shared-no-clients",
+      description: "src/shared never imports a third-party client",
+      nonNegotiable: 10,
+      check: (ctx) =>
+        forbid(
+          ctx,
+          "shared-no-clients",
+          { path: `${SHARED}/**` },
+          { path: `${CLIENTS}/**` },
+          "src/shared stays generic: the module that owns the vendor calls its client",
+        ),
+    },
+    {
+      id: "shared-no-io",
+      description:
+        "src/shared does no I/O: it imports no server-only package but server-only itself (no request, session or database driver)",
+      nonNegotiable: 10,
+      check: (ctx) =>
+        content(ctx, "shared-no-io", { path: `${SHARED}/**` }, (sf) =>
+          specifiers(sf)
+            .filter(
+              (spec) =>
+                spec !== "server-only" &&
+                arch.serverOnlyPackages.some((p) => spec === p || spec.startsWith(`${p}/`)),
+            )
+            .map((spec) => ({
+              target: spec,
+              message: `src/shared does no I/O: read the session or the database in a module, not with ${spec} here`,
+            })),
+        ),
+    },
+    {
+      id: "composition-folders",
+      description:
+        "Composition folders (app/**/_shell, app/**/_components) import src/ui, src/i18n, browser doors and other composition files only: never a server door or an action; data and actions arrive as props",
+      nonNegotiable: 10,
+      async check(ctx) {
+        const g = graphOf(ctx);
+        const isComposition = (f: string) =>
+          f.startsWith(`${APP}/`) &&
+          f
+            .slice(APP.length + 1)
+            .split("/")
+            .slice(0, -1)
+            .some((part) => L.compositionFolders.includes(part));
+        const allowed = (f: string) =>
+          f.startsWith(`${UI}/`) ||
+          f.startsWith(`${at(L.i18n)}/`) ||
+          doorRole(f) === "browser" ||
+          isComposition(f);
+        const isAction = (f: string) => {
+          const sf = g.sources.get(f);
+          return !!sf && hasDirective(sf, "use server");
+        };
+        // erased type imports are fine: they carry no data and no call
+        return g.edges
+          .filter((e) => e.kind === "runtime" && !e.external && isComposition(e.from))
+          .filter((e) => !allowed(e.to))
+          .map((e) => ({
+            rule: "composition-folders",
+            file: e.from,
+            target: e.to,
+            message:
+              doorRole(e.to) === "server"
+                ? "a composition folder never calls a server door: the page passes the data in as props"
+                : isAction(e.to)
+                  ? "a composition folder never imports an action: the page passes it in as a prop"
+                  : "a composition folder imports only src/ui, src/i18n, browser doors and other composition files",
+          }));
+      },
+    },
+    {
       id: "nothing-imports-app",
       description: "Nothing imports src/app",
       check: (ctx) =>
         forbid(
           ctx,
           "nothing-imports-app",
-          { path: `${src}/**`, except: [`${src}/app/**`] },
-          { path: `${src}/app/**` },
+          { path: `${src}/**`, except: [`${APP}/**`] },
+          { path: `${APP}/**` },
           "app/ is the outermost layer: nothing imports it",
         ),
     },
@@ -783,7 +1184,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
             forbid(
               ctx,
               "components-no-persistence",
-              { path: `${src}/modules/*/components/**` },
+              { path: `${M}/*/components/**` },
               { path: to },
               "Components get data through props",
             ),
@@ -803,7 +1204,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
             forbid(
               ctx,
               "app-no-persistence",
-              { path: `${src}/app/**` },
+              { path: `${APP}/**` },
               { path: to },
               "app/ calls a module's server.ts, never persistence",
             ),
@@ -828,7 +1229,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
               {
                 path: `${src}/**`,
                 except: [
-                  modulePath(src, owner),
+                  modulePath(owner),
                   db,
                   ...exceptionFiles.filter(
                     (f) =>
@@ -837,7 +1238,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
                   ),
                 ],
               },
-              { path: `${src}/modules/${owner}/*.tables.ts` },
+              { path: `${M}/${owner}/*.tables.ts` },
               `Only ${owner} imports its tables; call its service, or declare a read exception for one file and one table`,
             ),
           ),
@@ -970,7 +1371,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
         const findings = await content(
           ctx,
           "table-definitions-declared",
-          { path: `${src}/modules/*/*.tables.ts` },
+          { path: `${M}/*/*.tables.ts` },
           (sf, path) => {
             const owner = moduleOf(path) ?? "";
             return definedTables(sf).flatMap((table) => {
@@ -1014,13 +1415,10 @@ export function buildRules(arch: Architecture): ArchRule[] {
       nonNegotiable: 4,
       async check(ctx) {
         const g = graphOf(ctx);
-        const schema = `${src}/db/schema.ts`;
+        const schema = at(L.schemaRoot);
         const composed = new Set(g.edges.filter((e) => e.from === schema).map((e) => e.to));
         const missing = g.files
-          .filter(
-            (f) =>
-              new RegExp(`^${src}/modules/[^/]+/[^/]+\\.tables\\.ts$`).test(f) && !composed.has(f),
-          )
+          .filter((f) => new RegExp(`^${M}/[^/]+/[^/]+\\.tables\\.ts$`).test(f) && !composed.has(f))
           .map((f) => ({
             rule: "schema-composition",
             file: schema,
@@ -1038,7 +1436,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
           ctx,
           "schema-composition",
           { path: db },
-          { path: `${src}/modules/**`, except: [`${src}/modules/*/*.tables.ts`] },
+          { path: `${M}/**`, except: [`${M}/*/*.tables.ts`] },
           "src/db imports table files only",
         );
         return [...missing, ...intruders, ...leaks];
@@ -1054,8 +1452,8 @@ export function buildRules(arch: Architecture): ArchRule[] {
             forbid(
               ctx,
               "providers-in-client-folder",
-              { path: `${src}/**`, except: [`${src}/clients/${c}/**`] },
-              { path: `${src}/clients/${c}/providers/**` },
+              { path: `${src}/**`, except: [`${CLIENTS}/${c}/**`] },
+              { path: `${CLIENTS}/${c}/providers/**` },
               `Use the ${c} client's index, never a provider`,
             ),
           ),
@@ -1072,7 +1470,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
         content(
           ctx,
           "use-server-only-in-app",
-          { path: `${src}/**`, except: [`${src}/app/**`] },
+          { path: `${src}/**`, except: [`${APP}/**`] },
           (sf) =>
             hasDirective(sf, "use server")
               ? [{ target: "use server", message: "actions live in app/ and stay thin" }]
@@ -1087,20 +1485,28 @@ export function buildRules(arch: Architecture): ArchRule[] {
       neverBaseline: true,
       async check(ctx) {
         const globs = [
-          ...modules.flatMap((m) => serverDoorNames.map((d) => `${src}/modules/${m}/${d}`)),
+          ...modules.flatMap((m) => serverDoorNames.map((d) => `${M}/${m}/${d}`)),
           `${src}/**/*.service.ts`,
           `${src}/**/*.repository.ts`,
-          `${src}/db/index.ts`,
+          at(L.dbClient),
           ...sharedServer,
-          `${src}/clients/*/index.ts`,
+          `${CLIENTS}/*/index.ts`,
         ];
         const results = await Promise.all(
           globs.map((g) =>
-            content(ctx, "server-only-in-server-files", { path: g }, (sf) =>
-              importsServerOnly(sf)
-                ? []
-                : [{ target: "server-only", message: 'missing import "server-only"' }],
-            ),
+            content(ctx, "server-only-in-server-files", { path: g }, (sf) => {
+              const marker = serverOnlyMarker(sf);
+              if (marker === "first") return [];
+              return [
+                {
+                  target: "server-only",
+                  message:
+                    marker === "late"
+                      ? 'import "server-only" must be the first statement: code above it runs before the marker'
+                      : 'missing import "server-only"',
+                },
+              ];
+            }),
           ),
         );
         return results.flat();
@@ -1114,7 +1520,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
       neverBaseline: true,
       async check(ctx) {
         const roots = modules
-          .flatMap((m) => browserDoorNames.map((d) => `${src}/modules/${m}/${d}`))
+          .flatMap((m) => browserDoorNames.map((d) => `${M}/${m}/${d}`))
           .filter((f) => graphOf(ctx).files.includes(f));
         return closure(ctx, "public-door-closure", roots, "a browser door");
       },
@@ -1137,17 +1543,24 @@ export function buildRules(arch: Architecture): ArchRule[] {
     {
       id: "system-operations-from-routes-only",
       description:
-        "Webhook and job operations are called only from route handlers (and from other webhook/job operations), never from actions, pages, components or user operations",
+        "Webhook and job operations are called only from route handlers, the worker, workflows those two call, and other webhook/job operations; never from actions, pages, components or user operations",
       nonNegotiable: 6,
       async check(ctx) {
         const g = graphOf(ctx);
         const ops = systemOps(ctx);
         const findings: Finding[] = [];
+        const isWorker = (f: string) => f === at(L.worker);
+        const isWorkflow = (f: string) => f.startsWith(`${at(L.workflows)}/`);
+        const systemWorkflows = new Set<string>(); // workflows that call a system operation
         for (const [file, sf] of g.sources) {
-          if (isRoutes(file)) continue;
+          if (isRoutes(file) || isWorker(file)) continue;
           const bound = new Map<string, string>(); // local name -> "module.operation"
           const note = (target: string, message: string) =>
             findings.push({ rule: "system-operations-from-routes-only", file, target, message });
+          const own = moduleOf(file);
+          // system operations defined in this very file: a user operation beside them is checked too
+          if (own && isServiceFile(file))
+            for (const name of systemOpsIn(sf)) bound.set(name, `${own}.${name}`);
           for (const stmt of sf.statements) {
             const isImport = ts.isImportDeclaration(stmt);
             if (
@@ -1158,13 +1571,11 @@ export function buildRules(arch: Architecture): ArchRule[] {
               continue;
             const target = g.resolve(stmt.moduleSpecifier.text, file);
             const m = target ? moduleOf(target) : null;
-            if (
-              !target ||
-              !m ||
-              doorRole(target) !== "server" ||
-              !ops.has(m) ||
-              m === moduleOf(file)
-            )
+            if (!target || !m || !ops.has(m)) continue;
+            // across modules the way in is the server door; inside a module, a sibling service file.
+            // A module's own door re-exports its operations and is not a caller.
+            const inModule = m === own;
+            if (inModule ? doorRole(file) || !isServiceFile(target) : doorRole(target) !== "server")
               continue;
             const names = ops.get(m)!;
             const clause = isImport ? stmt.importClause?.namedBindings : stmt.exportClause;
@@ -1179,8 +1590,10 @@ export function buildRules(arch: Architecture): ArchRule[] {
               const original = (el.propertyName ?? el.name).text;
               if (!names.has(original)) continue;
               bound.set(el.name.text, `${m}.${original}`);
+              // a workflow may call one; its own callers are checked below
+              if (isWorkflow(file)) systemWorkflows.add(file);
               // a webhook/job operation may be called by another system operation (service files), see below
-              if (!isServiceFile(file))
+              else if (!isServiceFile(file))
                 note(
                   `${m}.${original}`,
                   "a system operation is reachable only from a route handler that verified the caller",
@@ -1206,6 +1619,20 @@ export function buildRules(arch: Architecture): ArchRule[] {
                 );
           });
         }
+        for (const e of g.edges)
+          if (
+            systemWorkflows.has(e.to) &&
+            !isRoutes(e.from) &&
+            !isWorker(e.from) &&
+            !isWorkflow(e.from)
+          )
+            findings.push({
+              rule: "system-operations-from-routes-only",
+              file: e.from,
+              target: e.to,
+              message:
+                "this workflow calls a system operation: only a route handler or the worker may call it",
+            });
         return findings;
       },
     },
@@ -1218,10 +1645,30 @@ export function buildRules(arch: Architecture): ArchRule[] {
       check: (ctx) =>
         content(ctx, "access-declared", { path: `${src}/**/*.service.ts` }, (sf) => {
           const problems: Problem[] = [];
+          // names exported later with `export { fn }` count as exported declarations too
+          const listed = new Set(
+            sf.statements
+              .filter(
+                (s): s is ts.ExportDeclaration =>
+                  ts.isExportDeclaration(s) && !s.moduleSpecifier && !s.isTypeOnly,
+              )
+              .flatMap((s) =>
+                s.exportClause && ts.isNamedExports(s.exportClause)
+                  ? s.exportClause.elements
+                      .filter((el) => !el.isTypeOnly)
+                      .map((el) => (el.propertyName ?? el.name).text)
+                  : [],
+              ),
+          );
           for (const stmt of sf.statements) {
             const exported =
-              ts.canHaveModifiers(stmt) &&
-              ts.getModifiers(stmt)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+              (ts.canHaveModifiers(stmt) &&
+                ts.getModifiers(stmt)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) ||
+              (ts.isFunctionDeclaration(stmt) && stmt.name && listed.has(stmt.name.text)) ||
+              (ts.isVariableStatement(stmt) &&
+                stmt.declarationList.declarations.some(
+                  (d) => ts.isIdentifier(d.name) && listed.has(d.name.text),
+                ));
             if (!exported) continue;
             if (ts.isFunctionDeclaration(stmt) && stmt.name)
               problems.push({
@@ -1250,26 +1697,62 @@ export function buildRules(arch: Architecture): ArchRule[] {
     {
       id: "workflow-header",
       description:
-        "An action or route that sequences two or more modules documents the four workflow questions",
+        "Every workflow in app/_workflows, and every action or route that sequences two modules, answers the four workflow questions in its header block; no two workflows give the same answers",
       nonNegotiable: 9,
       async check(ctx) {
-        const analyze = (sf: ts.SourceFile, _path: string, text: string): Problem[] => {
-          const touched = new Set(
-            specifiers(sf)
-              .map((x) => /\/modules\/([^/]+)\//.exec(x)?.[1])
-              .filter(Boolean),
-          );
-          if (touched.size < 2) return [];
-          return ["@workflow", "retry-safe:", "duplicates:", "recovery:", "survives-restart:"]
-            .filter((k) => !text.includes(k))
-            .map((k) => ({ target: k, message: `workflow header is missing ${k}` }));
+        const keys = ["retry-safe", "duplicates", "recovery", "survives-restart"];
+        const answers = new Map<string, string>(); // file -> normalised answers
+        const analyze = (sf: ts.SourceFile, path: string): Problem[] => {
+          const isWorkflow = path.startsWith(`${at(L.workflows)}/`);
+          if (!isWorkflow) {
+            const touched = new Set(
+              specifiers(sf)
+                .map((x) => new RegExp(`/${L.modules}/([^/]+)/`).exec(x)?.[1])
+                // reading the session is not a step of a workflow
+                .filter((m) => m && m !== arch.sessionModule),
+            );
+            if (touched.size < 2) return [];
+          }
+          const header = headerBlock(sf);
+          const problems: Problem[] = [];
+          if (!/@workflow\s+\S+/.test(header))
+            problems.push({
+              target: "@workflow",
+              message: "workflow header is missing @workflow <name>",
+            });
+          for (const k of keys)
+            if (!new RegExp(`(^|\\n)[\\s*/]*${k}:[ \\t]*\\S`).test(header))
+              problems.push({ target: `${k}:`, message: `workflow header is missing ${k}:` });
+          if (!problems.length) {
+            const from = header.search(/retry-safe:|duplicates:|recovery:|survives-restart:/);
+            answers.set(
+              path,
+              header
+                .slice(from)
+                .replace(/[\s*/]+/g, " ")
+                .trim(),
+            );
+          }
+          return problems;
         };
-        const results = await Promise.all(
-          ["route.ts", "actions.ts"].map((name) =>
-            content(ctx, "workflow-header", { path: `${src}/app/**/${name}` }, analyze),
+        const results = await Promise.all([
+          content(ctx, "workflow-header", { path: `${at(L.workflows)}/**` }, analyze),
+          ...["route.ts", "actions.ts"].map((name) =>
+            content(ctx, "workflow-header", { path: `${APP}/**/${name}` }, analyze),
           ),
-        );
-        return results.flat();
+        ]);
+        // a copied header is a header nobody thought about
+        const copies: Finding[] = [];
+        for (const [file, text] of answers)
+          for (const [other, otherText] of answers)
+            if (file !== other && text === otherText)
+              copies.push({
+                rule: "workflow-header",
+                file,
+                target: other,
+                message: `the same four answers as ${other}: answer the questions for this workflow`,
+              });
+        return [...results.flat(), ...copies];
       },
     },
     {
@@ -1301,7 +1784,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
               ts.isCallExpression(n) &&
               ts.isPropertyAccessExpression(n.expression) &&
               n.expression.name.text === "transaction" &&
-              path !== `${src}/db/index.ts`
+              path !== at(L.dbClient)
             ) {
               problems.push({
                 target: "transaction()",
@@ -1379,7 +1862,7 @@ export function buildRules(arch: Architecture): ArchRule[] {
               const spec = bindings.get(callee.text);
               const target = spec ? g.resolve(spec, path) : null;
               if (!target) return;
-              if (target.startsWith(`${src}/clients/`))
+              if (target.startsWith(`${CLIENTS}/`))
                 problems.push({
                   target: callee.text,
                   message:

@@ -4,6 +4,8 @@
     "entry": [
       "next.config.ts",
       "src/proxy.ts",
+      "src/instrumentation.ts",
+      "src/worker.ts",
       "src/app/**/{page,layout,route,loading,error,not-found}.{ts,tsx}"
     ]
   },
@@ -12,17 +14,16 @@
     "entry": ["src/**/*.test.{ts,tsx}", "tests/**/*.test.ts", "tests/setup.ts"]
   },
   "playwright": {
-    "config": ["playwright.config.ts"],
-    "entry": ["e2e/**/*.spec.ts"]
+    "config": ["playwright.config.ts", "playwright.storybook.config.ts"],
+    "entry": ["tests/e2e/**/*.spec.ts", "tests/storybook/**/*.spec.ts"]
   },
-  "entry": ["scripts/**/*.mjs", "tests/stubs/server-only.ts", "src/modules/*/{public,server}.ts"],
-  "project": [
-    "src/**/*.{ts,tsx}",
-    "tests/**/*.ts",
-    "e2e/**/*.ts",
+  "entry": [
     "scripts/**/*.mjs",
-    "*.{ts,mjs}"
+    "tests/stubs/server-only.ts",
+    "src/modules/*/{public,server}.ts",
+    "src/i18n/global.ts"
   ],
+  "project": ["src/**/*.{ts,tsx}", "tests/**/*.ts", "scripts/**/*.mjs", "*.{ts,mjs}"],
   "ignore": ["tests/fixtures/**"],
-  "ignoreDependencies": ["jscpd", "lint-staged"]
+  "ignoreDependencies": ["jscpd", "lint-staged", "tailwindcss"]
 }

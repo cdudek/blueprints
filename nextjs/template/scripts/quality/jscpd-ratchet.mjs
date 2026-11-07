@@ -2,19 +2,21 @@
 // not by line numbers, so edits elsewhere in a file do not churn the key.
 // Rule: no new duplication above the threshold in .jscpd.json. Extract only when the two copies
 // change for the same reason; otherwise rename or restructure them so they stop matching.
-// Usage: node scripts/quality/jscpd-ratchet.mjs [--cwd <dir>] [--baseline <file>]
+// Usage: node scripts/quality/jscpd-ratchet.mjs [--cwd <dir>] [--baseline <file>] [--write-baseline]
+// --write-baseline records today's clones: only for adopting the blueprint or a reviewed tool upgrade.
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, rmSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { arg, binOf, fatal, numbered, ratchet } from "./baseline.mjs";
+import { existsSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { isAbsolute, join, relative, resolve } from "node:path";
+import { arg, binOf, fatal, numbered, ratchet, writeBaseline } from "./baseline.mjs";
 
-const cwd = resolve(arg("cwd", "."));
+const cwd = realpathSync(resolve(arg("cwd", ".")));
 const baseline = resolve(cwd, arg("baseline", "quality/jscpd-baseline.json"));
 const reportFile = join(cwd, "reports/jscpd/jscpd-report.json");
 rmSync(reportFile, { force: true }); // never judge a stale report
 
-const run = spawnSync(process.execPath, [binOf("jscpd")], {
+// --absolute: jscpd otherwise names files relative to each scan root, so src/x.ts and e2e/x.ts collide
+const run = spawnSync(process.execPath, [binOf("jscpd"), "--absolute"], {
   cwd,
   encoding: "utf8",
   maxBuffer: 64 * 1024 * 1024,
@@ -31,10 +33,13 @@ try {
 }
 if (!Array.isArray(report.duplicates)) fatal("jscpd report has no `duplicates` array");
 
+/** a project-relative posix path, the same whichever root jscpd scanned */
+const repoPath = (/** @type {string} */ name) =>
+  (isAbsolute(name) ? relative(cwd, name) : name).split("\\").join("/");
 const found = report.duplicates.map((d) => {
   if (!d.firstFile || !d.secondFile || typeof d.fragment !== "string")
     fatal("jscpd report has a malformed clone");
-  const files = [d.firstFile.name, d.secondFile.name].sort().join(":");
+  const files = [d.firstFile.name, d.secondFile.name].map(repoPath).sort().join(":");
   const hash = createHash("sha1")
     .update(d.fragment.replace(/\s+/g, " ").trim())
     .digest("hex")
@@ -58,5 +63,7 @@ for (const f of stale)
     `jscpd: STALE exception ${f} (the clone is gone: delete it from quality/jscpd-exceptions.json)`,
   );
 
-const code = ratchet("jscpd", numbered(found.filter((f) => !excepted.has(f))), baseline);
+const keys = numbered(found.filter((f) => !excepted.has(f)));
+if (process.argv.includes("--write-baseline")) writeBaseline(baseline, keys);
+const code = ratchet("jscpd", keys, baseline);
 process.exit(code || (stale.length ? 1 : 0));

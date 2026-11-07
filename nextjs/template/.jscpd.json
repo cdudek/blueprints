@@ -1,5 +1,5 @@
 {
-  "path": ["src", "scripts", "e2e"],
+  "path": ["src", "scripts", "tests/e2e"],
   "format": ["typescript", "tsx", "javascript"],
   "minTokens": 50,
   "minLines": 5,
@@ -9,7 +9,6 @@
   "ignore": [
     "**/*.test.ts",
     "**/*.test.tsx",
-    "**/tests/**",
     "**/fixtures/**",
     "**/drizzle/**",
     "**/messages/**",

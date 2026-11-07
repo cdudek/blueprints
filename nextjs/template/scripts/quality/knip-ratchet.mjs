@@ -1,9 +1,10 @@
 // knip as a ratchet: every finding is keyed `file:type:name`; findings not in
 // quality/knip-baseline.json fail, and baseline lines that no longer occur fail.
-// Usage: node scripts/quality/knip-ratchet.mjs [--cwd <dir>] [--baseline <file>]
+// Usage: node scripts/quality/knip-ratchet.mjs [--cwd <dir>] [--baseline <file>] [--write-baseline]
+// --write-baseline records today's findings: only for adopting the blueprint or a reviewed tool upgrade.
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
-import { arg, binOf, fatal, ratchet } from "./baseline.mjs";
+import { arg, binOf, fatal, ratchet, writeBaseline } from "./baseline.mjs";
 
 const cwd = resolve(arg("cwd", "."));
 const baseline = resolve(cwd, arg("baseline", "quality/knip-baseline.json"));
@@ -38,4 +39,5 @@ for (const issue of report.issues) {
   }
 }
 
+if (process.argv.includes("--write-baseline")) writeBaseline(baseline, [...keys]);
 process.exit(ratchet("knip", [...keys], baseline));

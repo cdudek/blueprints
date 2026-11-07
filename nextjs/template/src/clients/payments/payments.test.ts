@@ -42,6 +42,36 @@ describe("factory", () => {
   });
 });
 
+// Every combination of environment, provider and stub flag, and what the factory does with it.
+describe("configuration matrix", () => {
+  const keys = { PAYMENTS_API_KEY: "k", PAYMENTS_WEBHOOK_SECRET: "s" };
+  it.each([
+    ["test", undefined, undefined, FixturePaymentsClient],
+    ["test", "fixture", undefined, FixturePaymentsClient],
+    ["development", "noop", undefined, NoopPaymentsClient],
+    ["test", "real", undefined, "only available in production"],
+    ["production", undefined, undefined, RealPaymentsClient],
+    ["production", "fixture", undefined, "refused in production"],
+    ["production", "noop", undefined, "refused in production"],
+    ["production", "fixture", "e2e", FixturePaymentsClient],
+    ["production", "noop", "e2e", NoopPaymentsClient],
+    ["production", "real", "e2e", RealPaymentsClient],
+  ] as const)(
+    "NODE_ENV=%s PAYMENTS_PROVIDER=%s PAYMENTS_STUB=%s",
+    (nodeEnv, provider, stub, want) => {
+      const config = env({
+        NODE_ENV: nodeEnv,
+        ...keys,
+        ...(provider ? { PAYMENTS_PROVIDER: provider } : {}),
+        ...(stub ? { PAYMENTS_STUB: stub } : {}),
+      });
+      const build = () => createPaymentsClient(config, { fetch: vi.fn() });
+      if (typeof want === "string") expect(build).toThrow(want);
+      else expect(build()).toBeInstanceOf(want);
+    },
+  );
+});
+
 describe("real provider", () => {
   it("talks only through the fetch it is given", async () => {
     const fake = vi.fn(async () => Response.json({ id: "pi_1", client_secret: "sec_1" }));

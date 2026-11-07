@@ -1,14 +1,17 @@
 {
   "$schema": "./architecture.schema.json",
-  "$schemaVersion": "1.0.0",
+  "$schemaVersion": "1.1.0",
   "version": 1,
   "srcRoot": "src",
   "doors": {
     "public.ts": "browser",
     "server.ts": "server"
   },
-  "roots": ["proxy.ts"],
+  "roots": ["proxy.ts", "instrumentation.ts", "worker.ts"],
   "modules": {
+    "accounts": {
+      "description": "The signed-in session: reads it for pages and actions"
+    },
     "orders": {
       "description": "Placing, listing and cancelling orders"
     },
@@ -16,6 +19,7 @@
       "description": "Prices and payment attempts for orders"
     }
   },
+  "sessionModule": "accounts",
   "edges": [
     {
       "from": "orders",
@@ -37,7 +41,25 @@
     "next/headers",
     "postgres",
     "drizzle-orm/postgres-js",
-    "drizzle-orm/pglite"
+    "drizzle-orm/pglite",
+    "graphile-worker"
   ],
-  "rulesMayImport": ["zod"]
+  "rulesMayImport": ["zod"],
+  "uiMayImport": [
+    "react",
+    "react-dom",
+    "next/link",
+    "next/image",
+    "class-variance-authority",
+    "clsx",
+    "tailwind-merge",
+    "radix-ui"
+  ],
+  "iconPackages": [],
+  "bannedPackages": {
+    "axios": "Next.js extends fetch with caching; external HTTP goes through a port in src/clients with an injected fetch",
+    "redux": "server state lives in Server Components and actions; client state in useState, useReducer or the URL",
+    "@reduxjs/toolkit": "server state lives in Server Components and actions; client state in useState, useReducer or the URL",
+    "react-redux": "server state lives in Server Components and actions; client state in useState, useReducer or the URL"
+  }
 }

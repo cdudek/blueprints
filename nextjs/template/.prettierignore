@@ -7,3 +7,4 @@ tests/fixtures
 docs/architecture.md
 playwright-report
 test-results
+storybook-static

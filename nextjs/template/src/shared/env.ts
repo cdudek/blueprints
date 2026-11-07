@@ -11,6 +11,8 @@ const envSchema = z.object({
   CRON_SECRET: z.string().optional(),
   // the auth stub refuses production unless this is set; only the e2e job sets it
   AUTH_STUB: z.enum(["e2e"]).optional(),
+  // the fixture and noop payment providers refuse production unless this is set; only the e2e job sets it
+  PAYMENTS_STUB: z.enum(["e2e"]).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

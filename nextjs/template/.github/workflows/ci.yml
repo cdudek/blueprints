@@ -18,7 +18,8 @@ env:
   TEST_DATABASE_URL: postgres://app:app@localhost:5432/postgres
 
 jobs:
-  # Conservative path filter: only a change made entirely of docs skips the heavy jobs.
+  # Conservative path filter (scripts/quality/needs-code-checks.mjs): only a change made entirely
+  # of prose skips the heavy jobs; the generated diagram, quality/ and the policy files never do.
   # Any unknown path, and every push to main, runs everything.
   changes:
     runs-on: ubuntu-latest
@@ -31,12 +32,7 @@ jobs:
       - id: filter
         run: |
           if [ "${{ github.event_name }}" != "pull_request" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-          changed=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
-          if [ -z "$changed" ] || echo "$changed" | grep -qvE '(\.md$|^docs/|^LICENSE$)'; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "code=false" >> "$GITHUB_OUTPUT"
-          fi
+          echo "code=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" | node scripts/quality/needs-code-checks.mjs)" >> "$GITHUB_OUTPUT"
 
   check:
     needs: changes
@@ -128,6 +124,83 @@ jobs:
           path: playwright-report
           retention-days: 7
 
+  # The worker starts under plain Node (type stripping and the resolve hooks) and installs its
+  # queue schema in a migrated database.
+  worker:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://app:app@localhost:5432/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate
+      - run: pnpm worker:check
+
+  # The three image targets build; migrate runs, the worker image starts, the web image answers
+  # /api/health. The same images are what a deploy promotes.
+  docker:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://app:app@localhost:5432/app
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --target web -t app-web .
+      - run: docker build --target worker -t app-worker .
+      - run: docker build --target migrate -t app-migrate .
+      - run: docker run --rm --network host -e DATABASE_URL app-migrate
+      - run: docker run --rm --network host -e DATABASE_URL app-worker node --disable-warning=ExperimentalWarning scripts/worker.mjs --check
+      - name: The web image answers /api/health
+        run: |
+          docker run -d --name web --network host -e DATABASE_URL app-web
+          for _ in $(seq 1 30); do curl -fsS http://localhost:3000/api/health && exit 0; sleep 1; done
+          docker logs web
+          exit 1
+
+  # Every story of src/ui, checked with axe in the Storybook it renders in.
+  storybook:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm storybook:test
+
   quality-report:
     needs: changes
     if: needs.changes.outputs.code == 'true'
@@ -165,7 +238,7 @@ jobs:
   # The one stable required check. It always reports, whatever was skipped.
   ci:
     if: always()
-    needs: [changes, check, e2e, quality-report, governance]
+    needs: [changes, check, e2e, worker, docker, storybook, quality-report, governance]
     runs-on: ubuntu-latest
     steps:
       - name: Fail unless every needed job passed or was deliberately skipped

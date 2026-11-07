@@ -12,12 +12,19 @@
     "checkJs": false,
     "skipLibCheck": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
     "resolveJsonModule": true,
     "incremental": true,
     "types": ["node", "vitest/globals"],
-    "plugins": [{ "name": "next" }],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "paths": {
       "@/*": ["./src/*"],
       "@tests/*": ["./tests/*"]
@@ -29,7 +36,6 @@
     ".next/dev/types/**/*.ts",
     "src",
     "tests",
-    "e2e",
     "scripts",
     "*.ts",
     "*.mjs"

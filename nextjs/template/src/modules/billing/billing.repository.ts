@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { db, type DbClient } from "@/db";
 import { paymentInbox, payments, prices } from "./billing.tables";
 import type { NewPayment, Payment, PaymentStatus, Price } from "./billing.types";
@@ -88,6 +88,27 @@ export const billingRepository = {
     throw new Error(
       `payment ${id} kept changing under us; giving up after ${MAX_TRANSITION_TRIES} tries`,
     );
+  },
+
+  /**
+   * Gives up an attempt that never got a provider reference. One statement checks the state, the
+   * missing reference and the deadline, so a webhook that linked or captured the payment after
+   * the job read it wins, and a refund that became necessary is kept.
+   */
+  async abandonUnlinked(id: string, createdBefore: Date, c: DbClient = db): Promise<boolean> {
+    const changed = await c
+      .update(payments)
+      .set({ status: "cancelled" })
+      .where(
+        and(
+          eq(payments.id, id),
+          eq(payments.status, "cancel_pending"),
+          isNull(payments.providerRef),
+          lt(payments.createdAt, createdBefore),
+        ),
+      )
+      .returning({ id: payments.id });
+    return changed.length === 1;
   },
 
   listWithWork(limit: number, c: DbClient = db): Promise<Payment[]> {

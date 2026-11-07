@@ -10,9 +10,10 @@ one owning module.
 <!-- architecture-diagram:start -->
 ```mermaid
 flowchart LR
+  accounts["<b>accounts</b><br/>The signed-in session: reads it for pages and actions"]
   orders["<b>orders</b><br/>Placing, listing and cancelling orders<br/>tables: orders"]
   billing["<b>billing</b><br/>Prices and payment attempts for orders<br/>tables: prices, payments, payment_inbox"]
-  orders -->|calls server.ts| billing
+  orders -->|uses a door| billing
   client_payments[("client: payments")]:::port
   classDef port stroke-dasharray: 4 2
 ```

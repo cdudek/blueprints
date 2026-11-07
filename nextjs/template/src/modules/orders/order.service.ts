@@ -14,8 +14,10 @@ import type { PlaceOrderInput } from "./order.schema";
 import type { Order, PlaceOrderError, PlaceOrderSuccess } from "./order.types";
 
 class RolledBack extends Error {
-  constructor(readonly code: "forbidden" | "unauthenticated") {
+  readonly code: "forbidden" | "unauthenticated";
+  constructor(code: "forbidden" | "unauthenticated") {
     super(code);
+    this.code = code;
   }
 }
 
@@ -24,7 +26,8 @@ export const placeOrder = operation(
     access: "user",
     resource: "the caller's own checkout: orders are keyed by (user, checkout id)",
   },
-  async (user, input: PlaceOrderInput): Promise<Result<PlaceOrderSuccess, PlaceOrderError>> => {
+  async (session, input: PlaceOrderInput): Promise<Result<PlaceOrderSuccess, PlaceOrderError>> => {
+    const { user } = session;
     // A retry resolves the existing checkout FIRST and resumes with the terms it persisted:
     // today's catalog must not change what the customer already agreed to.
     let order: Order | null = await repo.findByCheckout(user.id, input.checkoutId);
@@ -46,7 +49,7 @@ export const placeOrder = operation(
     if (order.status !== "pending") return ok({ orderId: order.id, clientSecret: null });
 
     // billing persists one payment attempt per order and reuses it on retry
-    const payment = await startPayment({
+    const payment = await startPayment(session, {
       orderId: order.id,
       userId: user.id,
       amountCents: order.totalCents,
@@ -58,7 +61,8 @@ export const placeOrder = operation(
 
 export const cancelOrder = operation(
   { access: "user", resource: "an order the caller owns (findForUser)" },
-  async (user, id: string) => {
+  async (session, id: string) => {
+    const { user } = session;
     const order = await repo.findForUser(id, user.id);
     if (!order) return err("not_found");
 
@@ -79,7 +83,7 @@ export const cancelOrder = operation(
           tx,
         );
         if (!changed) return false;
-        const recorded = await recordCancellation(order.id, tx);
+        const recorded = await recordCancellation(session, order.id, tx);
         if (!recorded.ok) throw new RolledBack(recorded.error);
         return true;
       });
@@ -108,5 +112,5 @@ export const markPaidFromWebhook = operation(
 
 export const listMyOrders = operation(
   { access: "user", resource: "the caller's own orders" },
-  async (user) => ok(await repo.listForUser(user.id)),
+  async ({ user }) => ok(await repo.listForUser(user.id)),
 );
