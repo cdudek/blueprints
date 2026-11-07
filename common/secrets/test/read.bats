@@ -155,3 +155,19 @@ has() { printf '%s' "$output" | grep -qF -- "$1" || { echo "expected '$1' in: $o
   run secrets list --env dev
   grep -q -- '--project shop-dev-4821' "$STUB_STATE/argv.log"
 }
+
+@test "check reports a missing agent deny rule and a sandbox that is off" {
+  jq '.permissions.deny -= ["Bash(printenv*)"] | .sandbox.enabled = false' "$APP/.claude/settings.json" >"$APP/settings.new"
+  mv "$APP/settings.new" "$APP/.claude/settings.json"
+  run secrets check --env dev
+  [ "$status" -eq 1 ]
+  has "DRIFT agents: .claude/settings.json does not deny Bash(printenv*)"
+  has "DRIFT agents: .claude/settings.json does not turn the sandbox on"
+}
+
+@test "check reports missing agent settings" {
+  rm "$APP/.claude/settings.json"
+  run secrets check --env dev
+  [ "$status" -eq 1 ]
+  has "DRIFT agents: .claude/settings.json is missing"
+}

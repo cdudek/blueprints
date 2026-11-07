@@ -206,3 +206,142 @@ The output `env_vars` maps each env var name to `{secret, version, readers}`; a 
 left out, so the app fails closed. [`examples/cloud-run/`](./terraform/secrets/examples/cloud-run)
 wires a web service, a worker and a migrate job to it. `project_number` is an input rather than a
 data source so the module plans without credentials.
+
+## The manifest: `secrets.manifest.json`
+
+It lives at the root of each app repository and holds metadata only, never values. JSON, because
+`jq` and Terraform's `jsondecode` both read it natively. [`manifest.schema.json`](./secrets/manifest.schema.json)
+gives editors completion; `secrets check` is the authoritative validation.
+
+```json
+{
+  "$schema": "tools/common/secrets/manifest.schema.json",
+  "schemaVersion": 1,
+  "repo": "shop",
+  "envs": ["dev", "staging", "prod"],
+  "projects": { "prod": "shop-prod-4821" },
+  "rollbackWindowDays": 7,
+  "secrets": {
+    "payments-api-key": {
+      "description": "Payments provider secret key, used for charges and refunds",
+      "owner": "billing",
+      "readers": ["web", "worker"],
+      "local": true,
+      "rotationDays": 90,
+      "probe": "probes/payments-api-key.sh"
+    },
+    "session-signing-key": {
+      "description": "Signs session cookies",
+      "owner": "platform",
+      "readers": ["web"],
+      "generated": { "bytes": 32 }
+    }
+  }
+}
+```
+
+- **`readers`:** the kinds whose `<repo>-<kind>-<env>` service accounts get `secretAccessor`.
+- **`local`:** `dev-env` may fetch the value from `dev`.
+- **`probe`:** an executable that reads the value on stdin, checks it against the vendor API and
+  exits 0 or 1. It never prints the value or puts it in argv: use `curl --config -` or `-H @-`,
+  never `-u "$value"`, and no here-strings (bash 3.2 writes them to a temp file).
+- **`generated`:** Terraform generates the value.
+- **`ci` and `ciReason`:** a value a vendor forces into CI with no OIDC alternative. `check` lists
+  every such exception.
+- **`projects`:** the GCP project per environment, when it is not `<repo>-<env>`. A repository
+  rename needs it.
+
+Pinned versions live beside the manifest in `secret-versions/<env>.json`
+(`{"payments-api-key": "3"}`). Only the CLI writes them, and Terraform reads them.
+
+## Secrets CLI: `secrets/secrets`
+
+One bash script for bash 3.2 or later, with `gcloud` and `jq` 1.6+ as its only dependencies. Its
+output is names, version numbers, dates and states, never values.
+
+| Command | Who runs it | What it does |
+| --- | --- | --- |
+| `list [--env E]` | anyone, agents included | per secret: enabled versions with dates, the pin, readers from the IAM policy |
+| `check [--env E]` | anyone, agents included | drift between the manifest, pins, Secret Manager, Cloud Run and the agent rules; non-zero on drift |
+| `env-names` | anyone | the env var names, one per line, for a stack's drift test |
+| `set NAME --env E [--stdin] [--disable-previous]` | a human | reads a hidden prompt, runs the probe, adds a version on stdin, writes the pin |
+| `rotate NAME --env E` | a human | first run: `set`; after the rollout: disables the older versions |
+| `retire NAME --env E [--destroy] [--all]` | a human | disables versions older than the live one once it is past the rollback window; `--destroy` destroys them; `--all` retires a secret nothing reads |
+| `rename OLD NEW --env E [--apply]` | dry run: anyone; `--apply`: a human | copies OLD's newest enabled version into the declared NEW and pins it; OLD stays until `retire` |
+| `rename-repo OLD_REPO NEW_REPO --env E [--apply]` | dry run: anyone; `--apply`: a human | the same for every `<old>-...-<env>` secret, after one confirmation |
+| `dev-env -- CMD...` | a human | exports each `local` secret from `dev`, then runs CMD; nothing is written to disk |
+
+**`check` reports drift** (exit 1): an invalid manifest or name; a declared secret that is missing,
+has no enabled version or no pin; a pin that does not exist or is not enabled; a live Cloud Run
+revision that reads another version than the pin, or `latest`; a secret nobody declared; a live
+resource name that breaks `<repo>-<kind>-<env>`; a missing agent rule. It **warns** on overdue
+rotation, enabled versions past the rollback window, newer versions not rolled out, and CI
+exceptions.
+
+**Updates reach apps through pinned versions, not `latest`.** Cloud Run resolves secrets at instance
+start; with `latest`, one revision would run with mixed values as instances scale. Pinning makes
+every rotation a reviewed change and every rollback a revert, at the cost of one commit, which the
+CLI prepares. A rotation:
+
+1. `make secret-rotate NAME=payments-api-key ENV=prod` adds and pins the new version.
+2. Commit `secret-versions/prod.json`; CI applies Terraform, which rolls out new revisions.
+3. `make secret-rotate ...` again: once every revision reads the pin, the older versions are
+   disabled. Disabling is reversible.
+4. After the rollback window: `make secret-retire NAME=payments-api-key ENV=prod DESTROY=1`.
+
+Cloud Run listings use gcloud's own region setting (`CLOUDSDK_RUN_REGION`) when one is needed.
+
+## Make contract: `make/`
+
+`common.mk` sets the shell flags, `--warn-undefined-variables --no-builtin-rules`, `ENV ?= dev` and a
+`help` default goal that lists every `## description`. `secrets.mk` adds `secret-list`,
+`secret-check`, `secret-set`, `secret-rotate`, `secret-retire`, `secret-rename`,
+`secret-rename-repo` and `dev-real`, each one line calling the CLI with `NAME`, `OLD`, `NEW`, `ENV`,
+`APPLY`, `DESTROY` and `ALL`.
+
+```make
+include tools/common/make/common.mk tools/common/make/secrets.mk
+
+DEV_CMD := uv run fastapi dev
+```
+
+Every repository defines the same standard targets; one with nothing to do prints "not applicable"
+and exits 0.
+
+| Target | Next.js | FastAPI |
+| --- | --- | --- |
+| `setup` | `pnpm install --frozen-lockfile` | `uv sync --locked`, `prek install` |
+| `dev` | `pnpm dev` | `uv run fastapi dev` |
+| `lint`, `format` | `pnpm lint`, `pnpm format` | `ruff check`, `ruff format` |
+| `typecheck` | `pnpm typecheck` | `mypy` |
+| `test`, `test-integration` | `pnpm test`, `pnpm e2e` | `pytest tests/unit`, `pytest tests/integration` |
+| `arch` | `pnpm arch && pnpm arch:baseline` | `lint-imports` plus `tests/architecture` |
+| `check` | `pnpm check` | all of the above plus the FastAPI drift tests |
+| `migrate`, `run-worker` | `pnpm db:migrate`, the worker entry | `alembic upgrade head`, `procrastinate worker` |
+| `docker-build` | `docker build` per target | `docker build` per target |
+
+Other stacks map the same names: Rust with `cargo fmt`, `cargo clippy -D warnings`, `cargo test`
+and `cargo deny check`; Kotlin with `./gradlew ktlintCheck detekt test` and ArchUnit for `arch`;
+Scala with `sbt scalafmtCheckAll scalafixAll test`.
+
+macOS ships GNU Make 3.81, which ignores `.SHELLFLAGS`; recipes still run in bash there.
+
+## AI agents and CI
+
+- **Agents may** run `make secret-list`, `make secret-check`, and the renames without `APPLY=1`,
+  and open the pull request with a pin file the CLI prepared.
+- **Agents ask a human** for `secret-set`, `secret-rotate`, `secret-retire`, renames with `APPLY=1`
+  and `dev-real`. The value goes into a hidden prompt, which needs a terminal an agent's shell does
+  not have.
+- **The boundary is credentials, not rules.** An agent session runs with no gcloud credentials, or
+  with a separate gcloud config (`CLOUDSDK_CONFIG`) whose identity holds only
+  `secretmanager.viewer`.
+- **Accident guards:** merge [`agents/claude-settings.json`](./agents/claude-settings.json) into the
+  app's `.claude/settings.json` (deny rules for value-reading commands and `.env` files, and the
+  sandbox for subprocesses, which deny rules do not cover). [`agents/AGENTS.md`](./agents/AGENTS.md)
+  states the same in tool-neutral words. `secrets check` reports a missing rule.
+- **CI** authenticates through Workload Identity Federation as `<repo>-ci-<env>` (build, push,
+  `secret-check` with viewer) and `<repo>-deploy-<env>` (Terraform apply, new revisions). Neither
+  reads payloads. Deploys reference secrets by name and pinned version through Terraform, and CI
+  variables hold no secret values except the manifest's `ci` exceptions, each scoped to the one job
+  that needs it.
