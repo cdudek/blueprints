@@ -1,0 +1,49 @@
+name: Decision4
+
+# Decision4 v1.0.1 (https://github.com/Habitat-Thinking/decision4/blob/v1.0.1/DECISION4.md), CI-26.
+# Own workflow, not a job in another one: it must re-run when the PR body is edited.
+# Add `decision4` to the ruleset's required checks to make it block merges.
+# Security: the PR body reaches the script through env, never expanded inside `run:`.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+concurrency:
+  group: decision4-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  decision4:
+    name: decision4
+    # bot PRs cannot carry the fields
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Tools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/v"
+          "$RUNNER_TEMP/v/bin/pip" install -q pyyaml==6.0.3 check-jsonschema==0.39.0
+      - name: boundary-map.yaml matches the pinned schema
+        # Decision4 v1.0.1, pinned by commit SHA (a tag can move)
+        run: '"$RUNNER_TEMP/v/bin/check-jsonschema" --schemafile https://raw.githubusercontent.com/Habitat-Thinking/decision4/4429f821780655f253a954b2659bf38e7b9d5517/boundary-map.schema.json boundary-map.yaml'
+      - name: The check fails and passes on its fixtures
+        run: PATH="$RUNNER_TEMP/v/bin:$PATH" tests/decision4/run.sh
+      - name: PR body meets the floor of the changed paths
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          MAP: boundary-map.yaml
+        run: |
+          gh api --paginate "repos/$GH_REPO/pulls/$PR/files" --jq '.[] | .filename, (.previous_filename // empty)' > "$RUNNER_TEMP/files.txt"
+          FILES="$RUNNER_TEMP/files.txt" "$RUNNER_TEMP/v/bin/python" .github/scripts/decision4.py
