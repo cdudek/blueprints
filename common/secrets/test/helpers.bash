@@ -5,7 +5,7 @@
 PLANTED='pl4nted-v4lue-7f3a9c'
 
 setup_app() {
-  CLI="$BATS_TEST_DIRNAME/../secrets"
+  export CLI="$BATS_TEST_DIRNAME/../secrets"
   APP="$BATS_TEST_TMPDIR/app"
   mkdir -p "$APP"
   cp -R "$BATS_TEST_DIRNAME/fixtures/app/." "$APP"
