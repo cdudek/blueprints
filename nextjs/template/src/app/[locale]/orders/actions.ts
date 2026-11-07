@@ -19,7 +19,7 @@ export async function placeOrderAction(
   const result = await placeOrder(session.value, parsed.data);
   if (!result.ok) return { ok: false, error: result.error };
 
-  revalidatePath("/orders");
+  revalidatePath("/[locale]/orders", "page");
   return { ok: true, orderId: result.value.orderId, clientSecret: result.value.clientSecret };
 }
 
@@ -29,6 +29,6 @@ export async function cancelOrderAction(id: unknown): Promise<CancelOrderRespons
 
   const session = await currentSession();
   const result = session.ok ? await cancelOrder(session.value, parsed.data) : session;
-  if (result.ok) revalidatePath("/orders");
+  if (result.ok) revalidatePath("/[locale]/orders", "page");
   return result.ok ? { ok: true } : { ok: false, error: result.error };
 }

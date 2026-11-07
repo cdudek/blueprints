@@ -295,6 +295,12 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
       "a banned package",
     ],
     [
+      "src/app/reads-messages.ts",
+      "boundaries/dependencies",
+      /Message catalogs are read through src\/i18n/,
+      "a message catalog imported outside src/i18n",
+    ],
+    [
       "src/escape.ts",
       "boundaries/no-unknown-files",
       /does not match any file pattern/,
@@ -353,6 +359,7 @@ describe("eslint rejects the deliberate violations with the intended diagnostic"
     "src/modules/orders/components/Styled.tsx",
     "src/ui/icons/index.ts",
     "src/ui/Button.stories.tsx",
+    "src/i18n/catalog.ts",
   ])("stays quiet on the clean file %s", async (file) => {
     const lint = await lintWith();
     expect(await lint(file)).toEqual([]);

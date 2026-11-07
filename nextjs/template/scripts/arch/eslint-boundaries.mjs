@@ -64,6 +64,8 @@ export function buildBoundariesConfig(arch, options = {}) {
     { type: "shared", pattern: at(L.shared), partialMatch: false },
     { type: "db", pattern: at(L.db), partialMatch: false },
     { type: "i18n", pattern: at(L.i18n), partialMatch: false },
+    // message catalogs (messages/<locale>.json) sit beside src/, read through src/i18n only
+    { type: "messages", pattern: "messages", partialMatch: false },
     { type: "client", pattern: at(`${L.clients}/*`), capture: ["client"], partialMatch: false },
     { type: "module", pattern: at(`${L.modules}/*`), capture: ["module"], partialMatch: false },
   ];
@@ -174,6 +176,11 @@ export function buildBoundariesConfig(arch, options = {}) {
       message:
         "src/ui is the project's design system and a leaf: it never imports modules, shared, i18n, clients, db or app code",
     },
+    {
+      disallow: { to: type("messages") },
+      message: "Message catalogs are read through src/i18n (next-intl), never imported directly",
+    },
+    { from: type("i18n"), allow: { to: type("messages") } },
     // the providers file is rendered by root layouts only
     { disallow: { to: category("providers") }, message: PROVIDERS_IMPORT },
     { from: category("root-layout"), allow: { to: category("providers") } },

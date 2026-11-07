@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 const config: NextConfig = {
   poweredByHeader: false,
@@ -10,4 +11,5 @@ const config: NextConfig = {
   deploymentId: process.env.DEPLOYMENT_ID,
 };
 
-export default config;
+// Finds the request config at src/i18n/request.ts.
+export default createNextIntlPlugin()(config);
