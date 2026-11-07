@@ -275,6 +275,47 @@ describe("processPaymentWorkFromJob (cancel and refund worker)", () => {
     ]);
   });
 
+  // The job reads the work list, then a webhook moves the row, then the job writes. The write
+  // must re-check state, reference and deadline in one statement, or a required refund is lost.
+  async function abandonRacingWith(webhook: (attemptId: string) => Promise<unknown>) {
+    const orderId = await seedOrder(db, "u1");
+    const payment = await billingRepository.findOrCreatePayment({
+      orderId,
+      userId: "u1",
+      amountCents: 1000,
+    });
+    await inTransaction((tx) => recordCancellation(me, orderId, tx));
+    const read = billingRepository.listWithWork.bind(billingRepository);
+    const spy = vi.spyOn(billingRepository, "listWithWork").mockImplementationOnce(async (n) => {
+      const rows = await read(n);
+      await webhook(payment.id);
+      return rows;
+    });
+    await processPaymentWorkFromJob(new Date(Date.now() + 11 * 60 * 1000));
+    spy.mockRestore();
+    return payment;
+  }
+
+  it("keeps a refund that a webhook made necessary while the job gave up on the attempt", async () => {
+    await abandonRacingWith((id) =>
+      receivePaymentEventFromWebhook(event("succeeded", id, "pi_late"), FIXTURE_SIGNATURE),
+    );
+    expect((await only())?.status).toBe("refund_pending");
+    await run();
+    expect((await only())?.status).toBe("refunded");
+    expect(provider().refunded).toContain("pi_late");
+  });
+
+  it("does not give up on an attempt a webhook linked while the job was running", async () => {
+    await abandonRacingWith((id) =>
+      receivePaymentEventFromWebhook(event("processing", id, "pi_linked"), FIXTURE_SIGNATURE),
+    );
+    expect(await only()).toMatchObject({ status: "cancel_pending", providerRef: "pi_linked" });
+    await run();
+    expect((await only())?.status).toBe("cancelled");
+    expect(provider().cancelled).toContain("pi_linked");
+  });
+
   it("waits for a missing provider reference, then abandons it after the grace period", async () => {
     const orderId = await seedOrder(db, "u1");
     await billingRepository.findOrCreatePayment({ orderId, userId: "u1", amountCents: 1000 });

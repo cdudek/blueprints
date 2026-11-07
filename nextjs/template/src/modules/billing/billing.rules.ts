@@ -35,8 +35,8 @@ const UNLINKED_GRACE_MS = 10 * 60 * 1000;
 
 /**
  * A cancel_pending attempt with no provider reference is either about to get one (intent
- * creation in flight) or never will. After the grace period there is nothing to cancel.
+ * creation in flight) or never will. One created before this cutoff has nothing left to cancel.
  */
-export function canAbandonUnlinked(createdAt: Date, now: Date): boolean {
-  return now.getTime() - createdAt.getTime() > UNLINKED_GRACE_MS;
+export function unlinkedAbandonCutoff(now: Date): Date {
+  return new Date(now.getTime() - UNLINKED_GRACE_MS);
 }

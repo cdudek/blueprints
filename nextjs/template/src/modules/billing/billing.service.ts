@@ -8,7 +8,7 @@ import {
   afterCancelAttempt,
   afterCancellation,
   afterProviderEvent,
-  canAbandonUnlinked,
+  unlinkedAbandonCutoff,
 } from "./billing.rules";
 import { attemptIdSchema, productIdSchema } from "./billing.schema";
 import type {
@@ -141,9 +141,9 @@ export const processPaymentWorkFromJob = operation(
       try {
         if (payment.status === "cancel_pending") {
           if (!payment.providerRef) {
-            // nothing to cancel yet: wait for the reference, or give up after the grace period
-            if (canAbandonUnlinked(payment.createdAt, now))
-              await repo.applyTransition(payment.id, () => "cancelled");
+            // nothing to cancel yet: wait for the reference, or give up after the grace period.
+            // The row read above may be stale, so the repository re-checks everything atomically.
+            await repo.abandonUnlinked(payment.id, unlinkedAbandonCutoff(now));
             continue;
           }
           const { result } = await paymentsClient().cancelIntent(
