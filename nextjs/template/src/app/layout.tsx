@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Orders and billing blueprint" };
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body style={{ margin: "var(--space-3)" }}>{children}</body>
+      <body className="p-4">{children}</body>
     </html>
   );
 }

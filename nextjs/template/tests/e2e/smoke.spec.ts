@@ -18,5 +18,6 @@ test("a signed-in user places and cancels an order", async ({ page, context }) =
   const row = page.getByRole("row", { name: /pending/ });
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "Cancel" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Cancel order" }).click();
   await expect(page.getByRole("row", { name: /cancelled/ })).toBeVisible();
 });

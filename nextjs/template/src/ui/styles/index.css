@@ -1,4 +1,5 @@
-/* The one stylesheet entry, imported once by the root layout. */
+/* The one stylesheet entry, imported once by the root layout. Tailwind scans src/ only, so prose
+   in docs/ or a change folder never generates CSS. */
+@import "tailwindcss" source("../..");
 @import "./theme.css";
 @import "./base.css";
-@import "./ui.css";

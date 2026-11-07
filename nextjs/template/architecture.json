@@ -45,7 +45,16 @@
     "graphile-worker"
   ],
   "rulesMayImport": ["zod"],
-  "uiMayImport": ["react", "react-dom", "next/link", "next/image"],
+  "uiMayImport": [
+    "react",
+    "react-dom",
+    "next/link",
+    "next/image",
+    "class-variance-authority",
+    "clsx",
+    "tailwind-merge",
+    "radix-ui"
+  ],
   "iconPackages": [],
   "bannedPackages": {
     "axios": "Next.js extends fetch with caching; external HTTP goes through a port in src/clients with an injected fetch",

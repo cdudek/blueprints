@@ -20,5 +20,5 @@
   "entry": ["scripts/**/*.mjs", "tests/stubs/server-only.ts", "src/modules/*/{public,server}.ts"],
   "project": ["src/**/*.{ts,tsx}", "tests/**/*.ts", "scripts/**/*.mjs", "*.{ts,mjs}"],
   "ignore": ["tests/fixtures/**"],
-  "ignoreDependencies": ["jscpd", "lint-staged"]
+  "ignoreDependencies": ["jscpd", "lint-staged", "tailwindcss"]
 }

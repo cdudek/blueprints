@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/ui/Button";
+import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { IconX } from "@/ui/icons";
 import type { CancelOrderResponse } from "../order.types";
 
@@ -22,18 +23,23 @@ export function CancelOrderButton({ orderId, action }: Props) {
   const [error, setError] = useState<string | null>(null);
   return (
     <>
-      <Button
-        variant="secondary"
-        disabled={pending}
-        onClick={() =>
+      <ConfirmDialog
+        trigger={
+          <Button variant="secondary" disabled={pending}>
+            <IconX /> Cancel
+          </Button>
+        }
+        title="Cancel this order?"
+        description="A paid order is refunded."
+        dismiss="Keep order"
+        confirm="Cancel order"
+        onConfirm={() =>
           start(async () => {
             const result = await action(orderId);
             setError(result.ok ? null : MESSAGES[result.error]);
           })
         }
-      >
-        <IconX /> Cancel
-      </Button>
+      />
       {error ? <span role="alert">{error}</span> : null}
     </>
   );
