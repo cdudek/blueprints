@@ -476,6 +476,8 @@ module components. Adding a language is a messages file and a locale in the rout
 - Providers: the real one, a `fixture` (canned responses for tests and local dev) and a `noop`. The
   factory builds the real provider only in production with a key; the real provider takes `fetch` as
   a parameter and the global `fetch` is stubbed to throw in tests, so no test can reach a live API.
+  Production refuses `fixture` and `noop` (one accepts a public signature, the other everything)
+  unless the E2E run sets `PAYMENTS_STUB=e2e`; a configuration-matrix test pins every combination.
 - A module service owns the calls to its vendor (orders never talks to the payment provider;
   billing does). A provider is imported only inside its client folder.
 

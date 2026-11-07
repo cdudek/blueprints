@@ -49,5 +49,6 @@ production-ready payment handling.
   next run and counted in `payments.attempts`; nothing stops retrying or alerts a human.
 - **A real provider.** `clients/payments/providers/real.ts` is a stub against a placeholder
   endpoint, guarded to production. Map your vendor's API to the port.
-- **A real session.** `shared/auth.ts` reads a cookie so the example runs; it refuses production
-  unless the E2E job sets `AUTH_STUB=e2e`.
+- **A real session.** `modules/accounts` reads a cookie so the example runs; it refuses
+  production unless the E2E job sets `AUTH_STUB=e2e`. The fixture and noop payment providers
+  refuse production the same way unless it sets `PAYMENTS_STUB=e2e`.

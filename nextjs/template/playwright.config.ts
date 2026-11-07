@@ -3,8 +3,9 @@ import { defineConfig } from "@playwright/test";
 const port = 3100;
 
 // E2E runs against the production build (`pnpm build` first; CI reuses the build artifact), so
-// it tests what ships. The auth stub refuses production unless AUTH_STUB=e2e, and production
-// defaults to the real payments provider, so this config sets both (AUTH_STUB, PAYMENTS_PROVIDER=fixture).
+// it tests what ships. The auth stub refuses production unless AUTH_STUB=e2e, production defaults
+// to the real payments provider, and the fixture provider refuses production unless
+// PAYMENTS_STUB=e2e, so this config sets all three.
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
@@ -19,6 +20,7 @@ export default defineConfig({
     env: {
       AUTH_STUB: "e2e",
       PAYMENTS_PROVIDER: "fixture",
+      PAYMENTS_STUB: "e2e",
       ...(process.env.DATABASE_URL ? { DATABASE_URL: process.env.DATABASE_URL } : {}),
     },
   },

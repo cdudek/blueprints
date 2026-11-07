@@ -67,6 +67,9 @@ defaults to 1.0.0 behaviour); new rules may report new findings.
 - UI: per-file `@/ui/<Component>` imports (no barrel), `ui/styles`, `ui/icons`, Tailwind v4 with
   semantic tokens and `cva`, `components.json` for shadcn, Storybook with the a11y addon, an axe
   smoke test, next-intl with English messages.
+- Production refuses the `fixture` and `noop` payment providers unless `PAYMENTS_STUB=e2e` (the
+  E2E run); a configuration-matrix test covers every combination. The cancel/refund job gives up an
+  unlinked attempt with one compare-and-set, so a refund a webhook made necessary is never lost.
 - The payments port's `cancelIntent` and `refund` take an idempotency key; the cancel/refund job
   derives it from the persisted attempt id (`<id>:cancel`, `<id>:refund`).
 - Docs: one owner of commit and rollback per atomic use case; named intermediate states for
@@ -84,7 +87,10 @@ defaults to 1.0.0 behaviour); new rules may report new findings.
 4. Rename `ui-no-modules` and `ui-no-server` to `ui-leaf` in `exemptions` and baselines.
 5. A user operation now takes the session as its first argument: read the session where the
    request is (a page, an action) and pass it in. Set `sessionModule` to the module that reads it.
-6. A payments provider you wrote implements `cancelIntent(providerRef, idempotencyKey)` and
+6. If a deployed environment runs the `fixture` or `noop` payments provider under
+   `NODE_ENV=production`, it now refuses to start: use the real provider, or set
+   `PAYMENTS_STUB=e2e` only in the E2E job.
+7. A payments provider you wrote implements `cancelIntent(providerRef, idempotencyKey)` and
    `refund(providerRef, idempotencyKey)` and sends the key to the vendor.
 
 ## 1.0.0
