@@ -24,7 +24,7 @@ It describes, it does not implement. Use the latest stable version of every tool
 Follow the steps in order. Each step names the references to read.
 
 1. **Product.** Write PRODUCT.md with the owner: who it is for, their hopes and dreams, what it will not do, the vocabulary. [product](references/product.md), [copy](references/copy.md)
-2. **Agent files.** Create CLAUDE.md, AGENTS.md, REVIEW.md, `docs/rules.md`, `docs/adr/` and the hooks. [agent-files](references/agent-files.md), [decisions](references/decisions.md)
+2. **Agent files and plugins.** Run `/cct:project-setup`: it declares the workflow plugins in `.claude/settings.json`, runs the sdlc adopt step, installs anti-slop and adds the Decision4 contract and boundary map, then checks the result. Then add CLAUDE.md sections, `docs/rules.md` and `docs/adr/`. [agent-files](references/agent-files.md), [decisions](references/decisions.md)
 3. **Stack and structure.** Pick the stack blueprint, lay out modules, `ui/`, `clients/`, `i18n/`. Add the verify command and minimal CI (format, lint, typecheck, test, one required check) before any other code, with anti-slop and the slop metrics as their own CI step. [stack](references/stack.md), [structure](references/structure.md), [naming](references/naming.md), [ci](references/ci.md), [code-quality](references/code-quality.md)
 4. **Design and UX.** Write DESIGN.md and `docs/ux/` (interaction, information architecture, glossary, sitemap). Build the central `ui/` before the first screen. [design](references/design.md), [ux](references/ux.md), [interaction](references/interaction.md)
 5. **Data.** Postgres, the ORM, repositories per module, the first migration. [data-and-migrations](references/data-and-migrations.md)

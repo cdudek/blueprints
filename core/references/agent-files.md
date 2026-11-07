@@ -86,6 +86,8 @@ Rules:
 
 ### Files the sdlc tool installs
 
+- **AGENT-26: The repo declares its workflow plugins.** `.claude/settings.json` lists `extraKnownMarketplaces` (where each plugin comes from, a GitHub repo, optionally pinned to a ref) and `enabledPlugins` (which plugins this repo needs). Opening and trusting the repo offers exactly that set, so no one installs by hand and the repo states its own dependencies. The default set is the owner's `cct` plugin (marketplace `cct`, repo `cdudek/calvins-claude-tools`), which carries the sdlc tool, the UX suite and `project-setup`.
+- **AGENT-27: Setup runs in a fixed order and has a drift check.** (a) declare the plugins (AGENT-26), (b) the sdlc tool's adopt step (AGENT-25), (c) the anti-slop install skill for TypeScript ([code-quality](code-quality.md)), (d) the Decision4 contract and `boundary-map.yaml` (AGENT-23, [structure](structure.md)), (e) a read-only check that all of it is present, run again at session start. `cct`'s `project-setup` skill does this with options (which plugins, a pinned marketplace ref, with or without Decision4, anti-slop, sdlc) and a dry run by default.
 - **AGENT-25: The sdlc tool's adopt step installs the process files,** so there is one way: the CLAUDE.md process section, `REVIEW.md`, the code-owners file, the review workflows, the PR template and the process hooks (see [sdlc](sdlc.md)). The blueprint adds its own sections on top (the table of AGENT-3, the overriding rules, the Decision4 contract, pitfalls, secret hooks). Do not write a second copy of what the tool installed.
 
 ### Agent safety around secrets
@@ -116,7 +118,7 @@ repo/
   src/clients/CLAUDE.md      scoped: how external clients are built and faked
 ```
 
-0. Run the sdlc tool's adopt step first (AGENT-25), then add the blueprint sections to what it installed.
+0. Run `/cct:project-setup` (AGENT-26, AGENT-27). It declares the plugins, then runs the sdlc tool's adopt step (AGENT-25), anti-slop and Decision4; add the blueprint sections to what it installed.
 1. Create `CLAUDE.md` (or extend the installed one) with the table, the overriding rules (including AGENT-4), the Decision4 contract and product lines (AGENT-23, AGENT-24), pitfalls (start empty) and the real verify command. Create `AGENTS.md` that imports it.
 2. Create `REVIEW.md`, `docs/working-agreements.md` and the hook scripts; wire them in `.claude/settings.json`.
 3. Add frontmatter to every doc as it is written.

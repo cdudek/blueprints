@@ -33,6 +33,14 @@ Decision4 v1.0.1
 
 Credit: Decision4 by Habitat Thinking, CC BY 4.0. [DECISION4.md v1.0.1](https://github.com/Habitat-Thinking/decision4/blob/v1.0.1/DECISION4.md).
 
+### cct (Calvin's Claude Tools)
+
+- **URL:** https://github.com/cdudek/calvins-claude-tools
+- **Pinned version:** the marketplace ref a product declares in `.claude/settings.json` (AGENT-26); latest `main` when none is set.
+- **What we take:** the tooling that applies this blueprint: `project-setup`, `sdlc-run`, the UX suite, `project-kickoff`. The blueprint says what; cct does it.
+- **Licence:** the owner's own.
+- **Tracking:** the owner releases cct; products update with `claude plugin update cct@cct`.
+
 ### spec-kit
 
 - **URL:** https://github.com/github/spec-kit
