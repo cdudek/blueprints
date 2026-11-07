@@ -46,7 +46,7 @@ Tests are the proof for every rule and every requirement. The idea: a test that 
 - **TEST-17: List callers before changing shared code.** Before changing a shared component or function, list its callers and the e2e locators that depend on its role and words.
 - **TEST-18: Never game a check.** No sleep, wrapper or special case added only to make a test pass. Fix the cause. Tests for hooks and CI scripts exist too.
 
-- **TEST-19: Every gate and hook has negative fixtures.** Forbidden edits, stale locks, missing evidence and below-floor classes must fail; permitted paths must pass. A gate tested only on the happy path is not known to block anything.
+- **TEST-19: Every gate and hook has negative fixtures.** Forbidden edits, stale locks, missing evidence and below-floor classes must fail; permitted paths must pass. A gate tested only on the happy path is not known to block anything. Fixtures live in `tests/fixtures/gates/<gate>/` as `bad-*` (must fail) and `good-*` (must pass), and the `gates-test` target runs them in the required job. The fitness gates need at least: one anti-slop rule, one slop metric rise, one boundary violation, one cycle, a score below the floor, a budget exceeded, a PR body below the Decision4 floor and one missing `Class-Change` (see [architecture](architecture.md), [code-quality](code-quality.md), [ci](ci.md)).
 - **TEST-20: Agent tooling is tested in layers.** Structure and contract (files, frontmatter, declared tools), trigger discrimination (the right prompts activate it, near misses do not), and a few end-to-end runs in a sandbox. Skipped layers are reported, not hidden (TEST-6).
 
 ## How to apply
