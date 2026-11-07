@@ -337,28 +337,29 @@ export function buildRules(arch: Architecture): ArchRule[] {
     return findings;
   };
 
+  /** Top-level `const x = operation({ access: "webhook" | "job" }, ...)` names in one file. */
+  const systemOpsIn = (sf: ts.SourceFile) =>
+    sf.statements.filter(ts.isVariableStatement).flatMap((stmt) =>
+      stmt.declarationList.declarations.flatMap((d) => {
+        const init = d.initializer;
+        if (
+          !ts.isIdentifier(d.name) ||
+          !init ||
+          !ts.isCallExpression(init) ||
+          !ts.isIdentifier(init.expression) ||
+          init.expression.text !== "operation"
+        )
+          return [];
+        const access = accessOf(init);
+        return access === "webhook" || access === "job" ? [d.name.text] : [];
+      }),
+    );
   const systemOps = (ctx: Ctx) => {
     const ops = new Map<string, Set<string>>();
     for (const [file, sf] of graphOf(ctx).sources) {
       const m = moduleOf(file);
       if (!m || !isServiceFile(file)) continue;
-      for (const stmt of sf.statements) {
-        if (!ts.isVariableStatement(stmt)) continue;
-        for (const d of stmt.declarationList.declarations) {
-          const init = d.initializer;
-          if (
-            ts.isIdentifier(d.name) &&
-            init &&
-            ts.isCallExpression(init) &&
-            ts.isIdentifier(init.expression) &&
-            init.expression.text === "operation"
-          ) {
-            const access = accessOf(init);
-            if (access === "webhook" || access === "job")
-              (ops.get(m) ?? ops.set(m, new Set()).get(m)!).add(d.name.text);
-          }
-        }
-      }
+      for (const name of systemOpsIn(sf)) (ops.get(m) ?? ops.set(m, new Set()).get(m)!).add(name);
     }
     return ops;
   };
@@ -443,7 +444,26 @@ export function buildRules(arch: Architecture): ArchRule[] {
             target: `role:${role}`,
             message: `the ${role} role (${glob}) selects no file: create one, or correct the layout`,
           }));
-        return [...findings, ...missing, ...clients, ...uncovered];
+        // removing or renaming a module leaves its name behind in edges, owners and the session key
+        const named: [string, string][] = [
+          ...arch.edges.flatMap((e): [string, string][] => [
+            [e.from, `edge:${e.from}->${e.to}`],
+            [e.to, `edge:${e.from}->${e.to}`],
+          ]),
+          ...Object.entries(arch.tables).map(([t, m]): [string, string] => [m, `table:${t}`]),
+          ...(arch.sessionModule
+            ? [[arch.sessionModule, "sessionModule"] as [string, string]]
+            : []),
+        ];
+        const stale = named
+          .filter(([m]) => !declared.has(m))
+          .map(([m, where]) => ({
+            rule: "modules-declared",
+            file: "architecture.json",
+            target: where,
+            message: `${where} names ${m}, which is not a declared module: a removed or renamed module left it behind`,
+          }));
+        return [...findings, ...missing, ...clients, ...uncovered, ...stale];
       },
     },
     {
@@ -1490,6 +1510,10 @@ export function buildRules(arch: Architecture): ArchRule[] {
           const bound = new Map<string, string>(); // local name -> "module.operation"
           const note = (target: string, message: string) =>
             findings.push({ rule: "system-operations-from-routes-only", file, target, message });
+          const own = moduleOf(file);
+          // system operations defined in this very file: a user operation beside them is checked too
+          if (own && isServiceFile(file))
+            for (const name of systemOpsIn(sf)) bound.set(name, `${own}.${name}`);
           for (const stmt of sf.statements) {
             const isImport = ts.isImportDeclaration(stmt);
             if (
@@ -1500,13 +1524,11 @@ export function buildRules(arch: Architecture): ArchRule[] {
               continue;
             const target = g.resolve(stmt.moduleSpecifier.text, file);
             const m = target ? moduleOf(target) : null;
-            if (
-              !target ||
-              !m ||
-              doorRole(target) !== "server" ||
-              !ops.has(m) ||
-              m === moduleOf(file)
-            )
+            if (!target || !m || !ops.has(m)) continue;
+            // across modules the way in is the server door; inside a module, a sibling service file.
+            // A module's own door re-exports its operations and is not a caller.
+            const inModule = m === own;
+            if (inModule ? doorRole(file) || !isServiceFile(target) : doorRole(target) !== "server")
               continue;
             const names = ops.get(m)!;
             const clause = isImport ? stmt.importClause?.namedBindings : stmt.exportClause;
@@ -1576,10 +1598,30 @@ export function buildRules(arch: Architecture): ArchRule[] {
       check: (ctx) =>
         content(ctx, "access-declared", { path: `${src}/**/*.service.ts` }, (sf) => {
           const problems: Problem[] = [];
+          // names exported later with `export { fn }` count as exported declarations too
+          const listed = new Set(
+            sf.statements
+              .filter(
+                (s): s is ts.ExportDeclaration =>
+                  ts.isExportDeclaration(s) && !s.moduleSpecifier && !s.isTypeOnly,
+              )
+              .flatMap((s) =>
+                s.exportClause && ts.isNamedExports(s.exportClause)
+                  ? s.exportClause.elements
+                      .filter((el) => !el.isTypeOnly)
+                      .map((el) => (el.propertyName ?? el.name).text)
+                  : [],
+              ),
+          );
           for (const stmt of sf.statements) {
             const exported =
-              ts.canHaveModifiers(stmt) &&
-              ts.getModifiers(stmt)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+              (ts.canHaveModifiers(stmt) &&
+                ts.getModifiers(stmt)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) ||
+              (ts.isFunctionDeclaration(stmt) && stmt.name && listed.has(stmt.name.text)) ||
+              (ts.isVariableStatement(stmt) &&
+                stmt.declarationList.declarations.some(
+                  (d) => ts.isIdentifier(d.name) && listed.has(d.name.text),
+                ));
             if (!exported) continue;
             if (ts.isFunctionDeclaration(stmt) && stmt.name)
               problems.push({

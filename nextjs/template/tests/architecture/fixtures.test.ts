@@ -92,6 +92,12 @@ const intended: Record<string, string[]> = {
   "src/modules/billing/uses-axios.ts": ["banned-packages"],
   "package.json": ["banned-packages"],
   "src/hooks/useThing.ts": ["roots-classified"],
+  // a third module, added the way the generator adds one, with the gaps a review found
+  "src/modules/shipments/shipments.service.ts": [
+    "access-declared",
+    "system-operations-from-routes-only",
+  ],
+  "src/modules/shipments/shipments.dispatch.service.ts": ["system-operations-from-routes-only"],
 };
 
 describe("each violation is flagged by its intended rules only", () => {
@@ -348,6 +354,29 @@ const specific: [string, string, string, string][] = [
     "missing its door",
   ],
   ["modules-declared", "src/modules/ghost/public.ts", "ghost", "not in architecture.json"],
+  // removing or renaming a module: its name stays behind in the policy. A rename is also the pair
+  // ghost (a folder nobody declared) and phantom (a declared name with no folder)
+  ["modules-declared", "architecture.json", "edge:shipments->couriers", "not a declared module"],
+  ["modules-declared", "architecture.json", "table:parcels", "removed or renamed module"],
+  ["modules-declared", "architecture.json", "phantom", "has no files"],
+  [
+    "access-declared",
+    "src/modules/shipments/shipments.service.ts",
+    "listShipments",
+    "not wrapped in operation",
+  ],
+  [
+    "system-operations-from-routes-only",
+    "src/modules/shipments/shipments.service.ts",
+    "shipments.receiveCarrierEvent",
+    "a user operation must not call the system operation",
+  ],
+  [
+    "system-operations-from-routes-only",
+    "src/modules/shipments/shipments.dispatch.service.ts",
+    "shipments.receiveCarrierEvent",
+    "a user operation must not call the system operation",
+  ],
   ["roots-classified", "src/escape.ts", "escape.ts", "fits no declared root"],
   [
     "roots-no-modules",

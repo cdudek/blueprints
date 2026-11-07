@@ -1,7 +1,14 @@
 // The generator's output must satisfy every gate the template enforces: scaffold a module in a
 // temporary copy of the template, then run type check, lint, unit tests and the architecture suite.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, symlinkSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -70,6 +77,55 @@ describe("pnpm new:module", () => {
       const result = run(copy, cmd, args);
       expect(result.status, `${cmd} ${args.join(" ")}\n${result.stdout}\n${result.stderr}`).toBe(0);
     }
+  }, 120_000);
+
+  // The gaps a review found by evolving the app: the third module exports a plain function in a
+  // second statement, and a user operation calls a webhook operation in the same file.
+  it("catches what the third module gets wrong", () => {
+    const dir = join(copy, "src/modules/shipments");
+    appendFileSync(
+      join(dir, "shipment.service.ts"),
+      `
+const exportShipments = async () => [];
+export { exportShipments };
+
+export const receiveCarrierEvent = operation(
+  { access: "webhook", verifiedBy: "the carrier signature" },
+  async (body: string) => ok(body.length),
+);
+
+export const trackShipment = operation(
+  { access: "user", resource: "the caller's own shipments" },
+  async (_session, body: string) => receiveCarrierEvent(body),
+);
+`,
+    );
+    writeFileSync(
+      join(dir, "server.ts"),
+      `import "server-only";
+
+export {
+  exportShipments,
+  listMyShipments,
+  receiveCarrierEvent,
+  trackShipment,
+} from "./shipment.service";
+`,
+    );
+    const bin = (name: string) => join(copy, "node_modules/.bin", name);
+    const access = run(copy, bin("vitest"), ["run", "src/shared/access.test.ts"]);
+    expect(access.status).not.toBe(0);
+    expect(access.stdout).toContain("shipments.exportShipments");
+    const arch = run(copy, bin("vitest"), [
+      "run",
+      "--config",
+      "vitest.arch.config.ts",
+      "architecture.test",
+    ]);
+    expect(arch.status).not.toBe(0);
+    expect(arch.stdout + arch.stderr).toMatch(
+      /system-operations-from-routes-only[\s\S]*shipments\.receiveCarrierEvent/,
+    );
   }, 120_000);
 
   it("refuses a name that exists", () => {

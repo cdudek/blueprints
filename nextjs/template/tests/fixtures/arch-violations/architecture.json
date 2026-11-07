@@ -29,6 +29,9 @@
     },
     "catalog": {
       "description": "a door with a client directive"
+    },
+    "shipments": {
+      "description": "a third module, added after the first two"
     }
   },
   "sessionModule": "ledger",
@@ -47,6 +50,11 @@
       "from": "billing",
       "to": "ledger",
       "reason": "closes a cycle with ledger -> billing"
+    },
+    {
+      "from": "shipments",
+      "to": "couriers",
+      "reason": "couriers was merged into shipments; this edge was left behind"
     }
   ],
   "tables": {
@@ -54,7 +62,8 @@
     "payments": "billing",
     "invoices": "orders",
     "ghosts": "billing",
-    "prices": "billing"
+    "prices": "billing",
+    "parcels": "couriers"
   },
   "readExceptions": [],
   "exemptions": [],

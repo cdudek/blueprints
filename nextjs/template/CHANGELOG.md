@@ -36,6 +36,12 @@ defaults to 1.0.0 behaviour); new rules may report new findings.
   the worker). `server-only-in-server-files` wants the marker as the first statement.
   `modules-declared` reports a role that selects no file. `roots-classified` says where a
   layer-first folder belongs. Client and browser-door closures stop at `"use server"` files.
+  `system-operations-from-routes-only` also catches a user operation calling a system operation
+  in its own file or from a sibling file of its module. `access-declared` also sees
+  `const fn = ...; export { fn }`. `modules-declared` reports edges, table owners and
+  `sessionModule` that still name a removed or renamed module.
+- The access test loads every server door the policy declares instead of a hard-coded list, so a
+  third module is checked without editing it.
 - Failure messages name `file:line`.
 
 ### Tooling
