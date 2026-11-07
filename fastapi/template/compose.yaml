@@ -1,0 +1,16 @@
+# Local Postgres for `make dev` and the integration tests. The password is the local compose
+# password, never a deployed one: production connects keyless through IAM.
+services:
+  db:
+    image: docker.io/library/postgres:18-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "app", "-d", "app"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

@@ -1,0 +1,106 @@
+# Generated from architecture.toml by `make arch-generate`. Do not edit: a test fails when
+# this file and the policy disagree. Baselines come from quality/arch-baseline.toml.
+
+[importlinter]
+root_package = app
+include_external_packages = True
+
+[importlinter:contract:layers]
+name = Dependencies point one way: roots, api, workflows, modules, infrastructure
+type = layers
+layers =
+    app.main | app.worker | app.schema
+    app.api
+    app.workflows
+    app.modules.billing
+    app.modules.orders
+    app.clients | app.shared
+    app.db
+    app.config
+
+[importlinter:contract:orders-door]
+name = Other code enters orders only through its door
+type = protected
+protected_modules =
+    app.modules.orders.errors
+    app.modules.orders.models
+    app.modules.orders.repository
+    app.modules.orders.rules
+    app.modules.orders.schemas
+    app.modules.orders.service
+allowed_importers =
+    app.modules.orders
+    app.schema
+
+[importlinter:contract:billing-door]
+name = Other code enters billing only through its door
+type = protected
+protected_modules =
+    app.modules.billing.errors
+    app.modules.billing.models
+    app.modules.billing.repository
+    app.modules.billing.rules
+    app.modules.billing.schemas
+    app.modules.billing.service
+allowed_importers =
+    app.modules.billing
+    app.schema
+
+[importlinter:contract:router-doors]
+name = Router doors are imported only by app.api
+type = protected
+protected_modules =
+    app.modules.orders.router
+    app.modules.billing.router
+allowed_importers =
+    app.api
+
+[importlinter:contract:billing-system-door]
+name = billing.system is imported only by billing, app.api and app.workflows
+type = protected
+protected_modules =
+    app.modules.billing.system
+allowed_importers =
+    app.modules.billing
+    app.api
+    app.workflows
+
+[importlinter:contract:billing-jobs-door]
+name = billing.jobs is imported only by billing and app.worker
+type = protected
+protected_modules =
+    app.modules.billing.jobs
+allowed_importers =
+    app.modules.billing
+    app.worker
+
+[importlinter:contract:rules-pure]
+name = rules.py imports no framework, I/O or infrastructure, directly or indirectly
+type = forbidden
+source_modules =
+    app.modules.orders.rules
+    app.modules.billing.rules
+forbidden_modules =
+    app.db
+    app.clients
+    app.config
+    sqlalchemy
+    fastapi
+    starlette
+    httpx
+    psycopg
+    procrastinate
+
+[importlinter:contract:no-framework-in-core]
+name = service, repository and rules do not import the web framework
+type = forbidden
+source_modules =
+    app.modules.orders.service
+    app.modules.orders.repository
+    app.modules.orders.rules
+    app.modules.billing.service
+    app.modules.billing.repository
+    app.modules.billing.rules
+forbidden_modules =
+    fastapi
+    starlette

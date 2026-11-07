@@ -9,6 +9,7 @@ maintained.
 | Blueprint             | What it is                                                                                                   |
 | --------------------- | ------------------------------------------------------------------------------------------------------------ |
 | [`nextjs/`](./nextjs) | A modular monolith for Next.js App Router with TypeScript, Postgres and drizzle (Prisma works the same way). |
+| [`fastapi/`](./fastapi) | A modular monolith for FastAPI with Python 3.14, Postgres (async SQLAlchemy, Alembic) and a Procrastinate worker. |
 | [`common/`](./common) | Shared parts, not a blueprint: the secrets CLI, Terraform module, Make contract and naming every blueprint vendors. |
 
 ## How to start from a blueprint

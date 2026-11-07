@@ -1,0 +1,11 @@
+[importlinter]
+root_package = door_bad
+include_external_packages = True
+
+[importlinter:contract:door]
+name = Other code enters orders only through its door
+type = protected
+protected_modules =
+    door_bad.modules.orders.service
+allowed_importers =
+    door_bad.modules.orders
