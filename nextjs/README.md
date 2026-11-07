@@ -163,8 +163,12 @@ target, a `worker` target for background jobs and a `migrate` target that runs o
 traffic shift (expand/contract migrations only). Every instance shares one
 `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`, and the build pins `deploymentId`. Public configuration is
 read at runtime, logs are JSON lines with the trace id, `/api/health` answers liveness, and a
-container service is enough until several services need Kubernetes. `ARCHITECTURE.md` section 12
-has the details.
+container service is enough until several services need Kubernetes. A schema change runs
+expand, old and new in parallel, switch, stop the old web and worker, rollback window, contract;
+readiness checks that the schema is compatible, not that it is at the latest migration. Jobs call
+providers with idempotency keys derived from persisted ids. Agents build and test with fixture
+providers; real credentials live only in a separate, limited context. `ARCHITECTURE.md` section
+12 has the details.
 
 ## Limitations
 

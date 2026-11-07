@@ -7,10 +7,7 @@
     "public.ts": "browser",
     "server.ts": "server"
   },
-  "roots": [
-    "proxy.ts",
-    "instrumentation.ts"
-  ],
+  "roots": ["proxy.ts", "instrumentation.ts"],
   "modules": {
     "accounts": {
       "description": "The signed-in session: reads it for pages and actions"
@@ -38,9 +35,7 @@
   },
   "readExceptions": [],
   "exemptions": [],
-  "clients": [
-    "payments"
-  ],
+  "clients": ["payments"],
   "serverOnlyPackages": [
     "server-only",
     "next/headers",
@@ -48,15 +43,8 @@
     "drizzle-orm/postgres-js",
     "drizzle-orm/pglite"
   ],
-  "rulesMayImport": [
-    "zod"
-  ],
-  "uiMayImport": [
-    "react",
-    "react-dom",
-    "next/link",
-    "next/image"
-  ],
+  "rulesMayImport": ["zod"],
+  "uiMayImport": ["react", "react-dom", "next/link", "next/image"],
   "iconPackages": [],
   "bannedPackages": {
     "axios": "Next.js extends fetch with caching; external HTTP goes through a port in src/clients with an injected fetch",

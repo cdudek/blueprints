@@ -6,9 +6,10 @@
  * @workflow payment-webhook
  * retry-safe: yes. A provider retry re-runs both steps; each one is idempotent and state-based.
  * duplicates: no duplicate effect. A repeated event re-applies a transition that already happened.
- * recovery: if orders fails after billing recorded the event, we answer 500; the provider
- *   retries and billing reports the same succeeded state, so orders runs again. An event that
- *   matches no payment attempt is stored in billing's inbox before we answer 200.
+ * recovery: two transactions, so two intermediate states. (1) Payment succeeded, order not yet
+ *   paid: resumes. We answer 500, the provider retries, billing reports the same succeeded
+ *   state and orders runs again. (2) An event that matches no payment attempt: stored in
+ *   billing's inbox before we answer 200, and resumed by a reconciliation job.
  * survives-restart: yes. All state is in the database; nothing is held in memory.
  */
 import { receivePaymentEventFromWebhook } from "@/modules/billing/server";

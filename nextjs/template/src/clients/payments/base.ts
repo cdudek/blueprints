@@ -29,10 +29,13 @@ export class InvalidSignatureError extends Error {
 
 export interface PaymentsClient {
   createIntent(input: CreateIntentInput): Promise<PaymentIntent>;
-  /** Cancels an open intent. Idempotent. Reports when the money had already been captured. */
-  cancelIntent(providerRef: string): Promise<CancelResult>;
-  /** Refunds a captured payment in full. Idempotent per provider reference. */
-  refund(providerRef: string): Promise<void>;
+  /**
+   * Cancels an open intent. Reports when the money had already been captured. The key is stable
+   * per payment attempt (derived from its persisted id), so a retried job never cancels twice.
+   */
+  cancelIntent(providerRef: string, idempotencyKey: string): Promise<CancelResult>;
+  /** Refunds a captured payment in full. The key is stable per attempt: a retry never refunds twice. */
+  refund(providerRef: string, idempotencyKey: string): Promise<void>;
   /** Verifies the signature against the raw body. Throws InvalidSignatureError. */
   parseEvent(rawBody: string, signature: string): PaymentEvent;
 }

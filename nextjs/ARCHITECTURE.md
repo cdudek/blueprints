@@ -300,8 +300,11 @@ same block. A policy file without the block gets exactly these paths.
 - **Cross-module foreign keys are kept**, and live in a reviewed custom migration
   (`drizzle/…_payments-order-fk.sql`) that the owners of both tables review together. Removing a
   constraint to avoid an import edge is not allowed.
-- **Transactions.** The calling service owns the boundary and opens it only through `inTransaction`
-  (`src/db`), the single gateway. An operation that must run in its caller's transaction takes a
+- **Transactions.** Exactly one place owns commit and rollback for each atomic use case: the
+  service operation that opens it, only through `inTransaction` (`src/db`), the single gateway.
+  Repositories never commit, roll back or open a transaction: they run on the client or `Tx` they
+  are given. A workflow never opens one either; it sequences service operations, each its own
+  atomic step (section 8). An operation that must run in its caller's transaction takes a
   `Tx` parameter (not an optional client), so it cannot be called without one and cannot open its
   own. Inside a transaction callback the checks refuse an external client call, `fetch`, a nested
   transaction and a module operation that does not receive the `tx`. A failed expected step inside
@@ -447,10 +450,20 @@ module components. Adding a language is a messages file and a locale in the rout
   `survives-restart`. The check reads every file in `app/_workflows/`, and every action or route
   that still sequences two modules itself, and refuses two workflows with the same answers: a
   copied header is a header nobody thought about.
+- **A process with more than one transaction names its intermediate states.** Each step commits
+  on its own, so a crash can stop the process between two commits. The workflow says which
+  persisted states it can stop in (a payment `cancel_pending`, an inbox row not yet processed) and,
+  for each, whether it **resumes** (a job picks the state up and finishes forward) or
+  **compensates** (a later step undoes an earlier one, such as a refund for a captured payment).
+  The `recovery` answer of the header names them; a state with neither is a bug.
 - **Durable work** (must survive a crash, retried by a job) is recorded in a table and drained by a
   job operation. The worker (`src/worker.ts`, a Postgres queue in its own process) runs the job on a
   schedule; where no worker process exists, a cron route does. The template's payment inbox and
-  cancel/refund work show both. Record the intent durably **before** acknowledging the work that
+  cancel/refund work show both. A job runs at least once, so every external call it makes carries
+  an idempotency key derived from a persisted identity, never from the run: the cancel/refund job
+  sends `<attempt id>:cancel` and `<attempt id>:refund`, so a retry, a second worker or a run that
+  happened twice cannot cancel or refund twice. A scheduled job also has a stable job key, so the
+  queue holds one pending copy. Record the intent durably **before** acknowledging the work that
   must survive. No general event bus until a module must react without the publisher knowing who
   listens.
 
@@ -497,11 +510,17 @@ module components. Adding a language is a messages file and a locale in the rout
 | Rules             | every branch                                          | plain unit tests, no mocks                                                                   |
 | Services          | permissions, main workflows, conflict paths           | a handful per operation against a real test database                                         |
 | Repositories      | conditional updates, find-or-create under concurrency | integration tests against real Postgres (PGlite locally, a Postgres service in CI)           |
+| Concurrency       | lost updates, duplicate jobs, two workers on one row  | real commits on separate connections, against Postgres (`TEST_DATABASE_URL`); never PGlite   |
 | Third parties     | the contract the app relies on                        | fixture provider; the real provider with an injected `fetch`                                 |
 | Webhooks and jobs | signature failure, duplicates, out-of-order, retries  | integration tests with fixtures                                                              |
 | Actions and pages | the happy path and one validation failure             | Playwright E2E against the production build                                                  |
 | Architecture      | every rule, and that each rule can fail               | fixtures: violations flagged by the intended rule only, positive controls, specific messages |
 | UI                | accessibility of real pages; primitives in isolation  | `@axe-core/playwright` over every page; Storybook stories with the a11y addon                |
+
+A concurrency or worker test that runs inside one rolled-back transaction, or on a single
+connection, proves nothing about concurrency: each side must commit for real on its own
+connection, the way two requests or two worker processes do. PGlite has one connection, so these
+tests run only where `TEST_DATABASE_URL` points at a Postgres server (CI always has one).
 
 Unit tests sit beside the code they test (`*.test.ts`); `tests/` holds the architecture suite,
 E2E, integration tests that span modules or a process entry point (the worker), tooling tests and
@@ -527,10 +546,17 @@ Production defaults. None of them is checked by the architecture suite; the temp
   it into the page; keep `NEXT_PUBLIC_` for values that really are the same in every
   environment.
 - **Migrations are a job before the traffic shift.** The `migrate` image target runs
-  `scripts/db-migrate.mjs` once, before the new web revision takes traffic. Migrations are
-  expand/contract only: add the column, deploy code that writes both, backfill, deploy code that
-  reads the new one, then drop the old column in a later release. A migration never breaks the
-  revision that is still serving.
+  `scripts/db-migrate.mjs` once, before the new web revision takes traffic. A migration never
+  breaks the revision that is still serving, so a schema change runs in this order:
+  1. **Expand:** add the new column or table; nothing reads it yet, the old code ignores it.
+  2. **Run old and new in parallel:** deploy code that writes both shapes and reads the old one;
+     backfill. Old and new revisions, web and worker, now run against the same schema.
+  3. **Switch:** move traffic to code that reads the new shape.
+  4. **Stop the old:** retire the old web revision and the old worker, so nothing writes only the
+     old shape.
+  5. **Rollback window:** keep the old column until a rollback to the previous release can no
+     longer happen.
+  6. **Contract:** drop the old column in a later release, through the same migrate job.
 - **Background work runs in a worker process.** `src/worker.ts` runs a Postgres queue
   (graphile-worker: `LISTEN/NOTIFY`, cron, job keys, no extra infrastructure) in its own process
   and calls job operations. Never run the queue inside the web process on a platform that bills
@@ -538,12 +564,22 @@ Production defaults. None of them is checked by the architecture suite; the temp
   exists, a cron route handler (`api/cron/...`) is the scheduler entry point instead.
 - **Health and readiness.** `/api/health` answers 200 when the process serves (the template ships
   it); a readiness route checks the database through a module operation and answers 503 until it
-  can (add it with the first deploy). The platform routes traffic on readiness and restarts on
-  health.
+  can (add it with the first deploy). Readiness checks that the schema is **compatible** with this
+  revision (the migrations it needs are applied), never that it is at the exact latest migration:
+  during steps 2 to 5 above, an older revision runs against a newer schema and must stay ready.
+  The deploy pipeline, not readiness, checks that the migrate job reached the expected state. The
+  platform routes traffic on readiness and restarts on health.
 - **Logs are JSON lines with a trace field.** One object per line, with `level`, `message` and
   the trace id from `traceparent`, so a request can be followed across the web process, the
   worker and a service. `instrumentation.ts` starts OpenTelemetry and logs unhandled request
   errors (`onRequestError`) in the same shape.
+- **Agents work with fixtures, not credentials.** The repository's rules protect against
+  accidental leaks: secrets only through `shared/env.ts`, `.env` files ignored, every port with
+  a fixture provider, no test reaching a live API. An agent (or a developer) builds and tests with
+  the fixture providers and the stub session, which need no secret. Real credentials exist only in
+  a separate, limited context (the deploy pipeline, a scoped environment a person opens), never in
+  the working copy an agent edits. The rules catch mistakes; they are not a sandbox, so an agent
+  that holds a credential can still leak it.
 - **Kubernetes only when its cost is justified.** A container platform that runs an image with
   environment variables (a managed container service) covers the web process, the worker and
   the migrate job. Kubernetes comes in when several services need what only it gives, and the
@@ -611,6 +647,14 @@ Every guarantee is one of: **RD** resolved-dependency check, **SH** syntax heuri
 check, **BT** behaviour test, **RO** review obligation. Where a guarantee has more than one
 mechanism, all are listed; where it ends in RO, that part is not enforced by a tool.
 
+Each row states three things: **what is detected** (the mechanism and its reach), **what stays
+review** (the RO part, named in the notes) and **which exceptions are allowed**. The only allowed
+exceptions are the ones `architecture.json` and `quality/` record with a reason: read exceptions
+(one file, one table), exemptions, the `rulesMayImport`, `uiMayImport` and `serverOnlyPackages`
+allowlists, reviewed duplication exceptions and baseline lines. A rule that is never admitted to a
+baseline (section 15) has no exception at all. A green run means "no detected violation outside
+these exceptions", not "correct".
+
 | Guarantee                                                                  | Mechanism     | Notes                                                                                                                                                                       |
 | -------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | No import cycles                                                           | RD            | complete graph: imports, re-exports, literal dynamic imports, type imports. ArchUnitTS alone misses re-export cycles                                                        |
@@ -648,9 +692,12 @@ mechanism, all are listed; where it ends in RO, that part is not enforced by a t
 | System operations are called only from route handlers and the worker       | RD + SH       | by imported name, namespace imports refused, user operations may not call them; a workflow that calls one is itself callable only from a route or the worker                |
 | Webhook and cron routes verify the caller                                  | BT            | signature and secret tests                                                                                                                                                  |
 | Actions are thin                                                           | RD + RO       | no persistence imports, `"use server"` only in app; "no business logic" is RO                                                                                               |
+| One owner of commit and rollback: only services open transactions          | SH            | `transaction-discipline`: `inTransaction` only in `*.service.ts`, `db.transaction()` only in `src/db`                                                                       |
 | Transactions: gateway, no external call, no nesting, `tx` passed on        | SH + BC       | direct calls only; the `Tx` type makes a missing transaction a compile error                                                                                                |
 | A callee given `tx` really uses it; isolation and retry assumptions        | RO            |                                                                                                                                                                             |
-| State safety: conditional updates, lost updates, retries                   | BT            | the worked slice                                                                                                                                                            |
+| State safety: conditional updates, lost updates, retries                   | BT            | the worked slice; concurrency tests commit on separate connections against Postgres                                                                                         |
+| Jobs call providers with a stable idempotency key                          | BT + RO       | the cancel/refund retry test; that every new job derives its key from a persisted id is RO                                                                                  |
+| A multi-transaction process names its intermediate states and recovery     | RO            | the `recovery` answer of the workflow header                                                                                                                                |
 | Webhooks: duplicates, out of order, late, before linkage, unmatched        | BT            | the worked slice                                                                                                                                                            |
 | A cross-module workflow documents its retry and recovery behaviour         | SH + RO       | the header block of every `app/_workflows` file and of any action or route that sequences two modules; no two workflows share the same answers; whether they are true is RO |
 | Server files start with `import "server-only"`                             | SH + BC       | as the first statement                                                                                                                                                      |

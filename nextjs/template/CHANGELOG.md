@@ -61,6 +61,12 @@ defaults to 1.0.0 behaviour); new rules may report new findings.
 - UI: per-file `@/ui/<Component>` imports (no barrel), `ui/styles`, `ui/icons`, Tailwind v4 with
   semantic tokens and `cva`, `components.json` for shadcn, Storybook with the a11y addon, an axe
   smoke test, next-intl with English messages.
+- The payments port's `cancelIntent` and `refund` take an idempotency key; the cancel/refund job
+  derives it from the persisted attempt id (`<id>:cancel`, `<id>:refund`).
+- Docs: one owner of commit and rollback per atomic use case; named intermediate states for
+  multi-transaction processes; concurrency tests on separate connections; schema-compatible
+  readiness and the full expand-to-contract sequence; agents work with fixtures, not credentials;
+  what each rule detects, leaves to review and allows.
 - Node 22.18 or later (graphile-worker and Node's type stripping).
 
 ### Migrating from 1.0.0
@@ -72,6 +78,8 @@ defaults to 1.0.0 behaviour); new rules may report new findings.
 4. Rename `ui-no-modules` and `ui-no-server` to `ui-leaf` in `exemptions` and baselines.
 5. A user operation now takes the session as its first argument: read the session where the
    request is (a page, an action) and pass it in. Set `sessionModule` to the module that reads it.
+6. A payments provider you wrote implements `cancelIntent(providerRef, idempotencyKey)` and
+   `refund(providerRef, idempotencyKey)` and sends the key to the vendor.
 
 ## 1.0.0
 

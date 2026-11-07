@@ -260,6 +260,21 @@ describe("processPaymentWorkFromJob (cancel and refund worker)", () => {
     expect((await only())?.status).toBe("cancelled");
   });
 
+  it("sends the same idempotency key when it retries a refund", async () => {
+    const { orderId, payment } = await started();
+    await setStatus("succeeded");
+    await inTransaction((tx) => recordCancellation(me, orderId, tx));
+    const mark = provider().idempotencyKeys.length;
+    provider().failNext = true;
+    await run();
+    await run();
+    expect((await only())?.status).toBe("refunded");
+    expect(provider().idempotencyKeys.slice(mark)).toEqual([
+      `${payment.id}:refund`,
+      `${payment.id}:refund`,
+    ]);
+  });
+
   it("waits for a missing provider reference, then abandons it after the grace period", async () => {
     const orderId = await seedOrder(db, "u1");
     await billingRepository.findOrCreatePayment({ orderId, userId: "u1", amountCents: 1000 });

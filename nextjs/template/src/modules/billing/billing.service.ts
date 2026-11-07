@@ -131,7 +131,8 @@ export const receivePaymentEventFromWebhook = operation(
 );
 
 // Drains cancel and refund work with the provider, with retries: a failure leaves the row for
-// the next run. Triggered by the cron route.
+// the next run. Each provider call carries a key derived from the persisted attempt id, so a
+// retry, a second worker or a job that ran twice never cancels or refunds twice.
 export const processPaymentWorkFromJob = operation(
   { access: "job", triggeredBy: "app/api/cron/payments/route.ts, authenticated with CRON_SECRET" },
   async (now: Date) => {
@@ -145,12 +146,15 @@ export const processPaymentWorkFromJob = operation(
               await repo.applyTransition(payment.id, () => "cancelled");
             continue;
           }
-          const { result } = await paymentsClient().cancelIntent(payment.providerRef);
+          const { result } = await paymentsClient().cancelIntent(
+            payment.providerRef,
+            `${payment.id}:cancel`,
+          );
           await repo.applyTransition(payment.id, (s) =>
             s === "cancel_pending" ? afterCancelAttempt(result) : s,
           );
         } else if (payment.providerRef) {
-          await paymentsClient().refund(payment.providerRef);
+          await paymentsClient().refund(payment.providerRef, `${payment.id}:refund`);
           await repo.applyTransition(payment.id, (s) => (s === "refund_pending" ? "refunded" : s));
         }
         summary.processed += 1;

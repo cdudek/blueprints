@@ -25,7 +25,7 @@ describe("pnpm new:module", () => {
     "--exclude",
     "test-results",
     "--exclude",
-    "tests/fixtures",
+    "tests/fixtures/arch-violations",
     ".",
     `${copy}/`,
   ]);

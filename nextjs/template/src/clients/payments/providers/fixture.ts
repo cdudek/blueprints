@@ -14,6 +14,8 @@ export class FixturePaymentsClient implements PaymentsClient {
   readonly intents: CreateIntentInput[] = [];
   readonly cancelled: string[] = [];
   readonly refunded: string[] = [];
+  /** Every idempotency key sent to cancel or refund, failed calls included. */
+  readonly idempotencyKeys: string[] = [];
   /** Provider references whose money is already captured: cancelling them reports it. */
   readonly captured = new Set<string>();
   /** Make the next provider call fail, to exercise retries. */
@@ -35,14 +37,16 @@ export class FixturePaymentsClient implements PaymentsClient {
     };
   }
 
-  async cancelIntent(providerRef: string): Promise<CancelResult> {
+  async cancelIntent(providerRef: string, idempotencyKey: string): Promise<CancelResult> {
+    this.idempotencyKeys.push(idempotencyKey);
     this.maybeFail();
     if (this.captured.has(providerRef)) return { result: "already_succeeded" };
     this.cancelled.push(providerRef);
     return { result: "cancelled" };
   }
 
-  async refund(providerRef: string): Promise<void> {
+  async refund(providerRef: string, idempotencyKey: string): Promise<void> {
+    this.idempotencyKeys.push(idempotencyKey);
     this.maybeFail();
     this.refunded.push(providerRef);
   }
