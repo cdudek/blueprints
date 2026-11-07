@@ -15,7 +15,7 @@ Build every product as a modular monolith: one deployable, split inside into mod
 
 - **STR-1 One module per business capability.** Name it after the domain (orders, billing, accounts), not after a framework or its first consumer. Opening the modules folder shows what the product does.
 - **STR-2 A module has a public door and a private inside.** The door lists, by name, everything other code may use. Repositories, tables and helpers stay private. No wildcard re-exports. Inside a module use relative imports, never its own door.
-- **STR-3 Dependencies are declared, point one way and never cycle.** A cycle means two modules are one module with two names. Declare allowed edges in one machine-readable policy file.
+- **STR-3 Dependencies are declared, point one way and never cycle.** A cycle means two modules are one module with two names. Declare allowed edges in one machine-readable policy file, `architecture.yaml`, and gate it with the fitness checks (see [architecture](architecture.md)).
 - **STR-4 A module has a fixed inside.** Service (operations), repository (queries), pure rules, input schemas, types and typed errors, table definitions. Start flat, add subfolders past about ten files.
 - **STR-5 Rules are pure.** Pricing, eligibility and allowed transitions are functions of their inputs: no database, network, clock, randomness or environment. The service passes those in. Pure code is tested without mocks.
 
@@ -86,7 +86,7 @@ src/
   shared/         result, session, access, env: generic, no I/O
   ui/             components, styleguide, theme
   i18n/           routing, messages, typed keys
-policy file       modules, allowed edges, table owners, read exceptions, exemptions
+architecture.yaml  the policy file: modules, doors, allowed edges, table owners, read exceptions, fitness rows
 boundary-map.yaml  Decision4 floors by path, key, store, API, credential, environment
 quality/          baselines (only shrink)
 tests/            architecture, integration, e2e

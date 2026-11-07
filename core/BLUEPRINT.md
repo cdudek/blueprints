@@ -25,7 +25,7 @@ Follow the steps in order. Each step names the references to read.
 
 1. **Product.** Write PRODUCT.md with the owner: who it is for, their hopes and dreams, what it will not do, the vocabulary. [product](references/product.md), [copy](references/copy.md)
 2. **Agent files and plugins.** Run `/cct:project-setup`: it declares the workflow plugins in `.claude/settings.json`, runs the sdlc adopt step, installs anti-slop and adds the Decision4 contract and boundary map, then checks the result. Then add CLAUDE.md sections, `docs/rules.md` and `docs/adr/`. [agent-files](references/agent-files.md), [decisions](references/decisions.md)
-3. **Stack and structure.** Pick the stack blueprint, lay out modules, `ui/`, `clients/`, `i18n/`. Add the verify command and minimal CI (format, lint, typecheck, test, one required check) before any other code, with anti-slop and the slop metrics as their own CI step. [stack](references/stack.md), [structure](references/structure.md), [naming](references/naming.md), [ci](references/ci.md), [code-quality](references/code-quality.md)
+3. **Stack and structure.** Pick the stack blueprint, lay out modules, `ui/`, `clients/`, `i18n/`. Add the verify command and minimal CI (format, lint, typecheck, test, one required check) before any other code, with anti-slop and the slop metrics as their own CI step. Write `architecture.yaml` and the `fitness` target with its baseline in the same step, so boundaries and the architecture score are gated from the first commit. [stack](references/stack.md), [structure](references/structure.md), [architecture](references/architecture.md), [naming](references/naming.md), [ci](references/ci.md), [code-quality](references/code-quality.md)
 4. **Design and UX.** Write DESIGN.md and `docs/ux/` (interaction, information architecture, glossary, sitemap). Build the central `ui/` before the first screen. [design](references/design.md), [ux](references/ux.md), [interaction](references/interaction.md)
 5. **Data.** Postgres, the ORM, repositories per module, the first migration. [data-and-migrations](references/data-and-migrations.md)
 6. **Config and secrets.** One env module, `.env.example`, Secret Manager, keyless CI. [env-and-secrets](references/env-and-secrets.md)
@@ -47,6 +47,7 @@ PRODUCT.md                who, why, what not, vocabulary
 DESIGN.md                 tokens, type, components, do and don't
 docs/rules.md             product rules as Given/When/Then, each naming its test
 docs/adr/                 class-aware decision records with their rejected alternatives
+architecture.yaml         modules, doors, allowed edges, table owners, fitness gates and budgets
 boundary-map.yaml         Decision4 floors per path, key, store, API, credential, environment
 docs/working-agreements.md  dated owner decisions
 docs/ux/                  interaction.md, information-architecture.md, glossary, sitemap
@@ -59,4 +60,4 @@ Run the change through the per-change process in [sdlc](references/sdlc.md) (the
 
 ## All references
 
-product, design, ux, interaction, copy, structure, clients, stack, data-and-migrations, compatibility, auth, security, forms, email, env-and-secrets, naming, code-quality, i18n, tracking, seo, legal, agent-files, decisions, testing, ci, release-and-deploy, observability, mcp, sdlc, sources. All live in [references/](references/).
+product, design, ux, interaction, copy, structure, architecture, clients, stack, data-and-migrations, compatibility, auth, security, forms, email, env-and-secrets, naming, code-quality, i18n, tracking, seo, legal, agent-files, decisions, testing, ci, release-and-deploy, observability, mcp, sdlc, sources. All live in [references/](references/).

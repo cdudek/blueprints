@@ -61,6 +61,14 @@ spec-kit v1.3.2
 - **Licence:** Apache-2.0.
 - **Tracking:** commit pin; manual re-check.
 
+### entrix and Building Evolutionary Architectures
+
+- **URL:** https://docs.rs/entrix and the book by Ford, Parsons and Kua (O'Reilly).
+- **Pinned:** entrix 0.19.0 (2026-11-07); the book's second edition.
+- **Takes:** ideas only, restated: architecture as data, fitness functions as CI checks over it, scores with a floor and a ratchet. See [architecture](architecture.md).
+- **Licence:** see the crate listing; the book is cited, not copied.
+- **Tracking:** manual. A crate is not a tagged repository, so Renovate does not watch it; re-check when architecture is next edited.
+
 ### anti-slop
 
 - **URL:** https://github.com/dmmulroy/anti-slop
