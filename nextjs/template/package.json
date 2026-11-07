@@ -33,18 +33,28 @@
     "new:module": "node scripts/arch/new-module.mjs"
   },
   "dependencies": {
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
     "drizzle-orm": "0.45.4",
+    "graphile-worker": "0.18.0",
     "next": "16.4.5",
+    "next-intl": "4.14.9",
     "postgres": "4.0.0",
+    "radix-ui": "1.8.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "server-only": "0.0.1",
+    "tailwind-merge": "3.7.0",
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@electric-sql/pglite": "0.5.15",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.65.0",
+    "@storybook/addon-a11y": "10.6.6",
+    "@storybook/nextjs-vite": "10.6.6",
+    "@tailwindcss/postcss": "4.3.5",
     "@types/node": "22.20.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
@@ -60,8 +70,11 @@
     "knip": "6.44.1",
     "lint-staged": "17.6.0",
     "prettier": "3.9.10",
+    "storybook": "10.6.6",
+    "tailwindcss": "4.3.5",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1",
+    "vite": "8.3.6",
     "vitest": "5.1.0"
   },
   "pnpm": {
