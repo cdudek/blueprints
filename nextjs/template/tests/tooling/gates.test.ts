@@ -293,6 +293,31 @@ describe("baseline-shrinks", () => {
     expect(check(dir).status).toBe(0);
   });
 
+  // Across PRs: the rename merges, the record stays in baseline-renames.json, and the next PR,
+  // whose merge base already has old.tsx, must not rename it again (old.tsx -> old.tsxx).
+  it("applies a recorded rename once: the next PR with an unchanged baseline passes", () => {
+    const { dir, git, set, renames } = repoWithBaseline(["r|old.ts|t#1", "r|x.ts|old.ts#1"], {
+      "old.ts": "x\n",
+      "x.ts": "y\n",
+    });
+    git("mv", "old.ts", "old.tsx");
+    set(["r|old.tsx|t#1", "r|x.ts|old.tsx#1"]);
+    renames([{ from: "old.ts", to: "old.tsx" }]);
+    expect(check(dir).status).toBe(0);
+    git("add", "-A");
+    git("commit", "-q", "-m", "rename");
+    git("checkout", "-q", "main");
+    git("merge", "-q", "--ff-only", "feature");
+    git("checkout", "-q", "-b", "next");
+    writeFileSync(join(dir, "x.ts"), "z\n"); // an unrelated change; the baseline is untouched
+    const next = check(dir);
+    expect(next.stdout + next.stderr).not.toContain("old.tsxx");
+    expect(next.status, next.stdout + next.stderr).toBe(0);
+    // and a finding the next PR really adds is still caught
+    set(["r|old.tsx|t#1", "r|x.ts|old.tsx#1", "r|old.tsx|t#2"]);
+    expect(check(dir).status).toBe(1);
+  });
+
   it("ignores a rename whose source never existed or whose destination already did", () => {
     const { dir, set, renames } = repoWithBaseline(["r|a.ts|t#1"], { "a.ts": "", "b.ts": "" });
     set(["r|a.ts|t#1", "r|b.ts|t#1"]);
