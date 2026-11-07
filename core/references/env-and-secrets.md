@@ -55,6 +55,8 @@ Configuration enters the app through one module that validates it at boot. The b
   Copying a new value to a runtime does not rotate it. Rotation is the full sequence in ENV-14, with a reload mechanism on every workload kind.
 - **ENV-17: Declare rotation periods and an alert channel.**
   Overdue rotation warns the team. Generated secrets (signing keys) are created by infrastructure code, never typed.
+- **ENV-18: Tools that move values never leak them.**
+  Turn off shell tracing before touching a value, discard probe output, reject empty values, keep the value byte-exact (trailing newlines included), and pass it on stdin, never as an argument. Validate the manifest: unknown fields rejected, owner and description required, positive rotation and rollback days, generated secrets have a bounded size (for example 16 to 512 bytes) and no probe.
 
 ## How to apply
 

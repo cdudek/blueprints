@@ -7,7 +7,7 @@ skip-when: purely additive changes, or a product in the dev phase with a throwaw
 
 # Compatibility
 
-A product has two phases. In development, break anything freely. Once real users exist, every change is backwards compatible: expand, migrate, contract. The one idea: the agent must know which phase it is in, and must ask before it guesses.
+A product has two phases. In development, break anything freely. Once real users exist, every change is backwards compatible: expand, migrate, contract. The one idea: the agent classifies every change with the Decision4 v1 question (see [sources](sources.md)), knows which phase it is in, and asks before it guesses.
 
 ## Rules
 
@@ -20,11 +20,12 @@ A product has two phases. In development, break anything freely. Once real users
 ### The ask-before-breaking rule
 
 - **CMP-4 Before any breaking change, the agent asks.** Breaking means: removing or renaming a column, table, field, endpoint, event, job payload field, MCP tool or URL; narrowing a type; adding a required input; changing the meaning of a value; adding a constraint that existing rows might violate.
-- **CMP-5 Exact wording.** The agent asks this, in these words, and waits for the answer:
+- **CMP-5 Classify first, then ask in these words.** The agent answers the Decision4 question for the change ("If this turns out to be wrong, what does it take to put right?"), takes the class from [boundary-map.yaml](structure.md) (never below its floor), and asks this, then waits for the answer:
 
-  > This change breaks existing behaviour: <what breaks, for whom>. Are we live, and may I break this? If yes, I will do it as a recorded exception. If no, I will do it in compatible steps (expand, migrate, contract).
+  > This change breaks existing behaviour: <what breaks, for whom>. If this turns out wrong, it takes <what it takes to put right>, so I class it <Undo|Repair|Migrate|Answer>. Are we live, and may I break this? If yes, I will do it as a recorded exception and hand back what that class requires (<the hand-back for the class>). If no, I will do it in compatible steps (expand, migrate, contract).
 
-- **CMP-6 The rule is written in the generated agent files.** The product's canonical agent file carries the rule near the top, under the overriding rules, with the exact question from CMP-5 and the current `phase` line. The other agent file carries it by importing the canonical file (AGENT-1). See [agent-files](agent-files.md). An agent that cannot find the phase line treats the product as live.
+  The hand-back per class: Undo, the result. Repair, the result and a choice story. Migrate, at least two real options (or one stated as forced, with its constraint); the owner chooses. Answer, evidence labelled observed, inferred, asked or unknown, and challenges, with no recommendation.
+- **CMP-6 The rule is written in the generated agent files.** The product's canonical agent file carries the rule near the top, under the overriding rules, with the Decision4 contract, the exact question from CMP-5 and the current `phase` line. The other agent file carries it by importing the canonical file (AGENT-1). See [agent-files](agent-files.md). An agent that cannot find the phase line treats the product as live.
 - **CMP-7 Silence is not consent.** A "go ahead" on the feature is not a "yes, break it". The agent asks again if the answer did not name the break.
 
 ### Expand, migrate, contract
@@ -51,12 +52,19 @@ A product has two phases. In development, break anything freely. Once real users
 - **CMP-13 A pre-launch break on a shared database is still an exception.** "Not live yet" is a reason to skip the ceremony only on a throwaway database. On anything shared, record it.
 - **CMP-14 Breaks are announced in the changelog** with the date the old shape stops working.
 
+### Classes
+
+- **CMP-15 Every change is classified before it is made.** Undo, Repair, Migrate or Answer, by the Decision4 question. When unsure, take the higher class. Unmapped ground takes the higher class and is logged as a map gap.
+- **CMP-16 In the live phase a breaking change is at least Migrate.** Present two real options: the compatible path (expand, migrate, contract) and the break, or one stated as forced. The owner chooses and the choice is recorded (see [decisions](decisions.md)). In the dev phase the class is read normally; a break on throwaway data is usually Undo or Repair.
+- **CMP-17 Floors from the map hold in both phases.** Ground the map marks Answer (production data, credentials, legal pages) never drops below Answer because the product is in dev.
+- **CMP-18 Lowering a class is recorded** in the `Class-Change` field of the PR (see [ci](ci.md)), with who lowered it and why. Shortening detection (flags, canaries) is a legitimate way to lower a class.
+
 ## How to apply
 
 New product:
 
-1. Add the `phase: dev` line and the CMP-5 question to `CLAUDE.md` and `AGENTS.md` at generation time.
-2. Add a short "breaking changes" section to the PR template: breaking yes or no, phase, ADR link.
+1. Add the `phase: dev` line, the Decision4 contract and the CMP-5 question to `CLAUDE.md` and `AGENTS.md` at generation time.
+2. Add the Decision4 question and a "breaking changes" section to the PR template: class, breaking yes or no, phase, ADR link (see [ci](ci.md)).
 3. Add the checks listed below that fit the surfaces the product has.
 
 Going live:
@@ -67,7 +75,7 @@ Going live:
 
 Making a change:
 
-1. Check the phase. 2. Decide: breaking or not (CMP-4). 3. If breaking, ask with the CMP-5 wording. 4. If the answer is no, plan expand, migrate, contract as separate PRs and write the contract step into the plan with its earliest date. 5. If yes, write the ADR and proceed.
+1. Check the phase. 2. Classify the change (CMP-15). 3. Decide: breaking or not (CMP-4). 4. If breaking, ask with the CMP-5 wording. 5. If the answer is no, plan expand, migrate, contract as separate PRs and write the contract step into the plan with its earliest date. 6. If yes, write the decision record and proceed.
 
 ## Checks
 
@@ -78,7 +86,7 @@ Automatic:
 - A redirect test: every URL in the committed URL list answers 200 or a permanent redirect.
 - Migration lint flags drops, renames and new not-null columns without a default in the live phase.
 - A test reads old-shape job payloads fixtures with the current code.
-- PR template field is required.
+- PR template fields are required and the `decision4` check passes (see [ci](ci.md)).
 
 Review: whether a change counts as breaking, whether contract is early, whether an ADR exists for each recorded break.
 
@@ -92,3 +100,4 @@ Review: whether a change counts as breaking, whether contract is early, whether 
 - Moving a URL with no redirect and losing indexed pages and inbound links.
 - Renaming an MCP tool because the old name was ugly. Clients and saved prompts break.
 - Reading a backup as a rollback plan.
+- Classing a live-phase break as Undo because the diff is small.

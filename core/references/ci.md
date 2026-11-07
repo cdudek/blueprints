@@ -13,7 +13,7 @@ The pipeline is the same checks a developer runs locally, run again where nobody
 
 ### One command, one gate
 
-- **CI-1: There is one verify command: format check, lint, typecheck, test.** Local runs and CI call the same command. When it fails, fix the code, not the test or the check.
+- **CI-1: There is one verify command: format check, lint, slop, typecheck, test.** Local runs and CI call the same command. When it fails, fix the code, not the test or the check.
 - **CI-2: Targets follow a fixed contract** (see "Make contract" below), so every repo and every agent uses the same names.
 - **CI-3: One required summary check gates the merge.** It depends on all real jobs and fails if any failed or was skipped by mistake. Branch protection requires only that one.
 - **CI-4: Docs-only PRs skip code checks** but still run the summary check, so the PR can merge. Detect by changed paths; a mixed PR runs everything.
@@ -46,9 +46,15 @@ IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
 ### Pull requests and merge
 
 - **CI-19: The PR template maps each requirement to its proof:** the fact or rule id, the test or screenshot that shows it, and the change folder link.
+- **CI-25: The PR template asks the Decision4 question and carries the class fields.** It opens with "If this turns out to be wrong, what does it take to put right?" and requires `Decision-Class` (Undo, Repair, Migrate or Answer) on every PR, `Put-right` at Repair and above, `Answerer` at Migrate and Answer, and `Class-Change` whenever a class was lowered (recommended when raised), in the form `<from> -> <to>; <lowered or raised> by <who>; <why>`.
+- **CI-26: A `decision4` check is part of the required summary.** It validates `boundary-map.yaml` against the schema, pinned by commit SHA (the Decision4 v1.0.1 commit, see [sources](sources.md)), never by a movable tag. It strips HTML comments from the PR body non-greedily across lines, then reads the fields of CI-25. It computes the floor from the PR's changed paths (the API file list or a diff against the merge base) matched against the map's path selectors, and takes the highest. It fails when the declared class is below that floor unless the body has a `Class-Change` line recording the lowering. It requires `Put-right` and `Answerer` from the effective class (the higher of declared and floor), and prints the floor and the entries that matched. Bot update PRs stay exempt.
+- **CI-27: Changes to `boundary-map.yaml` need the owner's review.** List it in the code-owners file and require that review. Changing the map is a recorded Repair decision; nothing lowers a class below its floor except a recorded map change.
+- **CI-28: The sdlc tool's adopt step installs the review and PR files** (`REVIEW.md`, code-owners file, review workflows, PR template). The blueprint adds the Decision4 sections and the `decision4` check on top; there is one way, not two copies (see [sdlc](sdlc.md), [agent-files](agent-files.md)).
+- **CI-29: A solo-owner repo cannot require approving reviews,** because an author cannot approve their own PR and every merge would block. Protect the gates by the required checks, the code-owners listing and the self-covering map entry (STR-28), not by a review count.
 - **CI-20: Squash merge, with a Conventional Commit title.** The title decides the release type (see [release-and-deploy](release-and-deploy.md)). One change per PR.
 - **CI-21: Arm auto-merge on every PR that can merge on green.** Hand a PR to the owner only when it needs a human judgment. Check the merge state (behind, blocked, clean) before saying it is ready; green checks are not the same as mergeable.
 - **CI-22: Branch from a freshly fetched default branch,** never from a stale local copy.
+- **CI-24: Slop is its own CI job, part of the required check.** It runs the `slop` target: anti-slop lint rules plus the slop metrics compared with the merge base. It fails on its own, so a slop regression is visible as such and cannot hide behind a green test run. It posts the metric deltas on the PR.
 
 ### Make contract
 
@@ -56,6 +62,7 @@ IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
   - `setup`: install dependencies from the lockfile, install git hooks.
   - `dev`: run the app locally.
   - `lint` and `format`: static checks and auto-fix.
+  - `slop`: the anti-slop rules and the slop metrics, its own step and its own CI job (see [code-quality](code-quality.md)).
   - `typecheck`: the type checker over all source.
   - `test` and `test-integration`: fast tests; tests needing a database or browser.
   - `arch`: boundary and import rules (see [structure](structure.md)).
@@ -65,20 +72,21 @@ IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
   Each stack maps these names to its own tools; the names stay fixed. Agent files name these targets, not raw tool commands.
 
 ```make
-check: format-check lint typecheck test test-integration arch  ## everything CI runs
+check: format-check lint slop typecheck test test-integration arch  ## everything CI runs
 ```
 
 ## How to apply
 
 1. Create the Makefile with the standard targets and `check` before any other code, so the first PR already runs CI.
 2. Write the CI workflow: one job per concern, a required summary job, path filter for docs-only, pinned actions, permissions and timeouts.
-3. Add scanners and the update bot. Add `REVIEW.md` and the review workflow. Add the PR template.
+3. Add scanners and the update bot. Add the `decision4` check and list `boundary-map.yaml` in the code-owners file. Add `REVIEW.md` and the review workflow. Add the PR template with the Decision4 question and fields.
 4. Configure the repo: squash merge only, Conventional Commit title check, auto-merge on, one required check.
 5. Later: a new guard test or script is added to `check` and to the required job in the same PR.
 
 ## Checks
 
 - Automatic: a test or script confirms every `uses:` is a SHA, every job has a timeout, every workflow declares permissions, and the summary job needs all other jobs.
+- Automatic: the `decision4` check (CI-26) passes; the code-owners file lists `boundary-map.yaml`.
 - Automatic: every target in the Make contract exists; commands named in agent files exist.
 - Review: whether a workflow change widens permissions, whether `REVIEW.md` still matches the rules.
 
@@ -91,3 +99,5 @@ check: format-check lint typecheck test test-integration arch  ## everything CI 
 - A step timeout raised to hide a slow build instead of finding the cause.
 - A "green" PR handed over while it was behind the default branch and could not merge.
 - A tally line not tied to a commit, so a stale review passed a later push.
+- A PR template with a Decision-Class field nobody validated, so every PR said Undo.
+- A map edited in a feature PR by the author, lowering the floor of the ground it changed.

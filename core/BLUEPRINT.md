@@ -13,7 +13,7 @@ It describes, it does not implement. Use the latest stable version of every tool
 
 ## Rules that override everything
 
-1. **Ask before breaking once live.** In the dev phase (no real users and no data worth keeping), break freely. The live phase starts on the first user outside the team, the first real customer data or the first public launch, whichever comes first; from then on every change to schema, APIs, events, job payloads, URLs or MCP tools stays backwards compatible. Before any breaking change, ask exactly: "This change breaks existing behaviour: <what breaks, for whom>. Are we live, and may I break this? If yes, I will do it as a recorded exception. If no, I will do it in compatible steps (expand, migrate, contract)." See [compatibility](references/compatibility.md).
+1. **Classify, then ask before breaking once live.** Before any change, ask the Decision4 v1 question: "If this turns out to be wrong, what does it take to put right?" The answer is a class (Undo, Repair, Migrate, Answer) that fixes what you hand back. In the dev phase (no real users and no data worth keeping), break freely. The live phase starts on the first user outside the team, the first real customer data or the first public launch, whichever comes first; from then on every change to schema, APIs, events, job payloads, URLs or MCP tools stays backwards compatible, and a breaking change is at least Migrate. Before any breaking change, ask exactly: "This change breaks existing behaviour: <what breaks, for whom>. If this turns out wrong, it takes <what it takes to put right>, so I class it <Undo|Repair|Migrate|Answer>. Are we live, and may I break this? If yes, I will do it as a recorded exception and hand back what that class requires (<the hand-back for the class>). If no, I will do it in compatible steps (expand, migrate, contract)." See [compatibility](references/compatibility.md) and [sources](references/sources.md).
 2. **Docs win over code.** When code and PRODUCT.md, DESIGN.md or a rule disagree, change the code or change the doc on purpose. Never let them drift.
 3. **One way to do each thing.** One env module, one client per external service, one event registry, one head pipeline, one `ui/`. A second way is a defect.
 4. **Every rule has a check or says it has none.** Enforce what can be enforced in CI. Write down what is left to review.
@@ -24,8 +24,8 @@ It describes, it does not implement. Use the latest stable version of every tool
 Follow the steps in order. Each step names the references to read.
 
 1. **Product.** Write PRODUCT.md with the owner: who it is for, their hopes and dreams, what it will not do, the vocabulary. [product](references/product.md), [copy](references/copy.md)
-2. **Agent files.** Create CLAUDE.md, AGENTS.md, REVIEW.md, `docs/rules.md`, `docs/adr/` and the hooks. [agent-files](references/agent-files.md), [decisions](references/decisions.md)
-3. **Stack and structure.** Pick the stack blueprint, lay out modules, `ui/`, `clients/`, `i18n/`. Add the verify command and minimal CI (format, lint, typecheck, test, one required check) before any other code. [stack](references/stack.md), [structure](references/structure.md), [naming](references/naming.md), [ci](references/ci.md)
+2. **Agent files and plugins.** Run `/cct:project-setup`: it declares the workflow plugins in `.claude/settings.json`, runs the sdlc adopt step, installs anti-slop and adds the Decision4 contract and boundary map, then checks the result. Then add CLAUDE.md sections, `docs/rules.md` and `docs/adr/`. [agent-files](references/agent-files.md), [decisions](references/decisions.md)
+3. **Stack and structure.** Pick the stack blueprint, lay out modules, `ui/`, `clients/`, `i18n/`. Add the verify command and minimal CI (format, lint, typecheck, test, one required check) before any other code, with anti-slop and the slop metrics as their own CI step. [stack](references/stack.md), [structure](references/structure.md), [naming](references/naming.md), [ci](references/ci.md), [code-quality](references/code-quality.md)
 4. **Design and UX.** Write DESIGN.md and `docs/ux/` (interaction, information architecture, glossary, sitemap). Build the central `ui/` before the first screen. [design](references/design.md), [ux](references/ux.md), [interaction](references/interaction.md)
 5. **Data.** Postgres, the ORM, repositories per module, the first migration. [data-and-migrations](references/data-and-migrations.md)
 6. **Config and secrets.** One env module, `.env.example`, Secret Manager, keyless CI. [env-and-secrets](references/env-and-secrets.md)
@@ -46,7 +46,8 @@ REVIEW.md                 what the AI reviewer checks
 PRODUCT.md                who, why, what not, vocabulary
 DESIGN.md                 tokens, type, components, do and don't
 docs/rules.md             product rules as Given/When/Then, each naming its test
-docs/adr/                 decisions with their rejected alternatives
+docs/adr/                 class-aware decision records with their rejected alternatives
+boundary-map.yaml         Decision4 floors per path, key, store, API, credential, environment
 docs/working-agreements.md  dated owner decisions
 docs/ux/                  interaction.md, information-architecture.md, glossary, sitemap
 .env.example              every config key, explained
@@ -54,8 +55,8 @@ docs/ux/                  interaction.md, information-architecture.md, glossary,
 
 ## Changing an existing product
 
-Find the reference for the area you touch, follow its "How to apply" for changes, and run its checks. When a rule here no longer fits a product, record the exception as an ADR in that product. When it no longer fits any product, change this blueprint.
+Run the change through the per-change process in [sdlc](references/sdlc.md) (the owner's sdlc-run skill by default). Find the reference for the area you touch, follow its "How to apply" for changes, and run its checks. When a rule here no longer fits a product, record the exception as an ADR in that product. When it no longer fits any product, change this blueprint.
 
 ## All references
 
-product, design, ux, interaction, copy, structure, clients, stack, data-and-migrations, compatibility, auth, security, forms, email, env-and-secrets, naming, i18n, tracking, seo, legal, agent-files, decisions, testing, ci, release-and-deploy, observability, mcp. All live in [references/](references/).
+product, design, ux, interaction, copy, structure, clients, stack, data-and-migrations, compatibility, auth, security, forms, email, env-and-secrets, naming, code-quality, i18n, tracking, seo, legal, agent-files, decisions, testing, ci, release-and-deploy, observability, mcp, sdlc, sources. All live in [references/](references/).
