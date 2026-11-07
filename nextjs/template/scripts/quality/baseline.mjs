@@ -146,7 +146,15 @@ export function gainedAfterRenames(before, after, moves, splits = []) {
     .sort();
 }
 
-/** The branch a baseline is compared with: BASELINE_BASE_REF, else origin/main. */
-export function baseRef() {
-  return process.env.BASELINE_BASE_REF || "origin/main";
+/**
+ * The branch a baseline is compared with: BASELINE_BASE_REF, else the remote's default branch
+ * (origin/HEAD), else origin/main. @param {(...args: string[]) => string} git
+ */
+export function baseRef(git) {
+  if (process.env.BASELINE_BASE_REF) return process.env.BASELINE_BASE_REF;
+  try {
+    return git("symbolic-ref", "--short", "refs/remotes/origin/HEAD").trim() || "origin/main";
+  } catch {
+    return "origin/main"; // no origin/HEAD (a fresh clone sets it; `git remote set-head origin -a` does too)
+  }
 }

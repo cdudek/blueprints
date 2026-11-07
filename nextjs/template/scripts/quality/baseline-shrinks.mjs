@@ -5,7 +5,8 @@
 // - A file that does not parse, or a git error, fails closed: an unreadable baseline is not a pass.
 // - A rename recorded in quality/baseline-renames.json moves lines only when its source existed
 //   at the merge base and its destination did not (a split that keeps the source counts too).
-// The target branch: BASELINE_BASE_REF, else origin/main.
+// The target branch: BASELINE_BASE_REF, else the remote's default branch (origin/HEAD), else
+// origin/main.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { baseRef, gainedAfterRenames, readRenames } from "./baseline.mjs";
@@ -44,7 +45,7 @@ function verifiedRenames(/** @type {string} */ base) {
 }
 
 try {
-  const ref = baseRef();
+  const ref = baseRef(git);
   let base;
   try {
     base = git("merge-base", "HEAD", ref);

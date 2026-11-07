@@ -321,6 +321,26 @@ describe("baseline-shrinks", () => {
     expect(check(dir).stderr).toContain("jscpd-exceptions.json gained b");
   });
 
+  it("compares with the remote's default branch when BASELINE_BASE_REF is unset", () => {
+    const { dir, git } = repoWithBaseline([]);
+    git("update-ref", "refs/remotes/origin/trunk", "main");
+    git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk");
+    const env = { ...withoutVitest(), BASELINE_BASE_REF: "", CI: "" };
+    const run = spawnSync(process.execPath, [join(root, "scripts/quality/baseline-shrinks.mjs")], {
+      cwd: dir,
+      encoding: "utf8",
+      env,
+    });
+    expect(run.stdout).toContain("comparing with origin/trunk");
+    git("symbolic-ref", "--delete", "refs/remotes/origin/HEAD");
+    const fallback = spawnSync(
+      process.execPath,
+      [join(root, "scripts/quality/baseline-shrinks.mjs")],
+      { cwd: dir, encoding: "utf8", env },
+    );
+    expect(fallback.stdout).toContain("no origin/main to compare with");
+  });
+
   it("fails closed on a baseline that does not parse", () => {
     const { dir } = repoWithBaseline([]);
     writeFileSync(join(dir, "quality/arch-baseline.json"), "{ not json");

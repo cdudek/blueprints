@@ -28,7 +28,7 @@ const git = (/** @type {string[]} */ ...args) =>
   });
 
 try {
-  const ref = baseRef();
+  const ref = baseRef(git);
   let base;
   try {
     base = git("merge-base", "HEAD", ref).trim();
