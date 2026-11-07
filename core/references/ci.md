@@ -46,6 +46,9 @@ IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
 ### Pull requests and merge
 
 - **CI-19: The PR template maps each requirement to its proof:** the fact or rule id, the test or screenshot that shows it, and the change folder link.
+- **CI-25: The PR template asks the Decision4 question and carries the class fields.** It opens with "If this turns out to be wrong, what does it take to put right?" and requires `Decision-Class` (Undo, Repair, Migrate or Answer) on every PR, `Put-right` at Repair and above, `Answerer` at Migrate and Answer, and `Class-Change` whenever a class was lowered (recommended when raised), in the form `<from> -> <to>; <lowered or raised> by <who>; <why>`.
+- **CI-26: A `decision4` check is part of the required summary.** It validates `boundary-map.yaml` against the pinned schema URL (`boundary-map.schema.json` at the Decision4 v1.0.1 tag, see [sources](sources.md)) and checks the PR fields of CI-25: present, a valid class, the conditional fields filled. It also fails when a PR touches ground the map floors higher than the declared class and carries no `Class-Change`.
+- **CI-27: Changes to `boundary-map.yaml` need the owner's review.** List it in the code-owners file and require that review. Changing the map is a recorded Repair decision; nothing lowers a class below its floor except a recorded map change.
 - **CI-20: Squash merge, with a Conventional Commit title.** The title decides the release type (see [release-and-deploy](release-and-deploy.md)). One change per PR.
 - **CI-21: Arm auto-merge on every PR that can merge on green.** Hand a PR to the owner only when it needs a human judgment. Check the merge state (behind, blocked, clean) before saying it is ready; green checks are not the same as mergeable.
 - **CI-22: Branch from a freshly fetched default branch,** never from a stale local copy.
@@ -74,13 +77,14 @@ check: format-check lint slop typecheck test test-integration arch  ## everythin
 
 1. Create the Makefile with the standard targets and `check` before any other code, so the first PR already runs CI.
 2. Write the CI workflow: one job per concern, a required summary job, path filter for docs-only, pinned actions, permissions and timeouts.
-3. Add scanners and the update bot. Add `REVIEW.md` and the review workflow. Add the PR template.
+3. Add scanners and the update bot. Add the `decision4` check and list `boundary-map.yaml` in the code-owners file. Add `REVIEW.md` and the review workflow. Add the PR template with the Decision4 question and fields.
 4. Configure the repo: squash merge only, Conventional Commit title check, auto-merge on, one required check.
 5. Later: a new guard test or script is added to `check` and to the required job in the same PR.
 
 ## Checks
 
 - Automatic: a test or script confirms every `uses:` is a SHA, every job has a timeout, every workflow declares permissions, and the summary job needs all other jobs.
+- Automatic: the `decision4` check (CI-26) passes; the code-owners file lists `boundary-map.yaml`.
 - Automatic: every target in the Make contract exists; commands named in agent files exist.
 - Review: whether a workflow change widens permissions, whether `REVIEW.md` still matches the rules.
 
@@ -93,3 +97,5 @@ check: format-check lint slop typecheck test test-integration arch  ## everythin
 - A step timeout raised to hide a slow build instead of finding the cause.
 - A "green" PR handed over while it was behind the default branch and could not merge.
 - A tally line not tied to a commit, so a stale review passed a later push.
+- A PR template with a Decision-Class field nobody validated, so every PR said Undo.
+- A map edited in a feature PR by the author, lowering the floor of the ground it changed.

@@ -20,7 +20,7 @@ Every product tells its coding agents how to work through a few short files that
 
 ```text
 Before any breaking change (schema, API, URL, stored data, public contract),
-ask the owner exactly: "This change breaks existing behaviour: <what breaks, for whom>. Are we live, and may I break this? If yes, I will do it as a recorded exception. If no, I will do it in compatible steps (expand, migrate, contract)."
+ask the owner exactly: "This change breaks existing behaviour: <what breaks, for whom>. If this turns out wrong, it takes <what it takes to put right>, so I class it <Undo|Repair|Migrate|Answer>. Are we live, and may I break this? If yes, I will do it as a recorded exception and hand back what that class requires (<the hand-back for the class>). If no, I will do it in compatible steps (expand, migrate, contract)."
 While the phase line says dev, break freely. Once it says live, only expand,
 migrate, contract.
 ```
@@ -47,6 +47,42 @@ migrate, contract.
 - **AGENT-15: Hooks enforce the process, prose does not.** Wire these: block destructive and out-of-scope commands (force push, schema push, cluster mutation, unapproved dependency change); block reads of secret files; run format and lint on every edit; run verify before the agent may stop; refuse source edits for a change that needs a change folder (DEC-13) until its plan is approved; typo and copy fixes are exempt.
 - **AGENT-16: Hooks are tested.** A hook with no test silently stops working. Test that a blocked command is blocked and an allowed one is not.
 - **AGENT-17: `REVIEW.md` is the brief for the AI reviewer,** at the repo root. Its content is specified in [ci](ci.md).
+
+### Decision4 in the agent file
+
+- **AGENT-23: The canonical agent file carries the Decision4 handoff contract v1, verbatim.** Paste it unchanged under the overriding rules and label it v1. The product lines of AGENT-24 go directly below it. Do not paraphrase the contract; a later version replaces it whole (see [sources](sources.md)).
+
+```markdown
+## Decision4 handoff contract (v1)
+
+For every decision you make, ask: "If this turns out to be wrong,
+what does it take to put right?" Take the class from the boundary map.
+Classes run from lowest to highest: Undo, Repair, Migrate, Answer.
+
+- Undo (a revert): hand back the result.
+- Repair (real work, contained to this team): hand back the result and a
+  choice story: Chose / Over / Because / Commits us to.
+- Migrate (coordinated change involving other people): hand back at least
+  two real options, or one stated as forced with the constraint that forces it.
+- Answer (an explanation to someone outside the team with standing to ask,
+  because the wrong outcome has reached them and nothing unmakes it): hand back
+  evidence labelled observed, inferred, asked or unknown, and your challenges.
+  Do not recommend.
+
+Rules:
+- Propose a class at or above the map's floor, never below it.
+- Unmapped or unsure: take the higher class and log a map gap.
+- A change takes the class of its highest decision.
+- Escalate freely and say who it pulls in. Never lower a class silently.
+- Unattended runs close only Undo. Above Undo, hand back and stop.
+```
+
+  Decision4 by Habitat Thinking, CC BY 4.0: [DECISION4.md v1.0.1](https://github.com/Habitat-Thinking/decision4/blob/v1.0.1/DECISION4.md).
+
+- **AGENT-24: Product lines follow the contract.** Three lines, product-specific:
+  - Map location: "The boundary map is `boundary-map.yaml` at the repo root; read it before classifying" (see [structure](structure.md)).
+  - PR fields: "Every PR carries Decision-Class, Put-right, Answerer and Class-Change as the PR template asks" (see [ci](ci.md)).
+  - Ceiling: "An autonomous run closes only up to the class approved at the plan gate. The default ceiling is Undo. Above it, prepare the handoff and stop."
 
 ### Agent safety around secrets
 
@@ -76,7 +112,7 @@ repo/
   src/clients/CLAUDE.md      scoped: how external clients are built and faked
 ```
 
-1. Create `CLAUDE.md` with the table, the overriding rules (including AGENT-4), pitfalls (start empty) and the real verify command. Create `AGENTS.md` that imports it.
+1. Create `CLAUDE.md` with the table, the overriding rules (including AGENT-4), the Decision4 contract and product lines (AGENT-23, AGENT-24), pitfalls (start empty) and the real verify command. Create `AGENTS.md` that imports it.
 2. Create `REVIEW.md`, `docs/working-agreements.md` and the hook scripts; wire them in `.claude/settings.json`.
 3. Add frontmatter to every doc as it is written.
 4. When a mistake happens twice, add it to the pitfalls with its incident. When a convention changes, search for the old guidance and retire it in the same PR.
@@ -85,6 +121,7 @@ repo/
 ## Checks
 
 - Automatic: a test lists every doc and fails if `read-when` or `skip-when` is missing; a test checks each command named in `CLAUDE.md` exists; hook tests run in CI.
+- Automatic: the contract block in the canonical file equals the pinned upstream text, and `boundary-map.yaml` is named in it.
 - Automatic: the deny rules for secret reads are present in the settings file.
 - Review: whether a pitfall has its incident, whether the root file is still about one page.
 
@@ -96,3 +133,5 @@ repo/
 - Old delivery guidance left in place after the convention changed, so agents followed both.
 - A bypass written in prose ("do not push schema") with no hook, which an agent later ignored.
 - Owner decisions kept only in chat memory and lost with the session.
+- A paraphrased Decision4 contract that drifted from upstream and lost the "unattended runs close only Undo" line.
+- An autonomous run that closed a Migrate change because nobody had set its ceiling.

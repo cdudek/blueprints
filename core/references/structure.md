@@ -49,6 +49,15 @@ Build every product as a modular monolith: one deployable, split inside into mod
 - **STR-22 No junk-drawer folders.** Top-level `utils`, `helpers`, `hooks`, `types`, `lib` and `common` group code by what it is, not what it is for. Put the code in the module or the shared folder it belongs to.
 - **STR-23 Single-use helpers stay beside their caller.** Extract on the second consumer. Duplication is cheaper than the wrong abstraction.
 
+### Boundary map
+
+- **STR-25 `boundary-map.yaml` sits at the repo root, next to the architecture policy file.** It is the Decision4 boundary map (v1, see [sources](sources.md)): it sets a floor class per path, config key, data store, external API, credential and environment, so a class comes from where the ground changes, not from mood. It validates against the pinned schema URL (see [ci](ci.md)).
+- **STR-26 Typical floors.**
+  - Migrate: database schema and migrations, published contracts (HTTP API schema, events, MCP tools, job payloads), auth configuration, public URLs.
+  - Answer: production data and its credentials, legal pages, user email addresses, payments, deletion jobs, production IAM and DNS, signing keys.
+  - Repair: an internal module, `clients/`, shared config. Undo: copy, styling, tests, docs.
+- **STR-27 The map marks ground, not decisions.** Each entry gives the floor, one line of put-right and the answerer. An agent proposes a class at or above the floor and logs a map gap on unmapped ground. Changing the map needs the owner's review.
+
 ### Size
 
 - **STR-24 Files stay under about 400 lines.** Split by responsibility when a file passes it. No dead code: unused files, exports and dependencies fail the build.
@@ -77,13 +86,14 @@ src/
   ui/             components, styleguide, theme
   i18n/           routing, messages, typed keys
 policy file       modules, allowed edges, table owners, read exceptions, exemptions
+boundary-map.yaml  Decision4 floors by path, key, store, API, credential, environment
 quality/          baselines (only shrink)
 tests/            architecture, integration, e2e
 ```
 
 New product:
 
-1. Write the policy file first: modules, edges, table owners. An empty module list is fine.
+1. Write the policy file first: modules, edges, table owners. An empty module list is fine. Write `boundary-map.yaml` with the typical floors of STR-26 for the ground the product has.
 2. Add the architecture tests before the first feature, so every rule is a hard failure from the first commit and the baselines are empty.
 3. Add a module by creating its door, service, repository and tables, then declare its edges and its tables in the policy file.
 4. Wire delivery layers last, each calling one operation.
@@ -94,6 +104,7 @@ Changing later: touch one module at a time. If a change needs another module's d
 
 Enforced automatically, in the required CI job:
 
+- `boundary-map.yaml` validates against the pinned schema, and every module path, table and credential the policy names is covered by an entry or a logged gap.
 - Imports respect doors, declared edges and the one-way rule, with no cycles at module and file level.
 - Only a table's owner imports its definition and writes it. Read exceptions match their declared file and table exactly.
 - Delivery layers contain no database access. System operations are called only from the outside edge.
@@ -117,3 +128,4 @@ Left to review: that a callee given the transaction really uses it, isolation le
 - Checks written but not wired into the required CI job. They are decoration.
 - Inventing ports and interfaces for the database or for code with one implementation.
 - Top-level folders named after technical roles, so every feature is spread across all of them.
+- A map with one catch-all Repair entry, so nothing was ever classed higher.
