@@ -81,7 +81,7 @@ Rules:
 
 - **AGENT-24: Product lines follow the contract.** Three lines, product-specific:
   - Map location: "The boundary map is `boundary-map.yaml` at the repo root; read it before classifying" (see [structure](structure.md)).
-  - PR fields: "Every PR carries Decision-Class, Put-right, Answerer and Class-Change as the PR template asks" (see [ci](ci.md)).
+  - PR fields: "Every PR uses the template section headed How hard is it to undo this PR after merging?: one selected bold class (Decision-Class), Recovery steps (Put-right; Repair and above), Responsible for recovery (Answerer; Migrate and Answer, with a named person for Answer), and Classification change (Class-Change; record any lowering). The old plain or bold-label Decision4 v1 fields remain accepted; if both class forms appear they must agree" (see [ci](ci.md) CI-25/CI-26).
   - Ceiling: "An autonomous run closes only up to the class approved at the plan gate. The default ceiling is Undo. Above it, prepare the handoff and stop."
 
 ### Files the sdlc tool installs

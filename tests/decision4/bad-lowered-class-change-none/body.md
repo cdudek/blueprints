@@ -1,0 +1,4 @@
+- **Decision-Class:** Undo
+- **Put-right:** Revert the doc change
+- **Answerer:** Repository owner
+- **Class-Change:** none

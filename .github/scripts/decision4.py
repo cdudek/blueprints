@@ -36,16 +36,47 @@ def main():
     body = re.sub(r"<!--.*?-->", "", os.environ["BODY"], flags=re.S).replace("\r", "")
     body = re.sub(r"<!--.*", "", body, flags=re.S)  # an unterminated comment hides the rest on GitHub
 
-    def field(name):
-        m = re.search(rf"^[ \t]*{name}:[ \t]*(.*?)[ \t]*$", body, re.M)
-        return m.group(1) if m else ""
+    def fields(name):
+        # Plain, list and bold-label forms remain valid for every field alias.
+        return list(re.finditer(
+            rf"^[ \t]*(?:[-*+][ \t]+)?(?:\*\*)?{re.escape(name)}:(?:\*\*)?[ \t]*(.*?)[ \t]*$",
+            body, re.M,
+        ))
 
-    def filled(name):
-        return bool(field(name)) and not field(name).startswith("<")
+    def nonempty(value):
+        return bool(value) and not value.startswith("<") and not re.match(
+            r"(?:none|n/?a)\b|[-—](?:\s|$)", value, re.I,
+        )
 
-    declared = field("Decision-Class")
-    if declared not in ORDER:
-        fail("PR body needs one line 'Decision-Class: Undo|Repair|Migrate|Answer' with exactly one class")
+    def filled(*names):
+        for name in names:
+            for match in fields(name):
+                if nonempty(match.group(1)):
+                    return True
+                if name == "Recovery steps":
+                    # Only this field's indented numbered steps count, never a
+                    # later field or an unrelated list elsewhere in the body.
+                    for line in body[match.end():].splitlines():
+                        if not line.strip():
+                            continue
+                        if not line.startswith((" ", "\t")):
+                            break
+                        step = re.match(r"^[ \t]+[0-9]+[.)][ \t]+(.*)", line)
+                        if step and nonempty(step.group(1).strip()):
+                            return True
+        return False
+
+    heading = re.search(r"^### How hard is it to undo this PR after merging\?[ \t]*$", body, re.M)
+    selected = []
+    if heading:
+        section = re.split(r"^#{1,6}[ \t]+", body[heading.end():], maxsplit=1, flags=re.M)[0]
+        selected = re.findall(r"^[ \t]*\*\*(?:[🟢🟡🟠🔴][ \t]+)?(Undo|Repair|Migrate|Answer)\*\*", section, re.M)
+    legacy = [match.group(1) for match in fields("Decision-Class")]
+    if (len(selected) > 1 or len(legacy) > 1 or not (selected or legacy)
+            or any(value not in ORDER for value in legacy)
+            or (selected and legacy and selected[0] != legacy[0])):
+        fail("PR body needs exactly one class in the Decision4 section or 'Decision-Class: Undo|Repair|Migrate|Answer'; both forms must agree")
+    declared = (selected or legacy)[0]
     files = [f for f in open(os.environ["FILES"]).read().split("\n") if f]
     floor = "Undo"
     for e in yaml.safe_load(open(os.environ["MAP"]))["entries"]:
@@ -54,13 +85,13 @@ def main():
             print(f"floor {e['floor']}: {', '.join(hit[:5])}{' ...' if len(hit) > 5 else ''}")
             floor = max(floor, e["floor"], key=ORDER.index)
     print(f"computed floor: {floor}, declared: {declared}")
-    if ORDER.index(declared) < ORDER.index(floor) and not filled("Class-Change"):
-        fail(f"Decision-Class {declared} is below the floor {floor}; raise it, or record the lowering in a 'Class-Change:' line")
+    if ORDER.index(declared) < ORDER.index(floor) and not filled("Classification change", "Class-Change"):
+        fail(f"Decision-Class {declared} is below the floor {floor}; raise it, or record the lowering in 'Classification change:' (or 'Class-Change:')")
     eff = max(declared, floor, key=ORDER.index)
-    if ORDER.index(eff) >= 1 and not filled("Put-right"):
-        fail(f"class {eff} needs a filled 'Put-right:' line")
-    if ORDER.index(eff) >= 2 and not filled("Answerer"):
-        fail(f"class {eff} needs a filled 'Answerer:' line")
+    if ORDER.index(eff) >= 1 and not filled("Recovery steps", "Put-right"):
+        fail(f"class {eff} needs filled 'Recovery steps:' (or 'Put-right:')")
+    if ORDER.index(eff) >= 2 and not filled("Responsible for recovery", "Accountable person", "Answerer"):
+        fail(f"class {eff} needs filled 'Responsible for recovery:' (or 'Accountable person:' / 'Answerer:')")
     print(f"Decision4 class: {eff}")
 
 
