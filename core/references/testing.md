@@ -46,25 +46,27 @@ Tests are the proof for every rule and every requirement. The idea: a test that 
 - **TEST-17: List callers before changing shared code.** Before changing a shared component or function, list its callers and the e2e locators that depend on its role and words.
 - **TEST-18: Never game a check.** No sleep, wrapper or special case added only to make a test pass. Fix the cause. Tests for hooks and CI scripts exist too.
 
-- **TEST-19: Every gate and hook has negative fixtures.** Forbidden edits, stale locks, missing evidence and below-floor classes must fail; permitted paths must pass. A gate tested only on the happy path is not known to block anything. Fixtures live in `tests/fixtures/gates/<gate>/` as `bad-*` (must fail) and `good-*` (must pass), and the `gates-test` target runs them in the required job. The fitness gates need at least: one anti-slop rule, one slop metric rise, one boundary violation, one cycle, a score below the floor, a budget exceeded, a PR body below the Decision4 floor and one missing `Class-Change` (see [architecture](architecture.md), [code-quality](code-quality.md), [ci](ci.md)).
+- **TEST-19: Every gate and hook has negative fixtures.** Forbidden edits, stale locks, missing evidence and below-floor classes must fail; permitted paths must pass. A gate tested only on the happy path is not known to block anything. Fixtures live in `tests/fixtures/gates/<gate>/` as `bad-*` (must fail) and `good-*` (must pass), and the `gates-test` target runs them in the required local gate. The fitness gates need at least: one anti-slop rule, one slop metric rise, one boundary violation, one cycle, a score below the floor, a budget exceeded, a PR body below the Decision4 floor and one missing `Class-Change` (see [architecture](architecture.md), [code-quality](code-quality.md), [ci](ci.md)).
 - **TEST-20: Agent tooling is tested in layers.** Structure and contract (files, frontmatter, declared tools), trigger discrimination (the right prompts activate it, near misses do not), and a few end-to-end runs in a sandbox. Skipped layers are reported, not hidden (TEST-6).
+
+- **TEST-21: Use the local failure loop before every push.** Follow [ci](ci.md) CI-34 and CI-35: first push runs the full local suite; diagnose the exact failed job or test locally, then rerun failing tests and their directly affected suite. E2E changes run that spec and its neighbours until green. Batch fixes, then run the full gate once before pushing. A whole-pipeline rerun or speculative push is never a flaky-test fix. Remote CI is confirmation, never the debugger.
 
 ## How to apply
 
 1. Create the layers in this order: unit and guard tests, integration with real Postgres, then e2e on a production build with the mail harness.
 2. Add a network guard in the shared test setup before any test is written (TEST-4).
 3. Add the four guard tests (tokens, glossary, UI primitives, boundaries) as soon as the first file they scan exists, so there is no backlog of violations.
-4. Put every layer in the single verify command and the required CI job (see [ci](ci.md)).
+4. Put every layer in the single verify command and the required local gate (see [ci](ci.md)).
 5. When adding a rule, write the scenario and the test in the same PR. When fixing a bug, follow TEST-13.
 
 ## Checks
 
-- Automatic: all layers run in CI; the guard tests are in the required job; a test run with the network blocked still passes; coverage does not shrink without a note.
+- Automatic: all layers run in `scripts/ci-local`; the guard tests are in the required local gate; a test run with the network blocked still passes; coverage does not shrink without a note.
 - Review: whether a new test would fail without the change, whether a UI change was seen running, whether e2e covers the journey the requirements name.
 
 ## Mistakes to avoid
 
-- Guard tests that existed but ran outside the required CI job, so nothing enforced them.
+- Guard tests that existed but ran outside the required local gate, so nothing enforced them.
 - A typecheck that did not cover the language the source was written in.
 - Mocking the database and missing a migration failure that production hit.
 - A source-text test mistaken for a behavior test; the behavior broke and it still passed.
