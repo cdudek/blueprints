@@ -28,3 +28,9 @@ Decision4 by Habitat Thinking, CC BY 4.0; tag v1.0.1, commit `4429f821780655f253
 The map is `boundary-map.yaml`. Read `core/references/ci.md` before changing checks.
 Run `bash tests/decision4/run.sh` and `python3 -m unittest discover -s tests/sources -v` before committing or pushing; Python needs PyYAML and jsonschema.
 Never read `.env*` files or secret values.
+
+Run `python3 -m unittest discover -s core/tests -v` for changes to the shared local runner or dependency driver.
+Before the first branch push, validate a proposed PR body through the shared Decision4 checker; consumers pass its file as `CI_LOCAL_PR_BODY`.
+After the exact head passes local-ci and Decision4, arm squash auto-merge only at Undo or Repair and without approval-gated tiers.
+Never arm it for `terraform/**`, Terraform workflows or classes above Repair; hand those decisions to the owner.
+Check the merge state, rerun the full local gate after a rebase, and batch local fixes into one verified push.
