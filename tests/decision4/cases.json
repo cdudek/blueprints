@@ -1,7 +1,7 @@
 [
   {
     "name": "undo",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟢 Undo** — A revert restores the wording.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe2 Undo** \u2014 A revert restores the wording.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -9,7 +9,7 @@
   },
   {
     "name": "repair",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -17,7 +17,7 @@
   },
   {
     "name": "h3",
-    "body": "### How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "### How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -25,7 +25,7 @@
   },
   {
     "name": "optional-circle",
-    "body": "## How hard is it to undo this PR after merging?\n\n**Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -33,7 +33,7 @@
   },
   {
     "name": "standalone-numbered",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -41,7 +41,7 @@
   },
   {
     "name": "indented-numbered",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n- **Recovery steps:**\n  1. Restore the prior rule.\n  2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n- **Recovery steps:**\n  1. Restore the prior rule.\n  2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -49,7 +49,7 @@
   },
   {
     "name": "inline-recovery",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n- **Recovery steps:** Restore and verify the rule.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n- **Recovery steps:** Restore and verify the rule.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -65,7 +65,7 @@
   },
   {
     "name": "legacy-agrees",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n\nDecision-Class: Repair\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n\nDecision-Class: Repair\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -73,7 +73,7 @@
   },
   {
     "name": "legacy-disagrees",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n\nDecision-Class: Undo\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n\nDecision-Class: Undo\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -89,7 +89,7 @@
   },
   {
     "name": "duplicate-selected",
-    "body": "## How hard is it to undo this PR after merging?\n\n**Undo**\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Undo**\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -105,7 +105,7 @@
   },
   {
     "name": "comment-class",
-    "body": "<!-- ## How hard is it to undo this PR after merging?\n\n**🟢 Undo** — A revert restores the wording.\n -->",
+    "body": "<!-- ## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe2 Undo** \u2014 A revert restores the wording.\n -->",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -113,7 +113,7 @@
   },
   {
     "name": "unclosed-comment",
-    "body": "<!-- ## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "<!-- ## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -129,7 +129,7 @@
   },
   {
     "name": "fenced-class",
-    "body": "```md\n## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n\n```\n",
+    "body": "```md\n## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n\n```\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -137,7 +137,7 @@
   },
   {
     "name": "migrate-options",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update.\n2. Update all pins together and commit the teams to one contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe0 Migrate** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Verify the affected consumers. **Commits to:** Coordinating the selected contract with consuming teams.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Class:** Migrate; put-right: Consumers coordinate a pin rollback and body repair.\n- **Who answers:** Service owner\n- **Commits us to:** Maintaining the shared record contract across consumers.\n- **Chosen by:** @cdudek\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Update all pins together and commit the teams to one contract. **Commits to:** Coordinating the selected contract with consuming teams.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -145,7 +145,7 @@
   },
   {
     "name": "migrate-forced",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. **Forced:** Update all teams together; **Constraint:** the old endpoint closes on Friday.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe0 Migrate** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Verify the affected consumers. **Commits to:** Coordinating the selected contract with consuming teams.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Class:** Migrate; put-right: Consumers coordinate a pin rollback and body repair.\n- **Who answers:** Service owner\n- **Commits us to:** Maintaining the shared record contract across consumers.\n- **Chosen by:** @cdudek\n\n**Options**\n\n1. **Forced:** Update all teams together; **Constraint:** the old endpoint closes on Friday. **Commits to:** Coordinating the selected contract with consuming teams.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -153,7 +153,7 @@
   },
   {
     "name": "migrate-one-not-forced",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe0 Migrate** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Verify the affected consumers. **Commits to:** Coordinating the selected contract with consuming teams.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Class:** Migrate; put-right: Consumers coordinate a pin rollback and body repair.\n- **Who answers:** Service owner\n- **Commits us to:** Maintaining the shared record contract across consumers.\n- **Chosen by:** @cdudek\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update. **Commits to:** Coordinating the selected contract with consuming teams.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -161,7 +161,7 @@
   },
   {
     "name": "migrate-forced-no-constraint",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. **Forced:** Update all teams together; \n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe0 Migrate** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Verify the affected consumers. **Commits to:** Coordinating the selected contract with consuming teams.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Class:** Migrate; put-right: Consumers coordinate a pin rollback and body repair.\n- **Who answers:** Service owner\n- **Commits us to:** Maintaining the shared record contract across consumers.\n- **Chosen by:** @cdudek\n\n**Options**\n\n1. **Forced:** Update all teams together;  **Commits to:** Coordinating the selected contract with consuming teams.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -169,7 +169,7 @@
   },
   {
     "name": "migrate-no-options",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe0 Migrate** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -177,7 +177,7 @@
   },
   {
     "name": "migrate-no-responsible",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** <role>\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update.\n2. Update all pins together and commit the teams to one contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe0 Migrate** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Verify the affected consumers. **Commits to:** Coordinating the selected contract with consuming teams.\n\n- **Responsible for recovery:** <role>\n- **Classification change:** None\n\n## Decision record\n\n- **Class:** Migrate; put-right: Consumers coordinate a pin rollback and body repair.\n- **Who answers:** Service owner\n- **Commits us to:** Maintaining the shared record contract across consumers.\n- **Chosen by:** @cdudek\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Update all pins together and commit the teams to one contract. **Commits to:** Coordinating the selected contract with consuming teams.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -185,7 +185,7 @@
   },
   {
     "name": "answer-labelled-evidence",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -193,7 +193,7 @@
   },
   {
     "name": "answer-name",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Calvin Dudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Calvin Dudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -201,7 +201,7 @@
   },
   {
     "name": "answer-role",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Team owner\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Team owner\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -209,7 +209,7 @@
   },
   {
     "name": "answer-role-cto",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** CTO\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** CTO\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -217,7 +217,7 @@
   },
   {
     "name": "answer-no-evidence",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Findings**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Findings**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -225,7 +225,7 @@
   },
   {
     "name": "answer-unlabelled",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **claim:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **claim:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -233,7 +233,7 @@
   },
   {
     "name": "answer-no-challenges",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -241,7 +241,7 @@
   },
   {
     "name": "answer-recommendation",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n\n- **Recommendation:** Ship it.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n\n- **Recommendation:** Ship it.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -249,7 +249,7 @@
   },
   {
     "name": "answer-recommend",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n\nRecommend: Ship it.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n\nRecommend: Ship it.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -257,7 +257,7 @@
   },
   {
     "name": "placeholder-recovery-none",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. none\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. none\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -265,7 +265,7 @@
   },
   {
     "name": "lowering-empty-none",
-    "body": "## How hard is it to undo this PR after merging?\n\n**Undo** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** none\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Undo** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** none\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "src/change.py"
@@ -273,7 +273,7 @@
   },
   {
     "name": "placeholder-recovery-n-a",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. n/a\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. n/a\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -281,7 +281,7 @@
   },
   {
     "name": "lowering-empty-n-a",
-    "body": "## How hard is it to undo this PR after merging?\n\n**Undo** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** n/a\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Undo** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** n/a\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "src/change.py"
@@ -289,7 +289,7 @@
   },
   {
     "name": "placeholder-recovery--",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. -\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. -\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -297,7 +297,7 @@
   },
   {
     "name": "lowering-empty--",
-    "body": "## How hard is it to undo this PR after merging?\n\n**Undo** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** -\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Undo** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** -\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "src/change.py"
@@ -305,7 +305,7 @@
   },
   {
     "name": "placeholder-recovery-<step>",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. <step>\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. <step>\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -313,7 +313,7 @@
   },
   {
     "name": "lowering-empty-<step>",
-    "body": "## How hard is it to undo this PR after merging?\n\n**Undo** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** <step>\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Undo** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** <step>\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "src/change.py"
@@ -321,7 +321,7 @@
   },
   {
     "name": "repair-missing-Chose",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -329,7 +329,7 @@
   },
   {
     "name": "repair-missing-Over",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -337,7 +337,7 @@
   },
   {
     "name": "repair-missing-Because",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Commits us to:** Maintaining the shared contract.",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Commits us to:** Maintaining the shared contract.",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -345,7 +345,7 @@
   },
   {
     "name": "repair-missing-Commits us to",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -353,7 +353,7 @@
   },
   {
     "name": "repair-record-outside-section",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Other\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Other\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -361,7 +361,7 @@
   },
   {
     "name": "steps-outside-section",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n## Other\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n## Other\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -369,7 +369,7 @@
   },
   {
     "name": "steps-from-next-field",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n- **Work preserved:**\n  1. Something else\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n- **Work preserved:**\n  1. Something else\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -377,7 +377,7 @@
   },
   {
     "name": "below-floor",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "cross-team/contract"
@@ -385,7 +385,7 @@
   },
   {
     "name": "lowered-recorded-effective-migrate",
-    "body": "## How hard is it to undo this PR after merging?\n\n**Repair** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** Migrate -> Repair; lowered by Calvin; recorded map review\n\n## Decision record\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update.\n2. Update all pins together and commit the teams to one contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Repair** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Verify the affected consumers. **Commits to:** Coordinating the selected contract with consuming teams.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** Migrate -> Repair; lowered by Calvin; recorded map review\n\n## Decision record\n\n- **Class:** Migrate; put-right: Consumers coordinate a pin rollback and body repair.\n- **Who answers:** Service owner\n- **Commits us to:** Maintaining the shared record contract across consumers.\n- **Chosen by:** @cdudek\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Update all pins together and commit the teams to one contract. **Commits to:** Coordinating the selected contract with consuming teams.\n",
     "valid": true,
     "paths": [
       "cross-team/contract"
@@ -393,7 +393,7 @@
   },
   {
     "name": "lowered-effective-still-migrate",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** Migrate -> Repair; lowered by Calvin; map review\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** Migrate -> Repair; lowered by Calvin; map review\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": false,
     "paths": [
       "cross-team/contract"
@@ -401,7 +401,7 @@
   },
   {
     "name": "legacy-lowering",
-    "body": "## How hard is it to undo this PR after merging?\n\n**Repair** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update.\n2. Update all pins together and commit the teams to one contract.\n\nClass-Change: Migrate -> Repair; lowered by Calvin; map review\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Repair** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Verify the affected consumers. **Commits to:** Coordinating the selected contract with consuming teams.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Class:** Migrate; put-right: Consumers coordinate a pin rollback and body repair.\n- **Who answers:** Service owner\n- **Commits us to:** Maintaining the shared record contract across consumers.\n- **Chosen by:** @cdudek\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Update all pins together and commit the teams to one contract. **Commits to:** Coordinating the selected contract with consuming teams.\n\nClass-Change: Migrate -> Repair; lowered by Calvin; map review\n",
     "valid": true,
     "paths": [
       "cross-team/contract"
@@ -409,7 +409,7 @@
   },
   {
     "name": "unmapped-repair",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": true,
     "paths": [
       "unmapped/new.txt"
@@ -418,7 +418,7 @@
   },
   {
     "name": "unmapped-never-undo",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟢 Undo** — A revert restores the wording.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe2 Undo** \u2014 A revert restores the wording.\n",
     "valid": false,
     "paths": [
       "unmapped/new.txt"
@@ -426,7 +426,7 @@
   },
   {
     "name": "glob-nested",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": true,
     "paths": [
       "src/nested/foo.py"
@@ -435,7 +435,7 @@
   },
   {
     "name": "glob-root",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe1 Repair** \u2014 The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
     "valid": true,
     "paths": [
       "main.py"
@@ -456,7 +456,7 @@
   },
   {
     "name": "selector-conjunction-unknown",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update.\n2. Update all pins together and commit the teams to one contract.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe0 Migrate** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Verify the affected consumers. **Commits to:** Coordinating the selected contract with consuming teams.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Class:** Migrate; put-right: Consumers coordinate a pin rollback and body repair.\n- **Who answers:** Service owner\n- **Commits us to:** Maintaining the shared record contract across consumers.\n- **Chosen by:** @cdudek\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Update all pins together and commit the teams to one contract. **Commits to:** Coordinating the selected contract with consuming teams.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -481,7 +481,7 @@
   },
   {
     "name": "credentials-only-does-not-raise-path-floor",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟢 Undo** — A revert restores the wording.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe2 Undo** \u2014 A revert restores the wording.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -511,7 +511,7 @@
   },
   {
     "name": "paths-and-credentials-conservative-floor",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
     "valid": true,
     "paths": [
       "docs/readme.md"
@@ -536,7 +536,7 @@
   },
   {
     "name": "invalid-map",
-    "body": "## How hard is it to undo this PR after merging?\n\n**🟢 Undo** — A revert restores the wording.\n",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe2 Undo** \u2014 A revert restores the wording.\n",
     "valid": false,
     "paths": [
       "docs/readme.md"
@@ -545,5 +545,237 @@
       "version": 2,
       "entries": []
     }
+  },
+  {
+    "name": "migrate-missing-Class",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe0 Migrate** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Verify the affected consumers. **Commits to:** Coordinating the selected contract with consuming teams.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Who answers:** Service owner\n- **Commits us to:** Maintaining the shared record contract across consumers.\n- **Chosen by:** @cdudek\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Update all pins together and commit the teams to one contract. **Commits to:** Coordinating the selected contract with consuming teams.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "migrate-missing-Who answers",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe0 Migrate** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Verify the affected consumers. **Commits to:** Coordinating the selected contract with consuming teams.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Class:** Migrate; put-right: Consumers coordinate a pin rollback and body repair.\n- **Commits us to:** Maintaining the shared record contract across consumers.\n- **Chosen by:** @cdudek\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Update all pins together and commit the teams to one contract. **Commits to:** Coordinating the selected contract with consuming teams.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "migrate-missing-Commits us to",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe0 Migrate** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Verify the affected consumers. **Commits to:** Coordinating the selected contract with consuming teams.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Class:** Migrate; put-right: Consumers coordinate a pin rollback and body repair.\n- **Who answers:** Service owner\n- **Chosen by:** @cdudek\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Update all pins together and commit the teams to one contract. **Commits to:** Coordinating the selected contract with consuming teams.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "migrate-missing-Chosen by",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe0 Migrate** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Verify the affected consumers. **Commits to:** Coordinating the selected contract with consuming teams.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Class:** Migrate; put-right: Consumers coordinate a pin rollback and body repair.\n- **Who answers:** Service owner\n- **Commits us to:** Maintaining the shared record contract across consumers.\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Update all pins together and commit the teams to one contract. **Commits to:** Coordinating the selected contract with consuming teams.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-missing-Title",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-missing-Status",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-missing-Context",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-missing-Decision",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-missing-Class",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-missing-Who answers",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-missing-Rejected alternative",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-missing-Provenance",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-missing-Class history",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-missing-Commits us to",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-missing-Last validated",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-missing-Revisit when",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-placeholder-Decision-<person writes>",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** <person writes>\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-placeholder-Decision-TBD",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** TBD\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-placeholder-Decision-TODO",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** TODO\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-placeholder-Decision-Accepted: <person writes>",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Accepted: <person writes>\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-placeholder-Commits us to-<person writes>",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** <person writes>\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-placeholder-Commits us to-TBD",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** TBD\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-placeholder-Commits us to-TODO",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** TODO\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-placeholder-Commits us to-Accepted: <person writes>",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Accepted: <person writes>\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "migrate-option-without-commitments",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe0 Migrate** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Class:** Migrate; put-right: Consumers coordinate a pin rollback and body repair.\n- **Who answers:** Service owner\n- **Commits us to:** Maintaining the shared record contract across consumers.\n- **Chosen by:** @cdudek\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update.\n2. Update all pins together and commit the teams to one contract.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "migrate-owner-not-person",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udfe0 Migrate** \u2014 The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Verify the affected consumers. **Commits to:** Coordinating the selected contract with consuming teams.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Class:** Migrate; put-right: Consumers coordinate a pin rollback and body repair.\n- **Who answers:** Service owner\n- **Commits us to:** Maintaining the shared record contract across consumers.\n- **Chosen by:** Service owner\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update. **Commits to:** Coordinating the selected contract with consuming teams.\n2. Update all pins together and commit the teams to one contract. **Commits to:** Coordinating the selected contract with consuming teams.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-class-without-put-right",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-placeholder-evidence",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** <checked claim>\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-ranking",
+    "body": "## How hard is it to undo this PR after merging?\n\n**\ud83d\udd34 Answer** \u2014 An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n- **Title:** External report correction\n- **Status:** Accepted\n- **Context:** A recipient received the incorrect report.\n- **Decision:** Calvin chose to issue a corrected report to the recipient.\n- **Class:** Answer; put-right: Explain the incorrect report; receipt cannot be undone.\n- **Who answers:** @cdudek\n- **Rejected alternative:** Retain the report and send a separate clarification.\n- **Provenance:** Agent supplied receipt evidence and challenges; Calvin chose a correction.\n- **Class history:** Unchanged Answer since external receipt was confirmed.\n- **Commits us to:** Calvin accepts follow-up with recipients if reliance is established.\n- **Last validated:** 2026-11-08 by Calvin\n- **Revisit when:** A recipient reports reliance on the incorrect report.\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n\n- **Ranking:** Best option first.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
   }
 ]
