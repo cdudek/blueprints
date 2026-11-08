@@ -162,6 +162,73 @@ class RunnerTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('FAIL complete fitness', result.stderr)
 
+    def publication_fixture(self, race=False):
+        self.enable_evidence()
+        script = self.work / 'scripts/ci-local'
+        script.write_text(script.read_text().replace("FITNESS_COMMAND='python3 scripts/report.py'", "FITNESS_COMMAND=''"))
+        self.edit('scripts/checker.py', "import pathlib, sys; sys.exit(0 if pathlib.Path(sys.argv[2]).read_text().startswith('valid') else 1)\n")
+        self.edit('scripts/reviewer.py', r"""import json, os, pathlib, sys
+body = pathlib.Path(sys.argv[sys.argv.index('--body') + 1])
+body.write_text(body.read_text().rstrip('\n') + '\nreview tally\n')
+if os.environ.get('BODY_RACE') == '1':
+    server = pathlib.Path(os.environ['PR_STATE'])
+    data = json.loads(server.read_text())
+    data['body'] = 'valid new owner decision'
+    server.write_text(json.dumps(data))
+""")
+        import json
+        server = self.root / 'pr-state.json'
+        server.write_text(json.dumps({'body': 'valid owner decision', 'baseRefName': 'main',
+                                     'baseRefOid': self.git('rev-parse', 'origin/main'),
+                                     'headRefOid': self.git('rev-parse', 'HEAD')}))
+        self.env.update(PR_STATE=str(server), GH_LOG=str(self.root / 'gh.log'), BODY_RACE=str(int(race)))
+        stub = self.bin / 'gh'
+        stub.write_text(r"""#!/usr/bin/env python3
+import json, os, pathlib, sys
+args = sys.argv[1:]
+state = pathlib.Path(os.environ['PR_STATE'])
+log = pathlib.Path(os.environ['GH_LOG'])
+if args[:2] == ['repo', 'view']:
+    print('example/project')
+elif args[:2] == ['pr', 'list']:
+    print('[{"number":1}]')
+elif args[:2] == ['pr', 'view']:
+    print(state.read_text())
+elif args[:2] == ['pr', 'edit']:
+    with log.open('a') as output: output.write('edit\n')
+    data = json.loads(state.read_text())
+    data['body'] = pathlib.Path(args[args.index('--body-file') + 1]).read_text().rstrip('\n')
+    state.write_text(json.dumps(data))
+elif args[:2] == ['api', '--paginate']:
+    print('scripts/ci-local')
+elif args[:3] == ['api', '--method', 'POST']:
+    with log.open('a') as output: output.write('status ' + ' '.join(args) + '\n')
+else:
+    raise SystemExit('Unexpected gh command: ' + repr(args))
+""")
+        stub.chmod(0o755)
+        return server
+
+    def test_concurrent_owner_body_is_preserved_without_publication(self):
+        import json
+        server = self.publication_fixture(race=True)
+        result = self.gate('--decision4')
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn('refusing to overwrite', result.stderr)
+        self.assertEqual(json.loads(server.read_text())['body'], 'valid new owner decision')
+        self.assertFalse((self.root / 'gh.log').exists())
+
+    def test_stable_body_receives_review_tally_and_exact_head_status(self):
+        import json
+        server = self.publication_fixture()
+        result = self.gate('--decision4')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(server.read_text())['body'], 'valid owner decision\nreview tally')
+        log = (self.root / 'gh.log').read_text()
+        self.assertEqual(log.count('edit\n'), 1)
+        self.assertIn('context=decision4', log)
+        self.assertIn('state=success', log)
+
 
 if __name__ == '__main__':
     unittest.main()
