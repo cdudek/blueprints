@@ -213,10 +213,16 @@ def map_floor(mapping, paths):
     for entry in mapping["entries"]:
         selectors = entry["select"]
         patterns = selectors.get("paths", [])
-        hits = {p for p in paths if any(glob_regex(g).fullmatch(p) for g in patterns)}
-        if patterns and not hits:
+        if not patterns:
+            # Changed paths cannot establish a match on non-path ground.
+            messages.append(
+                "map note: non-path ground, read by a person: "
+                + ", ".join(selectors)
+                + f" -> {entry['floor']}"
+            )
             continue
-        if not patterns and not paths:
+        hits = {p for p in paths if any(glob_regex(g).fullmatch(p) for g in patterns)}
+        if not hits:
             continue
         if set(selectors) != {"paths"}:
             # Path data cannot establish the other conjuncts. Never silently treat

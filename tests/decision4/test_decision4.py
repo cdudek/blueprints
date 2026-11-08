@@ -33,6 +33,63 @@ class Decision4Tests(unittest.TestCase):
                 if "contains" in case:
                     self.assertIn(case["contains"], "\n".join(messages))
 
+    def test_non_path_ground_is_not_a_changed_path_match(self):
+        kinds = [
+            "credentials",
+            "data_stores",
+            "config_keys",
+            "environments",
+            "external_apis",
+        ]
+        for selectors in [{kind: ["production"]} for kind in kinds] + [
+            {kind: ["production"] for kind in kinds}
+        ]:
+            mapping = {
+                "version": 1,
+                "entries": [
+                    {"select": {"paths": ["docs/**"]}, "floor": "Undo"},
+                    {"select": selectors, "floor": "Answer"},
+                ],
+            }
+            for paths, expected in [
+                (["docs/readme.md"], "Undo"),
+                ([], "Undo"),
+                (["unmapped.txt"], "Repair"),
+            ]:
+                with self.subTest(selectors=selectors, paths=paths):
+                    floor, messages = CHECK.map_floor(mapping, paths)
+                    self.assertEqual(floor, expected)
+                    self.assertIn(
+                        "map note: non-path ground, read by a person: "
+                        + ", ".join(selectors)
+                        + " -> Answer",
+                        messages,
+                    )
+
+    def test_path_and_credentials_keep_conservative_floor(self):
+        mapping = {
+            "version": 1,
+            "entries": [
+                {
+                    "select": {
+                        "paths": ["docs/**"],
+                        "credentials": ["production-token"],
+                    },
+                    "floor": "Answer",
+                }
+            ],
+        }
+        floor, messages = CHECK.map_floor(mapping, ["docs/readme.md"])
+        self.assertEqual(floor, "Answer")
+        self.assertIn(
+            "map gap: non-path selectors need owner review: paths, credentials",
+            messages,
+        )
+        self.assertIn("floor Answer: docs/readme.md", messages)
+        floor, messages = CHECK.map_floor(mapping, ["src/app.py"])
+        self.assertEqual(floor, "Repair")
+        self.assertNotIn("floor Answer: src/app.py", messages)
+
     def test_base_map_cannot_be_lowered_by_pr(self):
         cases = json.loads((HERE / "cases.json").read_text())
         undo = next(case["body"] for case in cases if case["name"] == "undo")
