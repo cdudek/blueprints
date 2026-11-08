@@ -42,7 +42,7 @@ architecture.yaml
 ### Ratchet and report
 
 - **ARCH-12 Existing violations go in a committed baseline that only shrinks.** One line per finding, for example `.fitness/baseline.json` ([structure](structure.md) quality ratchet, CQ-21). A new gate ships with its baseline in the same PR: baseline first, gate second, both in one change, so main never turns red. A greenfield product starts with an empty baseline.
-- **ARCH-13 A `fitness` target runs every dimension and writes `fitness-report.json`.** One entry per id: value, threshold, baseline, pass. CI posts the deltas on the PR. The target is part of the Make contract and feeds the required summary through the `arch` and `perf` jobs, not as a second pipeline.
+- **ARCH-13 A `fitness` target runs every dimension and writes `fitness-report.json`.** Produce one complete report per PR on its exact head and changed-path base, using the real result of every `architecture.yaml` dimension: id, value, threshold, baseline and pass, or an explicit not-applicable reason where the stack has none. Include the exact-head Decision4 result for the actual proposed/PR body and changed paths; record its body digest so a body edit invalidates it. Fixture success proves the checker, never the PR result. Missing, stale, failed or unexecuted applicable evidence fails the report. Post the deltas on the PR through the local gate; `fitness` reuses the `slop`, `arch`, `perf` and Decision4 results without running a second pipeline.
 - **ARCH-14 A dimension that does not apply prints "not applicable" and exits 0** (CI-23). A repo uses the dimensions that fit its stack and never invents a score to fill a row.
 
 | Stack | Fits | Not applicable |
