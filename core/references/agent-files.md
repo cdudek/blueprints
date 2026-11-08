@@ -44,7 +44,7 @@ migrate, contract.
 
 ### Hooks and review
 
-- **AGENT-28: Agent files teach scannable PR, issue and review text.** Include the bold-label What/Why/Proof layout below and its full example; Before merge is conditional, Decision4 appears only with a boundary map, and Decision record only at Migrate/Answer. Link to CI-19 and preserve repo-specific checklists.
+- **AGENT-28: Agent files teach scannable PR, issue and review text.** Include the bold-label What/Why/Proof layout below and its full example; Before merge is conditional, Decision4 appears only with a boundary map, and Decision record at Repair/Migrate/Answer. Link to CI-19 and preserve repo-specific checklists.
 
 - **AGENT-15: Hooks enforce the process, prose does not.** Wire these: block destructive and out-of-scope commands (force push, schema push, cluster mutation, unapproved dependency change); block reads of secret files; run format and lint on every edit; run verify before the agent may stop; refuse source edits for a change that needs a change folder (DEC-13) until its plan is approved; typo and copy fixes are exempt.
 - **AGENT-16: Hooks are tested.** A hook with no test silently stops working. Test that a blocked command is blocked and an allowed one is not.
@@ -52,7 +52,7 @@ migrate, contract.
 
 ### Decision4 in the agent file
 
-- **AGENT-23: The canonical agent file carries the Decision4 handoff contract v1, verbatim.** Paste it unchanged under the overriding rules and label it v1. The product lines of AGENT-24 go directly below it. Do not paraphrase the contract; a later version replaces it whole (see [sources](sources.md)).
+- **AGENT-23: AGENTS.md carries the Decision4 handoff contract v1, verbatim, and a source line naming tag v1.0.1. CLAUDE.md imports that block so there is one source.** Paste it unchanged under the overriding rules and label it v1. The product lines of AGENT-24 go directly below it. Do not paraphrase the contract; a later version replaces it whole (see [sources](sources.md)).
 
 ```markdown
 ## Decision4 handoff contract (v1)
@@ -83,13 +83,13 @@ Rules:
 
 - **AGENT-24: Product lines follow the contract.** Three lines, product-specific:
   - Map location: "The boundary map is `boundary-map.yaml` at the repo root; read it before classifying" (see [structure](structure.md)).
-  - PR fields: "Every PR uses the template section headed How hard is it to undo this PR after merging?: one selected bold class (Decision-Class), Recovery steps (Put-right; Repair and above), Responsible for recovery (Answerer; Migrate and Answer, with a named person for Answer), and Classification change (Class-Change; record any lowering). The old plain or bold-label Decision4 v1 fields remain accepted; if both class forms appear they must agree" (see [ci](ci.md) CI-25/CI-26).
+  - PR fields: "Every PR uses the template section headed How hard is it to undo this PR after merging?: one selected bold class (Decision-Class), Recovery steps (Put-right; Repair and above), Decision record (Repair choice story, Migrate options, Answer evidence/challenges), Responsible for recovery (Answerer; Migrate and Answer, with a named person for Answer), and Classification change (Class-Change; record any lowering). The old plain or bold-label Decision4 v1 fields remain accepted; if both class forms appear they must agree" (see [ci](ci.md) CI-25/CI-26).
   - Ceiling: "An autonomous run closes only up to the class approved at the plan gate. The default ceiling is Undo. Above it, prepare the handoff and stop."
 
 ### Files the sdlc tool installs
 
 - **AGENT-26: The repo declares its workflow plugins.** `.claude/settings.json` lists `extraKnownMarketplaces` (where each plugin comes from, a GitHub repo, optionally pinned to a ref) and `enabledPlugins` (which plugins this repo needs). Opening and trusting the repo offers exactly that set, so no one installs by hand and the repo states its own dependencies. The default set is the owner's `cct` plugin (marketplace `cct`, repo `cdudek/calvins-claude-tools`), which carries the sdlc tool, the UX suite and `project-setup`.
-- **AGENT-27: Setup runs in a fixed order and has a drift check.** (a) declare the plugins (AGENT-26), (b) the sdlc tool's adopt step (AGENT-25), (c) the anti-slop install skill for TypeScript ([code-quality](code-quality.md)), (d) the Decision4 contract and `boundary-map.yaml` (AGENT-23, [structure](structure.md)), (e) a read-only check that all of it is present, run again at session start. `cct`'s `project-setup` skill does this with options (which plugins, a pinned marketplace ref, with or without Decision4, anti-slop, sdlc) and a dry run by default.
+- **AGENT-27: Setup runs in a fixed order and has a drift check.** (a) declare the plugins (AGENT-26), (b) the sdlc tool's adopt step (AGENT-25), (c) the anti-slop install skill for TypeScript ([code-quality](code-quality.md)), (d) the Decision4 contract, PR section, boundary-map scaffold and pinned workflow caller or verified local fetch (AGENT-23, CI-26), (e) a read-only check that all of it is present, run again at session start. `cct`'s `project-setup` skill does this with options (which plugins, a pinned marketplace ref, with or without Decision4, anti-slop, sdlc) and a dry run by default.
 - **AGENT-25: The sdlc tool's adopt step installs the process files,** so there is one way: the CLAUDE.md process section, `REVIEW.md`, the code-owners file, the review workflows, the PR template and the process hooks (see [sdlc](sdlc.md)). The blueprint adds its own sections on top (the table of AGENT-3, the overriding rules, the Decision4 contract, pitfalls, secret hooks). Do not write a second copy of what the tool installed.
 
 ### Agent safety around secrets
@@ -149,62 +149,57 @@ repo/
 
 ## Pull requests, issues and PR comments: scannable, never a text blob
 
-- **Order:** `## What` → `## Why` → `## Proof` → `## Before merge` (only while something is open) → the repo's Decision4 section (only with `boundary-map.yaml`) → `## Decision record` (only at Migrate/Answer).
+- **Order:** `## What` → `## Why` → `## Proof` → `## Before merge` (only while something is open) → the repo's Decision4 section (only with `boundary-map.yaml`) → `## Decision record` (at Repair/Migrate/Answer).
 - **Bullets:** Every section is a list; start each bullet with a bold label (`- **Source plan:** 0 adds, 8 updates, 38 destroys.`). Keep one idea per bullet, at most two lines, and no paragraph longer than two sentences. Keep checklist syntax and bold-label the item.
 - **Proof:** Name the check and result (`- **Unit tests:** 1,320 passed.`). Put links on the label or result, never a bare URL in prose. Preserve claims and human checklist attestations when restructuring an existing body.
 - **Decision4:** When the repo has a boundary map, read it and copy the exact readable section from its PR template. Select its highest applicable class in bold with one colour circle and a sentence explaining recovery; use bold-labelled Recovery steps (numbered for multiple steps), optional Work preserved, Responsible for recovery (a named person at Answer), and Classification change. Keep the Recovery levels legend collapsed. Never author old plain `Decision-Class:` lines.
-- **Decision record:** At Migrate/Answer use `## Decision record` with bold-labelled bullets: Chose, Over, Because, Commits us to. Never use “Repair, choice story:” headings; Repair needs no decision record.
+- **Decision record:** At Repair use Chose / Over / Because / Commits us to. At Migrate use at least two real Options, or one Forced option with its Constraint. At Answer use labelled Evidence and Challenges, with no recommendation. Use `## Decision record`; omit it at Undo.
 - **Milestone and review text:** The same layout covers milestone-close PRs, issue bodies and PR comments. Put addressed feedback under What, its rationale under Why and its check results under Proof. A short thread reply can be one bold-labelled bullet; include only applicable sections.
 - **Validation:** Validate the proposed body before pushing and the actual body after creation or edits through the repo's Decision4 gate when installed. Use `--body-file`; scannable formatting applies even without Decision4.
 
-Full example for a repository whose boundary map requires Migrate (illustrative evidence, not claims to copy). Omit Before merge when nothing is open; omit both Decision4 sections entirely when the repo has no boundary map, and omit Decision record at Undo/Repair.
+Full example (illustrative evidence, not claims to copy):
 
 ```markdown
 ## What
 
-- **Change:** Move saved filters to the versioned format.
-- **Requirement F1:** Existing filters remain readable during rollout.
+- **Change:** Correct generated agent guidance.
 
 ## Why
 
-- **Compatibility:** Clients need time to adopt the new format.
+- **Reason:** Already generated files need team follow-up after the rule changes.
 
 ## Proof
 
-- **Migration tests:** 12 passed, including reading the old format.
-- **Local gate:** `scripts/ci-local --check` passed on the proposed head.
+- **Contract fixtures:** All cases passed locally.
 
-## Before merge
+## How hard is it to undo this PR after merging?
 
-- [ ] **Owner review:** Confirm the rollout window.
+**🟡 Repair** — <who has to put it right and what it takes, concrete>
 
-### How hard is it to undo this PR after merging?
+**Recovery steps**
 
-**🟠 Migrate** — Recovering requires moving saved filters back to the previous format before redeploying the old reader.
+1. <first step>
+2. <next step>
 
-- **Recovery steps:**
-  1. Pause writes and convert saved filters back with the reverse migration.
-  2. Redeploy the previous reader and verify existing filters.
-- **Work preserved:** The migration retains each original filter until rollout completes.
-- **Responsible for recovery:** Service owner
+- **Responsible for recovery:** <role; at Answer a named person>
 - **Classification change:** None
+
+## Decision record
+
+- **Chose:** <what was decided>
+- **Over:** <viable alternative>
+- **Because:** <reason>
+- **Commits us to:** <what this ties the team to>
 
 <details>
 <summary>Recovery levels</summary>
 
-Undo — Revert only
-Repair — Revert plus fixes or a release
-Migrate — Move data, state, or users back
-Answer — Cannot fully recover; a named person is accountable
+Undo — a revert puts it right
+Repair — real work, contained to this team
+Migrate — coordinated change involving other people
+Answer — someone outside the team with standing to ask is affected, and nothing unmakes it
 
 </details>
-
-## Decision record
-
-- **Chose:** A versioned format with a reversible migration.
-- **Over:** Replacing stored filters in place without a compatibility window.
-- **Because:** Existing clients must keep reading their saved filters.
-- **Commits us to:** Retain the reverse migration until rollout is verified.
 
 🤖 Generated with Codex
 ```

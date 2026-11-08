@@ -64,10 +64,10 @@ Enforced by: tests/trash.restore.test (or "nothing enforces this yet")
   - **Last validated**: a date.
   - **Revisit when**: a condition, not only a date.
 - **DEC-19: Which class gets which record.**
-  - Undo: no record. Do not write one.
-  - Repair: the choice story (Chose / Over / Because / Commits us to) in the PR, not an ADR.
-  - Migrate: a record with at least two real options. An agent may draft Context and options; the accountable owner chooses. Class, Who answers and Commits us to are required.
-  - Answer: a record with every field. The agent supplies evidence and challenge, labelled observed, inferred, asked or unknown, with no recommendation; only a person with standing writes the Decision and Commits us to.
+  - Undo: a revert puts it right; return the result, with no Decision record.
+  - Repair: real work, contained to this team; return the result and choice story (Chose / Over / Because / Commits us to) under `## Decision record` in the PR, not a separate ADR.
+  - Migrate: coordinated change involving other people; a record with at least two real options, or one stated as forced with the constraint that forces it. An agent may draft Context and options; the accountable owner chooses. Class, Who answers and Commits us to are required.
+  - Answer: the wrong outcome reached someone outside the team with standing to ask, and nothing unmakes it; a record with every field. The agent supplies evidence and challenge, labelled observed, inferred, asked or unknown, with no recommendation; only a person with standing writes the Decision and Commits us to.
 - **DEC-20: A record is written before approval, never after.** A Migrate or Answer change is not approved, and an autonomous run does not start it, until the record exists.
 - **DEC-21: Records are kept current.** An agent follows a stale record as faithfully as a current one. Mark each record superseded, retired or re-validated (update `Last validated`) when its `Revisit when` condition fires or the code moves on. Retiring a record is a recorded Repair decision; reversing what it decided takes the class of the original decision.
 

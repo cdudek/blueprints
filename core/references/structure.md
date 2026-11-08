@@ -63,6 +63,8 @@ Build every product as a modular monolith: one deployable, split inside into mod
 
 - **STR-24 Files stay under about 400 lines.** Split by responsibility when a file passes it. No dead code: unused files, exports and dependencies fail the build.
 
+The per-repository Decision4 set is exactly the AGENTS.md upstream contract, the PR template section, `boundary-map.yaml`, and a pinned reusable-workflow caller or checksum-verified local fetch. Checker code and `tests/decision4/*` belong only in the shared host (CI-26).
+
 ## How to apply
 
 Generic layout (names are defaults, the stack blueprint maps them to real folders):
