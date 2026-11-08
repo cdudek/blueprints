@@ -22,6 +22,6 @@ jobs:
           persist-credentials: false
       - run: |
           python3 -m venv "$RUNNER_TEMP/v"
-          "$RUNNER_TEMP/v/bin/pip" install -q PyYAML==6.0.3 jsonschema==4.26.0
+          "$RUNNER_TEMP/v/bin/pip" install -q PyYAML==6.0.3 jsonschema==4.26.0 lizard==1.25.1
           PATH="$RUNNER_TEMP/v/bin:$PATH" bash tests/decision4/run.sh
           python3 -m unittest discover -s tests/sources -v
