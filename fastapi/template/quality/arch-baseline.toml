@@ -1,4 +1,0 @@
-# Today's import-contract violations of an adopted codebase, written by `make arch-baseline-write`.
-# Lines may only be removed (scripts/quality/baseline_shrinks.py). Never-baselinable contracts
-# (role doors, no-framework-in-core) are refused. Format: contract id = ["importer -> imported"].
-[ignore_imports]

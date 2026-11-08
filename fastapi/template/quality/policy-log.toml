@@ -1,7 +1,0 @@
-# Every accepted loosening of the policy, one entry each. `make arch` prints the exact `change`
-# text of an unlogged loosening; copy it here with a reason and the date.
-#
-# [[entry]]
-# change = "public route added: /status"
-# reason = "the load balancer probes it without credentials"
-# date = 2026-01-31
