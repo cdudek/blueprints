@@ -20,7 +20,7 @@ A release is one commit built once into one immutable image and promoted through
 ### Container image
 
 - **REL-4. Multi-stage, minimal, non-root, read-only.** Build in one stage, copy only the runtime output to a small final stage. Numeric non-root user, read-only root filesystem, explicit writable scratch directory, no shell tools the app does not need.
-- **REL-5. Base images are pinned by digest.** A tag like `slim` moves under you. Renovate or equivalent updates the digest by PR. Build context excludes env files, keys and worktrees.
+- **REL-5. Base images are pinned by digest.** A tag like `slim` moves under you. Dependabot or equivalent updates the digest by PR. Build context excludes env files, keys and worktrees.
 - **REL-6. Scan and describe every image.** CI scans for known vulnerabilities and produces an SBOM. A critical finding with a fix available fails the build.
 - **REL-7. One immutable image runs the app and the migrations.** Built once per revision and tagged with the SHA. The migration job is a separate command run from that same image, never a second image. A migration that does not match the app code is a deploy bug.
 
