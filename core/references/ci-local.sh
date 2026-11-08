@@ -6,6 +6,9 @@ CHECK_NAMES=(format lint typecheck test)
 CHECK_COMMANDS=('make format-check' 'make lint' 'make typecheck' 'make test')
 CHECK_TOOLS=('' '' '' '')
 DECISION4_COMMAND='python3 "$(fetch_decision4)"'
+# Optional until installed with the tested reference scripts; consumers enable both.
+AI_REVIEW_COMMAND=''
+FITNESS_COMMAND=''
 # Optional remote-only evidence, after pushing (for example an infrastructure plan).
 POST_PUSH_COMMAND=''
 # END REPO CONFIG
@@ -54,6 +57,7 @@ sha=$(git rev-parse HEAD)
 git_dir=$(git rev-parse --absolute-git-dir)
 log_dir="$git_dir/ci-local/$sha"
 mkdir -p "$log_dir"
+export CI_LOCAL_EVIDENCE="$log_dir"
 repo=''
 branch=''
 if [[ $mode != check && $mode != proposed-body ]]; then
@@ -117,6 +121,35 @@ validate_decision4() {
   bash -euo pipefail -c "$DECISION4_COMMAND \"\$@\"" -- "${args[@]}"
 }
 
+record_decision4() {
+  python3 - "$log_dir" "$sha" "$1" "$2" "$3" <<'PY'
+import hashlib, json, pathlib, sys
+folder, head, base, body, result = sys.argv[1:]
+path = pathlib.Path(folder)
+data = {'head': head, 'base': base, 'body_sha256': hashlib.sha256(pathlib.Path(body).read_bytes()).hexdigest(),
+        'pass': result == '0', 'source': 'actual-pr-body-and-changed-paths'}
+(path / 'decision4-result.json').write_text(json.dumps(data, indent=2) + '\n')
+PY
+}
+
+review_body() {
+  if [[ -n ${AI_REVIEW_COMMAND:-} ]]; then
+    bash -euo pipefail -c "$AI_REVIEW_COMMAND --base \"\$1\" --head \"\$2\" --out \"\$3\" --body \"\$4\"" \
+      -- "$1" "$sha" "$log_dir" "$2" > "$log_dir/ai-review.log" 2>&1 || {
+      echo "FAIL AI review (see $log_dir/ai-review.log)" >&2; return 1;
+    }
+  fi
+}
+
+complete_fitness() {
+  if [[ -n ${FITNESS_COMMAND:-} ]]; then
+    bash -euo pipefail -c "$FITNESS_COMMAND --evidence \"\$1\" --body \"\$2\"" -- "$log_dir" "$1" \
+      > "$log_dir/fitness.log" 2>&1 || {
+      echo "FAIL complete fitness report (see $log_dir/fitness.log)" >&2; return 1;
+    }
+  fi
+}
+
 run_decision4() {
   # An absent PR is normal before opening one; an API error must not look like absence.
   if [[ -z ${CI_LOCAL_PR:-} ]]; then
@@ -136,7 +169,23 @@ run_decision4() {
   local base_sha result=0
   base_sha=$(jq -r .baseRefOid "$log_dir/pr.json")
   git cat-file -e "$base_sha^{commit}" 2>/dev/null || git fetch origin "$(jq -r .baseRefName "$log_dir/pr.json")"
+  if [[ -n ${AI_REVIEW_COMMAND:-} ]]; then
+    # Reuse the exact-head review: body edits do not trigger a second diff read.
+    local review_base
+    review_base=$(git merge-base HEAD "$base_sha")
+    review_body "$review_base" "$log_dir/body.md" || return 1
+    if ! cmp -s "$log_dir/body.md" <(jq -r .body "$log_dir/pr.json"); then
+      gh pr edit "$number" --repo "$repo" --body-file "$log_dir/body.md"
+      gh pr view "$number" --repo "$repo" --json body,baseRefName,baseRefOid,headRefOid > "$log_dir/pr.json"
+      jq -r .body "$log_dir/pr.json" > "$log_dir/body.md"
+      if [[ $(jq -r .headRefOid "$log_dir/pr.json") != "$sha" ]]; then
+        echo 'PR head moved while publishing review tally.' >&2; return 1
+      fi
+    fi
+  fi
   validate_decision4 "$log_dir/body.md" "$log_dir/files.txt" "$base_sha" > "$log_dir/decision4.log" 2>&1 || result=$?
+  record_decision4 "$base_sha" "$log_dir/body.md" "$result"
+  if (( result == 0 )); then complete_fitness "$log_dir/body.md" || result=1; fi
   gh pr view "$number" --repo "$repo" --json body,baseRefName,baseRefOid,headRefOid > "$log_dir/pr-after.json"
   if ! cmp -s "$log_dir/pr.json" "$log_dir/pr-after.json" || \
       [[ $(git rev-parse HEAD) != "$sha" || -n $(git status --porcelain --untracked-files=normal) ]]; then
@@ -320,6 +369,25 @@ ci_trivy_image() (
 )
 export -f ci_container_setup trivy ci_trivy_image
 
+python3 - "$log_dir/checks.json" "$sha" "$base_sha" "$docs_only" <<'PY'
+import json, pathlib, subprocess, sys
+paths = subprocess.check_output(["git", "diff", "--name-only", "--no-renames", "-z", sys.argv[3], "HEAD"]).decode().split("\0")
+pathlib.Path(sys.argv[1]).write_text(json.dumps({"head": sys.argv[2], "base": sys.argv[3], "checks": {},
+    "selection": "docs-only" if sys.argv[4] == "true" else "full", "changed_paths": [p for p in paths if p]}))
+PY
+record_check() {
+  python3 - "$log_dir" "$1" "$2" <<'PY'
+import hashlib, json, pathlib, sys
+folder, name, status = sys.argv[1:]
+folder = pathlib.Path(folder)
+path = folder / 'checks.json'
+data = json.loads(path.read_text())
+log = folder / (name + '.log')
+data['checks'][name] = {'exit_code': int(status), 'kind': 'actual-check', 'log': log.name,
+                        'sha256': hashlib.sha256(log.read_bytes()).hexdigest()}
+path.write_text(json.dumps(data, indent=2) + '\n')
+PY
+}
 for (( i=0; i<${#CHECK_NAMES[@]}; i++ )); do
   name=${CHECK_NAMES[$i]}
   tool=${CHECK_TOOLS[$i]:-}
@@ -339,13 +407,41 @@ for (( i=0; i<${#CHECK_NAMES[@]}; i++ )); do
   fi
   check_started=$SECONDS
   if env -u CI_LOCAL_PR bash -euo pipefail -c "${CHECK_COMMANDS[$i]}" > "$log_dir/$name.log" 2>&1; then
+    record_check "$name" 0
     passed=$((passed + 1))
     echo "PASS $name ($((SECONDS - check_started))s)"
   else
+    record_check "$name" 1
     failed=$((failed + 1))
     echo "FAIL $name ($((SECONDS - check_started))s; $log_dir/$name.log)" >&2
   fi
 done
+if (( failed == 0 )) && [[ -n ${AI_REVIEW_COMMAND:-}${FITNESS_COMMAND:-} ]]; then
+  evidence_body=${CI_LOCAL_PR_BODY:-${CI_LOCAL_BODY_FILE:-}}
+  if [[ -z $evidence_body ]]; then
+    # Existing PR bodies become the proposed local body before pushing a new head.
+    if [[ -z $repo ]]; then repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner); fi
+    if [[ -z $branch ]]; then branch=$(git branch --show-current); fi
+    number=${CI_LOCAL_PR:-$(gh pr list --repo "$repo" --head "$branch" --state open --json number --jq '.[0].number // empty')}
+    if [[ -z $number ]]; then
+      echo 'Complete PR evidence requires CI_LOCAL_PR_BODY before opening the PR.' >&2; failed=$((failed + 1))
+    else
+      evidence_body="$log_dir/proposed-body.md"
+      gh pr view "$number" --repo "$repo" --json body --jq '.body // ""' > "$evidence_body"
+    fi
+  fi
+  if (( failed == 0 )); then
+    if review_body "$base_sha" "$evidence_body"; then
+      git diff --name-only --no-renames "$base_sha" HEAD > "$log_dir/proposed-files.txt"
+      evidence_result=0
+      validate_decision4 "$evidence_body" "$log_dir/proposed-files.txt" "$base_sha" > "$log_dir/proposed-decision4.log" 2>&1 || evidence_result=$?
+      record_decision4 "$base_sha" "$evidence_body" "$evidence_result"
+      if (( evidence_result != 0 )) || ! complete_fitness "$evidence_body"; then failed=$((failed + 1)); fi
+    else
+      failed=$((failed + 1))
+    fi
+  fi
+fi
 # Never attest a different commit or files changed by a check.
 if [[ $(git rev-parse HEAD) != "$sha" || -n "$(git status --porcelain --untracked-files=normal)" ]]; then
   echo 'FAIL worktree changed during checks' >&2

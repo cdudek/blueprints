@@ -125,6 +125,43 @@ class RunnerTest(unittest.TestCase):
         self.body.write_text('invalid\n')
         self.assertEqual(self.gate('--check', CI_LOCAL_PR_BODY=str(self.body)).returncode, 1)
 
+    def enable_evidence(self, fail_review=False, fail_fitness=False):
+        script = self.work / 'scripts/ci-local'
+        source = script.read_text().replace('# END REPO CONFIG\n',
+            "AI_REVIEW_COMMAND='python3 scripts/reviewer.py'\n"
+            "FITNESS_COMMAND='python3 scripts/report.py'\n# END REPO CONFIG\n", 1)
+        script.write_text(source)
+        self.edit('scripts/reviewer.py', 'import sys\n' + f'sys.exit({int(fail_review)})\n')
+        self.edit('scripts/report.py', 'import json, pathlib, sys\n'
+                  'folder = pathlib.Path(sys.argv[sys.argv.index("--evidence") + 1])\n'
+                  'checks = json.loads((folder / "checks.json").read_text())\n'
+                  'decision = json.loads((folder / "decision4-result.json").read_text())\n'
+                  'assert checks["head"] == decision["head"] and decision["pass"]\n'
+                  f'sys.exit({int(fail_fitness)})\n')
+
+    def test_complete_evidence_reuses_actual_check_manifest_and_decision(self):
+        self.enable_evidence()
+        result = self.gate('--check', CI_LOCAL_PR_BODY=str(self.body))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        import json
+        folder = self.work / '.git/ci-local' / self.git('rev-parse', 'HEAD')
+        checks = json.loads((folder / 'checks.json').read_text())
+        self.assertEqual(checks['checks']['code']['kind'], 'actual-check')
+        self.assertEqual(checks['checks']['code']['exit_code'], 0)
+
+    def test_review_failure_never_writes_success_marker(self):
+        self.enable_evidence(fail_review=True)
+        result = self.gate('--check', CI_LOCAL_PR_BODY=str(self.body))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('FAIL AI review', result.stderr)
+        self.assertFalse((self.work / '.git/ci-local' / (self.git('rev-parse', 'HEAD') + '.ok')).exists())
+
+    def test_incomplete_fitness_never_writes_success_marker(self):
+        self.enable_evidence(fail_fitness=True)
+        result = self.gate('--check', CI_LOCAL_PR_BODY=str(self.body))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('FAIL complete fitness', result.stderr)
+
 
 if __name__ == '__main__':
     unittest.main()
