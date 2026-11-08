@@ -41,11 +41,26 @@ A release is one commit built once into one immutable image and promoted through
 ### Infrastructure as code
 
 - **REL-16. Infrastructure is code, applied only by CI after merge.** PRs run plan read-only. Merge applies the saved plan. Applies are serialized. Nobody applies from a laptop. An emergency manual change is imported back into the code the same day.
+- **REL-19. Paid automatic registry scanning stays off unless the owner explicitly opts in.** Keep `containerscanning.googleapis.com` out of the default enabled-API list. Every GCP Artifact Registry Docker repository, including staging and previews, explicitly sets `vulnerability_scanning_config.enablement_config = "DISABLED"`. An agent, bootstrap script or dependency must not enable paid scanning as incidental setup. Before enabling it, record owner approval, affected projects/repositories, current pricing, expected monthly image volume and cost, and how to stop it. Keep the CI image scan and SBOM required by REL-6; record any missing coverage rather than claiming it exists.
 - **REL-17. Drift is checked on a schedule.** A scheduled plan fails loudly when reality differs from code. Stateful resources (database, buckets) have deletion protection, backups and point-in-time recovery. A backup counts only after a restore has been tested.
 
 ### Done means verified
 
 - **REL-18. A deploy is done only when production serves the expected SHA.** After the traffic shift, poll the public URL's `/readyz` until it returns the commit just built, repeatedly, and wait for the post-deploy checks to finish. Record the deployment only after that.
+
+## GCP scanning defaults and costs
+
+The project must first enable the Container Scanning API. Once enabled, Google automatically
+scans newly pushed images in standard and remote Docker repositories unless a repository
+explicitly disables scanning. Enabling Artifact Registry for image storage alone is not the
+same as enabling the paid scanner. Disabling the API stops project-wide scanning; explicit
+repository exclusions survive API re-enablement. See [Google’s documented defaults](https://docs.cloud.google.com/artifact-analysis/docs/enable-automatic-scanning).
+
+The service charges per initial image scan; repeated builds can therefore accumulate charges.
+Check [current pricing](https://cloud.google.com/artifact-analysis/pricing) before requesting an
+exception to REL-19. Cloud Build allowances do not make this separate scanning service free.
+Budget alerts are notifications, not a hard spending cap, and stopping scans does not cancel
+charges already incurred or still being reported.
 
 ## How to apply
 
@@ -85,7 +100,7 @@ What to avoid now so the move is cheap: Cloud Run-only SDK calls in app code, co
 
 Automated: image scan and SBOM on every build; digest pins present; no root user in the final stage; Terraform plan on PR and drift job on schedule; `/readyz` SHA equals the built SHA after deploy; no service account key in the repo.
 
-Review: gate order unchanged, preview isolation (own database and secrets), rollback tested at least once, restore drill dated.
+Review: REL-19 API exclusion and explicit repository scanning disablement, or a recorded owner-approved exception with pricing and volume; gate order unchanged, preview isolation (own database and secrets), rollback tested at least once, restore drill dated.
 
 ## Mistakes to avoid
 

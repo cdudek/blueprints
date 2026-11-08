@@ -25,7 +25,7 @@ The pipeline is the same checks a developer runs locally, run again where nobody
 - **CI-7: Checkout uses `persist-credentials: false`.** Jobs that push use a short-lived app token, not the default token.
 - **CI-8: Pin every third-party action to a full commit SHA,** with the version as a comment. The dependency bot keeps pins current.
 - **CI-9: Cloud access is keyless** through workload identity, never a stored key. Secrets reach a job only if that job needs them. See [env-and-secrets](env-and-secrets.md).
-- **CI-10: Scanners run on every PR:** secret scanning, workflow linting, container scanning, and infrastructure-as-code scanning. A dependency update bot opens weekly grouped updates.
+- **CI-10: Scanners run on every PR:** secret scanning, workflow linting, container scanning, and infrastructure-as-code scanning. A dependency update bot opens weekly grouped updates. Use CI image scanners such as Trivy; this rule does not authorize enabling paid Google registry scanning. Follow [release-and-deploy REL-19](release-and-deploy.md) for that separate service.
 - **CI-11: A comment explains each non-obvious step.** Why this flag, why this order, what breaks without it.
 - **CI-12: Test the scripts and hooks that CI relies on,** and change them in the same PR as the convention they implement.
 
