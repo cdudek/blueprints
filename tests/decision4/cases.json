@@ -480,6 +480,61 @@
     "contains": "map gap: non-path"
   },
   {
+    "name": "credentials-only-does-not-raise-path-floor",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟢 Undo** — A revert restores the wording.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ],
+    "map": {
+      "version": 1,
+      "entries": [
+        {
+          "select": {
+            "paths": [
+              "docs/**"
+            ]
+          },
+          "floor": "Undo"
+        },
+        {
+          "select": {
+            "credentials": [
+              "production-token"
+            ]
+          },
+          "floor": "Answer"
+        }
+      ]
+    },
+    "contains": "map note: non-path ground, read by a person: credentials -> Answer"
+  },
+  {
+    "name": "paths-and-credentials-conservative-floor",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ],
+    "map": {
+      "version": 1,
+      "entries": [
+        {
+          "select": {
+            "paths": [
+              "docs/**"
+            ],
+            "credentials": [
+              "production-token"
+            ]
+          },
+          "floor": "Answer"
+        }
+      ]
+    },
+    "contains": "map gap: non-path selectors need owner review: paths, credentials"
+  },
+  {
     "name": "invalid-map",
     "body": "## How hard is it to undo this PR after merging?\n\n**🟢 Undo** — A revert restores the wording.\n",
     "valid": false,
