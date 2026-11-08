@@ -63,4 +63,4 @@ jobs:
             exit 1
           fi
       - name: Validate schema, changed-path floor and class-specific handoff
-        uses: cdudek/blueprints/.github/actions/decision4@95dc1586f9e807841ad9b46b69b12780a72c9671 # shared checker v1
+        uses: cdudek/blueprints/.github/actions/decision4@d572c1a05fd7f69ca9ebee72b4bb55201500717d # shared checker v1
