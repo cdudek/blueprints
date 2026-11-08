@@ -29,6 +29,7 @@ The default stack is TypeScript, Next.js App Router as a modular monolith, and P
 ### Versions
 
 - **STK-12 Latest stable at build time.** Take the newest stable release of each library when the product is created, never a pre-release, never a version copied from an older product. Commit the lockfile. Do not write version numbers in blueprints or docs.
+- **STK-22 Supported LTS runtime, one source.** Choose a current or active Node LTS line; never an end-of-life or maintenance-only line for new work. Resolve its current security patch at build time. `.nvmrc` is the version source: CI reads it with `node-version-file`, `engines.node` constrains the same major, and Docker build/runtime stages use that major. The first step in `scripts/ci-local` checks the local Node major against `.nvmrc` (or `engines.node` when there is no version file), fails before any other checks on a mismatch, and names the required version, the installed version and `nvm use`. Electron's embedded Node is separate from its tooling runtime.
 - **STK-13 The framework may be newer than the agent's knowledge.** Before using a framework API, read the documentation bundled with the installed version. When code and memory disagree, the installed version wins.
 - **STK-14 One package manager per product**, named in the agent files, with exact commands that exist.
 - **STK-15 Dependencies are added deliberately.** A new dependency needs a reason a reviewer can read: what it does, why the platform or an installed library cannot. Prefer fewer, maintained, widely used packages. Never add a dependency for a few lines of code.
@@ -62,7 +63,7 @@ Automatic:
 
 - Lockfile committed and in sync (frozen install in CI).
 - Unused dependencies, exports and files fail the build.
-- Dependency update bot runs weekly against the real lockfile.
+- Dependency update bot runs monthly with grouped updates against the real lockfile, including Docker digests.
 - Typecheck covers all source code, including config and scripts.
 - Audit and license scan in CI.
 
