@@ -53,7 +53,7 @@ Build every product as a modular monolith: one deployable, split inside into mod
 
 - **STR-25 `boundary-map.yaml` sits at the repo root, next to the architecture policy file.** It is the Decision4 boundary map (v1, see [sources](sources.md)): it sets a floor class per path, config key, data store, external API, credential and environment, so a class comes from where the ground changes, not from mood. It validates against the pinned schema URL (see [ci](ci.md)).
 - **STR-26 Typical floors.**
-  - Migrate: database schema and migrations, published contracts (HTTP API schema, events, MCP tools, job payloads), auth configuration, public URLs.
+  - Migrate: migration paths, schema definition files, published contracts (HTTP API schema, events, MCP tools, job payloads), auth configuration, public URLs. Every migration path and schema definition file (including module table definitions and ORM schema files) starts at Migrate in `boundary-map.yaml`. Explicit selectors cover them even when a broader module entry says Repair; use the actual stack paths and highest-floor-wins, and keep coverage current when files move.
   - Answer: production data and its credentials, legal pages, user email addresses, payments, deletion jobs, production IAM and DNS, signing keys.
   - Repair: an internal module, `clients/`, shared config. Undo: copy, styling, tests, docs.
 - **STR-27 The map marks ground, not decisions.** Each entry gives the floor, one line of put-right and the answerer. An agent proposes a class at or above the floor and logs a map gap on unmapped ground. Changing the map needs the owner's review.
@@ -105,7 +105,7 @@ Changing later: touch one module at a time. If a change needs another module's d
 
 Enforced automatically, in the required CI job:
 
-- `boundary-map.yaml` validates against the pinned schema, and every module path, table and credential the policy names is covered by an entry or a logged gap.
+- `boundary-map.yaml` validates against the pinned schema, and every module path, table and credential the policy names is covered by an entry or a logged gap. A coverage check enumerates migration and schema definition files from the migration/ORM configuration and verifies their effective floor is at least Migrate; a missing or lower entry fails, rather than merely logging a gap.
 - Imports respect doors, declared edges and the one-way rule, with no cycles at module and file level.
 - Only a table's owner imports its definition and writes it. Read exceptions match their declared file and table exactly.
 - Delivery layers contain no database access. System operations are called only from the outside edge.

@@ -41,9 +41,13 @@ Postgres is the database, the ORM is the only way code talks to it, and each mod
 - **DAT-17 Migrations run as a separate job before the new revision takes traffic.** Different identity from the app: the job has DDL rights, the app has data rights only. Never at web startup, never from several instances at once.
 - **DAT-18 Back up before migrating.** A fresh backup or a point-in-time marker exists before the migration job runs in production. A backup is not disaster recovery until a restore has been tested.
 - **DAT-19 Expand, migrate, contract.** See [compatibility](compatibility.md).
-- **DAT-20 A migration that can refuse data ships a read-only preflight.** Adding a unique index, a not-null, a foreign key or a narrower type can fail on real rows that a fresh dev database never has. The preflight runs read-only against production and reports offending rows. A test asserts the specific refusal.
+- **DAT-20 A migration that can refuse data ships a read-only preflight.** Adding a unique index, a not-null, a foreign key, a check constraint or a narrower type can fail on real rows that a fresh dev database never has. The preflight runs read-only against production and reports offending rows. A test asserts the specific refusal.
 - **DAT-21 Verify the result, not the exit code.** The pipeline confirms the expected migrations are applied.
 - **DAT-22 Readiness checks compatibility, not the latest migration.** An older revision runs against a newer schema during a rollout and must stay ready.
+- **DAT-25 Squawk checks every new or changed migration in the local gate.** Use the Postgres migration linter [Squawk](https://squawkhq.com/) (pin and credit in [sources](sources.md)), with its default rules enabled and the production Postgres major and migration runner's transaction behaviour configured. Findings fail the gate: an index without `CONCURRENTLY`, a new `NOT NULL` column without a default on an existing table, a type change that rewrites a table, and the other defaults. An exception uses a statement-scoped inline `squawk-ignore` naming the rule, with an adjacent comment explaining why it is safe; a companion check rejects missing reasons and blanket or global exclusions. An ignore does not waive DAT-26 or DAT-27.
+- **DAT-26 A guard enforces expand/contract against the released version.** A migration may not drop or rename a table, column or enum value that the currently released version still reads or writes. Parse the migration's destructive operations, including enum replacement sequences, and compare their targets with a schema-dependency manifest derived from the released artifact's code and SQL references. Take the immutable released revision from deployment evidence, not the PR head or default branch; include every revision still serving or retained as a rollback target. Unknown references, dynamic SQL the manifest cannot resolve, missing release evidence or parse failures fail closed. For a first release, require explicit evidence that no release exists. Deploy the version that no longer uses the object first; contract in a later PR once protected revisions no longer need it. A contract marker or a review approval alone cannot bypass the guard.
+- **DAT-27 The gate requires and executes preflight proof.** Classify new or changed migration SQL for a unique index, `NOT NULL`, foreign key, check constraint or narrower type, including later constraint validation. Each such operation maps by migration id to a read-only preflight (DAT-20) and an executable refusal test. Missing preflight, missing test or an unclassified operation fails the gate. On real Postgres, seed rows that violate that exact condition, assert that the preflight reports them and the migration refuses for the expected constraint or type reason, then assert clean rows pass. Enforce read-only execution with database permissions and a read-only transaction. Run pending preflights against production with a separate read-only identity before migration; offenders or inability to read fail rather than skip. Production access may be a separate cloud gate (see [ci](ci.md) CI-36); the local gate always checks coverage and runs the refusal tests without production access.
+- **DAT-28 The local gate migrates from zero and checks drift.** It starts a fresh disposable real Postgres matching the production major and required extensions, applies every committed migration in order using the production migration runner, verifies the expected applied set (DAT-21), then compares the resulting database schema with the schema definition. Compare normalized tables, columns, types, indexes and constraints, excluding only declared engine/tool metadata. A mismatch, unapplied migration, unavailable database or skipped suite fails. A developer's existing database, generated snapshot or successful exit code is no substitute.
 
 ### Developer databases
 
@@ -60,26 +64,31 @@ New product:
 4. Add the migrate job target to the image (see [release-and-deploy](release-and-deploy.md)) and a separate database role for the app.
 5. Add the jobs table or queue, and the worker entry point, when the first background task appears, not before.
 6. Add the hook or rule that blocks direct schema push.
+7. Wire the separate local `migrate` step (see [ci](ci.md) CI-42): Squawk, released-version compatibility guard, preflight coverage and refusal tests, migration from zero and drift comparison. Map migration paths and schema definition files at Migrate in `boundary-map.yaml` (STR-26).
 
 Changing a schema later:
 
 1. Edit the table definition, generate the migration, read the SQL.
-2. Ask whether the change breaks the running revision (see [compatibility](compatibility.md)). If it does, split it into expand and contract releases.
-3. If the migration can refuse rows, write the preflight and its test first.
-4. Merge. The pipeline backs up, runs the migrate job, then rolls out.
+2. Run the released-version compatibility guard (DAT-26); split incompatible work into expand, deploy and a later contract PR (see [compatibility](compatibility.md)).
+3. If the migration can refuse rows, write the preflight and its refusal test first; the coverage guard checks this (DAT-27).
+4. Run the local gate, including `migrate`, before pushing (CI-35).
+5. Before migration, the production preflight must pass. The pipeline backs up, runs the separate migrate job, then rolls out.
 
 ## Checks
 
 Automatic:
 
 - Repositories are the only importers of the ORM and table definitions.
-- A test creates a database from the migrations only and compares it with the schema definition (no drift).
+- The required local gate's `migrate` step runs Squawk on every added or changed migration against the target branch's merge base, plus staged, unstaged and untracked migration files during local development. Handle paths safely, report the files checked, and fail on unavailable base refs or diff errors; only a proven empty file set may report no changes (DAT-25).
+- The released-version dependency guard rejects destructive operations still used by protected releases, even with a contract marker or Squawk ignore (DAT-26).
+- SQL classification requires the matching read-only preflight and refusal test; both offending and clean fixtures execute on real Postgres (DAT-27).
+- The gate itself creates disposable Postgres, applies all migrations from zero, verifies the applied set and compares the live schema with the definition (DAT-28).
 - Applied migration files are unchanged compared with the target branch (hash or diff check).
 - The push command is blocked for agents and absent from scripts and docs.
 - Concurrency tests use real separate connections on Postgres.
-- A PR touching a migration lists it in the PR output.
+- A PR touching a migration lists it in the PR output; migration and schema definition paths have at least the Migrate floor in `boundary-map.yaml` (STR-26).
 
-Review: expand and contract split, preflight need, index impact on large tables, lock duration.
+Review: index impact on large tables and expected lock duration, alongside Squawk; estimates need production table size, traffic and query patterns. Expand/contract safety and preflight coverage are automatic requirements above.
 
 ## Mistakes to avoid
 
