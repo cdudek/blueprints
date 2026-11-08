@@ -43,7 +43,7 @@ jobs:
           --health-cmd "pg_isready -U app -d app" --health-interval 2s --health-timeout 3s
           --health-retries 30
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # the ratchets compare with the merge base; the secret scan reads history
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
@@ -79,7 +79,7 @@ jobs:
           --health-cmd "pg_isready -U app -d app" --health-interval 2s --health-timeout 3s
           --health-retries 30
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Build web, worker and migrate
         run: make docker-build IMAGE=app
       - name: migrate applies every migration to an empty database
