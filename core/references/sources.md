@@ -133,6 +133,14 @@ spec-kit v1.3.2
 - **Licence:** CC BY 3.0.
 - **Tracking:** manual.
 
+### GitHub Actions and Dependabot documentation
+
+- **URL:** [Runner pricing](https://docs.github.com/en/billing/reference/actions-runner-pricing), [hosted runners](https://docs.github.com/en/actions/reference/runners/github-hosted-runners), [Dependabot options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference), [security update configuration](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/configure-security-updates).
+- **Pinned:** documentation checked 2026-11-08; date pin because these are rolling service documents.
+- **Takes:** runner cost and capacity, public-repository free standard runners, per-job minute rounding, monthly routine update groups, separate immediate security groups and the scope of the version-update PR limit. See [ci](ci.md) CI-37 through CI-41.
+- **Licence:** GitHub documentation, CC BY 4.0; ideas restated with attribution.
+- **Tracking:** manual re-check when changing CI policy or choosing runners; keep reference prose independent of OS, runtime and dependency release versions.
+
 ## How to apply
 
 1. Adding a source: add its entry here first, then cite it from the reference that uses it.

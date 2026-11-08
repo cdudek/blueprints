@@ -35,7 +35,7 @@ A release is one commit built once into one immutable image and promoted through
 - **REL-11. CI authenticates keyless.** GitHub Actions federates to GCP through workload identity. No service account keys in repo, secrets or env. One deployer identity per app with only the roles it needs; the runtime identity is separate and has no DDL rights.
 - **REL-12. Promotion is staging, then no-traffic revision, then health gate, then production.** Deploy the new revision to production with zero traffic, call `/readyz` on its own URL, check the SHA matches, then shift traffic. A failed gate leaves the old revision serving.
 - **REL-13. Rollback is automatic and cheap.** If post-deploy checks fail, traffic returns to the previous revision without a human. The previous revision keeps working because migrations are backwards compatible (expand, migrate, contract).
-- **REL-14. A preview per PR, isolated.** Own hostname, own database, own secrets, own identity. A preview never inherits production config, secrets or jobs. Do not offer previews until this holds. Previews are deleted when the PR closes.
+- **REL-14. A preview per eligible PR, isolated.** Own hostname, own database, own secrets, own identity. A preview never inherits production config, secrets or jobs. Do not offer previews until this holds. Previews are deleted when the PR closes.
 - **REL-15. Migrations run as a separate job before traffic shifts.** Never at server startup. The job uses its own identity with DDL rights; the runtime has DML only. See [data-and-migrations](data-and-migrations.md).
 
 ### Infrastructure as code
@@ -47,6 +47,9 @@ A release is one commit built once into one immutable image and promoted through
 ### Done means verified
 
 - **REL-18. A deploy is done only when production serves the expected SHA.** After the traffic shift, poll the public URL's `/readyz` until it returns the commit just built, repeatedly, and wait for the post-deploy checks to finish. Record the deployment only after that.
+
+- **REL-20. Skip bot and draft PR previews.** Require a non-bot author and a ready PR before provisioning. Serialize preview deployment and cleanup per PR without cancelling cleanup midway; delete any existing preview when it becomes ineligible or closes.
+- **REL-21. Spend remote minutes on release work.** Follow [ci](ci.md) CI-36 through CI-39: use the cheapest capable runner, serialize deploys and necessary cleanup, filter irrelevant paths, and reserve macOS for tagged or manually dispatched Apple app release builds.
 
 ## GCP scanning defaults and costs
 
@@ -68,7 +71,7 @@ charges already incurred or still being reported.
 2. Write the Dockerfile to REL-4 and REL-5. Define the migration job as a separate command of the same image.
 3. Add `/healthz` and `/readyz` before the first deploy. Test that `/readyz` fails when the database is down.
 4. Define infrastructure in Terraform: network, Cloud SQL, Secret Manager containers, Cloud Run services, deployer and runtime identities, workload identity binding to the repo.
-5. Build the pipeline: PR (checks, plan, preview), merge to main (build, scan, push, apply, deploy to staging, gate, production no-traffic, gate, shift, verify SHA).
+5. Run the local gate before pushing; PR cloud work is plan and eligible preview only. Merge builds, scans and publishes the release artifact, applies and deploys through staging and production gates, without repeating the already-passed full CI suite (see [ci](ci.md) CI-36).
 6. Document the restore drill and the rollback command in the repo README, then run both once.
 
 Sketch of the production job order:
