@@ -126,8 +126,10 @@ def clean(text):
 
 def nonempty(value):
     value = value.strip().strip("*").strip()
-    return bool(value) and not re.match(
-        r"^(?:none|n/?a|[-—])(?:[. ]|$)|^<", value, re.I
+    return (
+        bool(value)
+        and not re.search(r"<[^>]*>|\b(?:TBD|TODO)\b", value, re.I)
+        and not re.match(r"^(?:none|n/?a|[-—])(?:[. ]|$)|^<", value, re.I)
     )
 
 
@@ -301,44 +303,103 @@ def check(body, paths, mapping, base_mapping=None):
         for label in ("Chose", "Over", "Because", "Commits us to"):
             if not value(record, label):
                 errors.append(f"Repair needs {label} under Decision record")
-    elif effective == "Migrate":
-        options = numbered(block(record, "Options"))
-        forced = len(options) == 1 and re.search(r"\bforced\b", options[0], re.I)
-        constraint = len(options) == 1 and re.search(
-            r"\bconstraint\s*:?\*{0,2}\s*:?\s*(.+)", options[0], re.I
-        )
-        if len(options) < 2 and not (
-            forced and constraint and nonempty(constraint.group(1))
+    elif effective in ("Migrate", "Answer"):
+        required = ["Class", "Who answers", "Commits us to"]
+        if effective == "Migrate":
+            required.append("Chosen by")
+        else:
+            required += [
+                "Title",
+                "Status",
+                "Context",
+                "Decision",
+                "Rejected alternative",
+                "Provenance",
+                "Class history",
+                "Last validated",
+                "Revisit when",
+            ]
+        for label in required:
+            if not value(record, label):
+                errors.append(f"{effective} needs filled {label} under Decision record")
+        record_class = value(record, "Class")
+        put_right = re.search(r"\bput[- ]right\s*:\s*(.+)", record_class, re.I)
+        if not (
+            re.match(rf"(?:\*\*)?{effective}\b", record_class)
+            and put_right
+            and nonempty(put_right.group(1))
         ):
-            errors.append(
-                "Migrate needs at least two real Options, or one Forced option with its Constraint"
+            errors.append(f"{effective} needs Class with its put-right answer")
+        if effective == "Migrate":
+            if not named_person(value(record, "Chosen by")):
+                errors.append(
+                    "Migrate needs Chosen by: <person>; an agent only drafts options"
+                )
+            options = numbered(block(record, "Options"))
+            forced = len(options) == 1 and re.search(r"\bforced\b", options[0], re.I)
+            constraint = len(options) == 1 and re.search(
+                r"\bconstraint\s*:?\*{0,2}\s*:?\s*(.+)", options[0], re.I
             )
-    elif effective == "Answer":
-        if not named_person(responsible):
-            errors.append(
-                "Answer needs a named person or @handle, not a role, for Responsible for recovery"
-            )
-        evidence = block(record, "Evidence")
-        items = [m.group(1) for m in re.finditer(r"^[-*][ \t]+(.+)$", evidence, re.M)]
-        if not items or any(
-            not re.match(
-                r"(?:\*\*)?(?:observed|inferred|asked|unknown)(?:\*\*)?:(?:\*\*)?\s*\S",
-                item,
+            if len(options) < 2 and not (
+                forced and constraint and nonempty(constraint.group(1))
+            ):
+                errors.append(
+                    "Migrate needs at least two real Options, or one Forced option with its Constraint"
+                )
+            commitments = [
+                re.search(r"\bcommits(?: us)? to\s*:?\*{0,2}\s*:?\s*(.+)", option, re.I)
+                for option in options
+            ]
+            if any(not match or not nonempty(match.group(1)) for match in commitments):
+                errors.append("Migrate needs what each option commits to")
+            if len(options) != len(set(option.casefold() for option in options)):
+                errors.append("Migrate needs distinct viable options")
+        else:
+            if re.search(r"<person writes>", record, re.I):
+                errors.append(
+                    "Answer person-authored fields must be filled before approval"
+                )
+            revisit = value(record, "Revisit when")
+            if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}[.]?", revisit):
+                errors.append(
+                    "Answer Revisit when must be a condition, not only a date"
+                )
+            if not named_person(responsible):
+                errors.append(
+                    "Answer needs a named person or @handle, not a role, for Responsible for recovery"
+                )
+            if not named_person(value(record, "Who answers")):
+                errors.append("Answer needs a named person or @handle for Who answers")
+            evidence = block(record, "Evidence")
+            items = [
+                m.group(1) for m in re.finditer(r"^[-*][ \t]+(.+)$", evidence, re.M)
+            ]
+            labelled = [
+                re.match(
+                    r"(?:\*\*)?(?:observed|inferred|asked|unknown)(?:\*\*)?:(?:\*\*)?\s*(.+)",
+                    item,
+                    re.I,
+                )
+                for item in items
+            ]
+            if not items or any(not m or not nonempty(m.group(1)) for m in labelled):
+                errors.append(
+                    "Answer needs Evidence items each labelled observed/inferred/asked/unknown"
+                )
+            challenges = block(record, "Challenges")
+            if not any(
+                nonempty(m.group(1))
+                for m in re.finditer(
+                    r"^[-*][ \t]+(?:\*\*[^*]+:\*\*\s*)?(.+)$", challenges, re.M
+                )
+            ):
+                errors.append("Answer needs Challenges")
+            if re.search(
+                r"\brecommend(?:ation|ations|ed|s)?\b|\brank(?:ing|ings|ed)?\b",
+                record,
                 re.I,
-            )
-            for item in items
-        ):
-            errors.append(
-                "Answer needs Evidence items each labelled observed/inferred/asked/unknown"
-            )
-        challenges = block(record, "Challenges")
-        if not any(
-            nonempty(m.group(1))
-            for m in re.finditer(r"^[-*][ \t]+(.+)$", challenges, re.M)
-        ):
-            errors.append("Answer needs Challenges")
-        if re.search(r"\brecommend(?:ation|ations)?\b", record, re.I):
-            errors.append("Answer must not contain a Recommend/recommendation line")
+            ):
+                errors.append("Answer must not contain a recommendation or ranking")
     messages.append(
         f"Decision4: declared {declared}; floor {floor}; effective {effective}"
     )

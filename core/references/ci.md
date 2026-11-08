@@ -167,10 +167,58 @@ Full example (illustrative evidence, not claims to copy):
 
 ## Decision record
 
+<!-- Keep only the block for the selected class; delete this section at Undo. -->
+
+**Repair**
+
 - **Chose:** <what was decided>
 - **Over:** <viable alternative>
 - **Because:** <reason>
 - **Commits us to:** <what this ties the team to>
+
+**Migrate**
+
+<!-- An agent drafts viable options; the accountable owner chooses on the record. -->
+- **Class:** Migrate; put-right: <coordinated change needed if wrong>
+- **Who answers:** <accountable person or role>
+- **Commits us to:** <what the chosen option ties the team to and how it could fail later>
+- **Chosen by:** <person>
+
+**Options**
+
+1. **Option 1:** <viable option>; **Commits to:** <its commitments>
+2. **Option 2:** <viable option>; **Commits to:** <its commitments>
+
+<!-- Or one numbered Forced option with its Constraint and Commits to. -->
+
+**Answer**
+
+<!-- Evidence and challenge only: no recommendation or ranking. General knowledge is not evidence about this case.
+A person with standing writes Decision and Commits us to; agents leave <person writes> and validation fails until filled.
+Every evidence claim is labelled observed / inferred / asked / unknown. Revisit when is a condition, not only a date. -->
+- **Title:** <decision title>
+- **Status:** <proposed / accepted / superseded / retired>
+- **Context:** <case-specific context>
+- **Decision:** <person writes>
+- **Class:** Answer; put-right: <who outside the team is affected and why nothing unmakes it>
+- **Who answers:** <named person or @handle with standing>
+- **Rejected alternative:** <a viable alternative>
+- **Provenance:** <evidence and challenges supplied by the agent; choice made by the person>
+- **Class history:** <escalations, recorded de-escalations and designs that lowered the class; or unchanged>
+- **Commits us to:** <person writes>
+- **Last validated:** <when and by whom this was checked>
+- **Revisit when:** <condition that calls for revalidation>
+
+**Evidence**
+
+- **observed:** <checked directly by reading, running or measuring>
+- **inferred:** <reasoned from observations>
+- **asked:** <what a person who was asked said>
+- **unknown:** <material gap not established by anyone>
+
+**Challenges**
+
+- **Challenge:** <what would make the decision wrong>
 
 <details>
 <summary>Recovery levels</summary>
