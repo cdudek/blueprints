@@ -1,2 +1,0 @@
-# Staged files only: format and lint. Nothing slow, no E2E.
-pnpm exec lint-staged

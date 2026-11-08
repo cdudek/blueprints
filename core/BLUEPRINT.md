@@ -9,7 +9,7 @@ skip-when: a one-line fix that touches no convention
 
 This is the briefing you would otherwise repeat at the start of every project. Read this file first, then open a reference only when you reach its step. The references hold the rules, the reasons behind them and the checks that keep them true.
 
-It describes, it does not implement. Use the latest stable version of every tool at build time and read its current docs before writing code. Where a stack blueprint exists ([Next.js](../nextjs/), [FastAPI](../fastapi/BLUEPRINT.md)), it applies this core to that stack and wins on stack details.
+It describes, it does not implement. Use the latest stable version of every tool at build time and read its current docs before writing code. Where a stack blueprint exists ([Next.js](../nextjs/BLUEPRINT.md), [FastAPI](../fastapi/BLUEPRINT.md)), it applies this core to that stack and wins on stack details.
 
 ## Rules that override everything
 
