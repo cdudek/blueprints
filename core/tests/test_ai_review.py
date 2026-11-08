@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -16,6 +17,24 @@ spec.loader.exec_module(review)
 
 
 class ReviewTests(unittest.TestCase):
+    def test_nested_commands_strip_worker_lifecycle_but_preserve_auth_context(self):
+        with patch.dict(os.environ, {
+            "ORCA_AGENT_HOOK_TOKEN": "fixture-hook",
+            "ORCA_TERMINAL_HANDLE": "fixture-terminal",
+            "ORCA_FUTURE_LIFECYCLE": "fixture-future",
+            "CODEX_THREAD_ID": "fixture-thread",
+            "AI_REVIEW_AUTH_FIXTURE": "fixture-auth",
+        }):
+            result = review.command([
+                sys.executable, "-c",
+                "import json, os; print(json.dumps({"
+                "'hooks': [key for key in os.environ if key.startswith('ORCA_') or key == 'CODEX_THREAD_ID'],"
+                "'auth': os.environ['AI_REVIEW_AUTH_FIXTURE']}))",
+            ])
+            self.assertEqual(json.loads(result.stdout), {"hooks": [], "auth": "fixture-auth"})
+            self.assertEqual(os.environ["ORCA_AGENT_HOOK_TOKEN"], "fixture-hook")
+            self.assertEqual(os.environ["CODEX_THREAD_ID"], "fixture-thread")
+
     def test_tally_is_collapsed_exact_and_preserves_attribution(self):
         receipt = {
             "reviewer": "codex",
