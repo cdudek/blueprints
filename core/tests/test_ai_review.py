@@ -98,13 +98,17 @@ class ReviewTests(unittest.TestCase):
                 "extra_nits": 0,
                 "tally": dict.fromkeys(review.SEVERITIES, 0),
             }
-            (folder / "ai-review.json").write_text(json.dumps(raw))
+            review.cache_path(folder, "base", "head").write_text(json.dumps(raw))
             with patch.object(
-                review, "reviewer", side_effect=AssertionError("second review")
+                review, "reviewer", side_effect=AssertionError("fresh review required")
             ):
                 self.assertEqual(review.review("base", "head", folder), raw)
-                with self.assertRaisesRegex(ValueError, "stale"):
+                with self.assertRaisesRegex(AssertionError, "fresh review required"):
                     review.review("base", "changed-head", folder)
+                raw["head"] = "forged-head"
+                review.cache_path(folder, "base", "head").write_text(json.dumps(raw))
+                with self.assertRaisesRegex(ValueError, "stale"):
+                    review.review("base", "head", folder)
 
     def test_low_findings_are_capped_and_extra_nits_are_counted(self):
         findings = [{"severity": "low", "summary": "nit"}] * 5
@@ -113,6 +117,41 @@ class ReviewTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "five-nit"):
             review.validate({"findings": findings + findings, "extra_nits": 0})
+
+    def test_retargeted_head_reviews_each_base_once_and_preserves_both_receipts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            brief = folder / "REVIEW.md"
+            brief.write_text("Review the supplied change.")
+            calls = []
+
+            def cli(args, **kwargs):
+                calls.append(args)
+                if args[0] == "git":
+                    return subprocess.CompletedProcess(args, 0, "fixture diff", "")
+                Path(args[args.index("--output-last-message") + 1]).write_text(
+                    '{"findings": [], "extra_nits": 0}'
+                )
+                return subprocess.CompletedProcess(args, 0, "fixture", "")
+
+            previous = Path.cwd()
+            try:
+                os.chdir(folder)
+                with (
+                    patch.object(review, "reviewer", return_value="codex") as select,
+                    patch.object(review, "command", side_effect=cli),
+                ):
+                    first = review.review("base-a", "same-head", folder / "proof")
+                    second = review.review("base-b", "same-head", folder / "proof")
+                    self.assertEqual(review.review("base-a", "same-head", folder / "proof"), first)
+                    self.assertEqual(review.review("base-b", "same-head", folder / "proof"), second)
+                    self.assertEqual(select.call_count, 2)
+            finally:
+                os.chdir(previous)
+            self.assertEqual(first["base"], "base-a")
+            self.assertEqual(second["base"], "base-b")
+            self.assertEqual(sum(args[:2] == ["git", "diff"] for args in calls), 2)
+            self.assertEqual(sum(args[0] == "codex" for args in calls), 2)
 
     def test_real_git_diff_is_read_once_and_cached_across_body_updates(self):
         with tempfile.TemporaryDirectory() as directory:

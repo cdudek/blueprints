@@ -130,9 +130,15 @@ def body_with_tally(body, receipt):
     return body.rstrip() + "\n\n" + block + "\n"
 
 
+def cache_path(folder, base, head):
+    # Safe filename for the complete pair, including a retargeted unchanged head.
+    key = hashlib.sha256(json.dumps([base, head]).encode()).hexdigest()
+    return folder / f"ai-review-{key}.json"
+
+
 def review(base, head, folder):
     folder.mkdir(parents=True, exist_ok=True)
-    receipt_path = folder / "ai-review.json"
+    receipt_path = cache_path(folder, base, head)
     if receipt_path.exists():
         receipt = json.loads(receipt_path.read_text())
         if receipt.get("head") != head or receipt.get("base") != base:
