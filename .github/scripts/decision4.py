@@ -37,11 +37,13 @@ def main():
     body = re.sub(r"<!--.*", "", body, flags=re.S)  # an unterminated comment hides the rest on GitHub
 
     def field(name):
-        m = re.search(rf"^[ \t]*{name}:[ \t]*(.*?)[ \t]*$", body, re.M)
+        # Accepts "Name: value", "- Name: value" and "- **Name:** value" (the readable PR template).
+        m = re.search(rf"^[ \t]*(?:[-*+][ \t]+)?(?:\*\*)?{name}:(?:\*\*)?[ \t]*(.*?)[ \t]*$", body, re.M)
         return m.group(1) if m else ""
 
     def filled(name):
-        return bool(field(name)) and not field(name).startswith("<")
+        v = field(name)
+        return bool(v) and not v.startswith("<") and not re.match(r"(?:none|n/?a)\b|[-—](?:\s|$)", v, re.I)
 
     declared = field("Decision-Class")
     if declared not in ORDER:
