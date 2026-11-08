@@ -24,7 +24,7 @@ The default stack is TypeScript, Next.js App Router as a modular monolith, and P
 - **STK-9 MCP.** The official MCP TypeScript SDK, inside the same app as one more delivery layer. See [mcp](mcp.md).
 - **STK-10 Hosting.** Containers: one image per app, config from env. GCP Cloud Run with Cloud SQL Postgres and Terraform first, the owner's Kubernetes cluster later. See [release-and-deploy](release-and-deploy.md).
 - **STK-11 Tests.** A unit and integration runner in the TypeScript ecosystem, Playwright for end to end, a real Postgres for data tests. See [testing](testing.md).
-- **STK-21 Lint.** Oxlint with the vendored anti-slop ruleset, plus the formatter. See [code-quality](code-quality.md).
+- **STK-21 Lint and format.** Biome handles TypeScript linting and formatting. Oxlint runs only the vendored anti-slop rules in the separate `slop` target; it does not duplicate general linting. See [code-quality](code-quality.md).
 
 ### Versions
 

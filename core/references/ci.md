@@ -61,19 +61,19 @@ IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
 - **CI-20: Squash merge, with a Conventional Commit title.** The title decides the release type (see [release-and-deploy](release-and-deploy.md)). One change per PR.
 - **CI-21: Arm auto-merge on every PR that can merge on green.** Hand a PR to the owner only when it needs a human judgment. Check the merge state (behind, blocked, clean) before saying it is ready; green checks are not the same as mergeable.
 - **CI-22: Branch from a freshly fetched default branch,** never from a stale local copy.
-- **CI-33: `arch` and `perf` are their own CI jobs, part of the required check,** next to `slop`. `arch` runs the boundary and score dimensions, `perf` runs the web and bundle budgets where the product has them. Each fails on its own, posts its deltas on the PR, and prints "not applicable" when the stack has nothing to measure. The dimensions, gates and baseline are defined in [architecture](architecture.md); this file only wires the jobs.
-- **CI-24: Slop is its own CI job, part of the required check.** It runs the `slop` target: anti-slop lint rules plus the slop metrics compared with the merge base. It fails on its own, so a slop regression is visible as such and cannot hide behind a green test run. It posts the metric deltas on the PR.
+- **CI-33: `arch` and `perf` are their own CI jobs, part of the required check,** next to `slop`. `arch` runs the boundary and score dimensions, using ArchUnitTS for TypeScript and import-linter for Python boundaries; `perf` runs the web and bundle budgets where the product has them. Each fails on its own, posts its deltas on the PR, and prints "not applicable" when the stack has nothing to measure. The dimensions, gates and baseline are defined in [architecture](architecture.md); this file only wires the jobs.
+- **CI-24: Slop is its own CI job, part of the required check.** It runs the `slop` target: the vendored anti-slop rules through Oxlint with only those rules enabled for TypeScript, plus separate slop metric collectors compared with the merge base. Biome stays in `lint` and `format-check`; it cannot run the anti-slop Oxlint JavaScript plugins. It fails on its own, so a slop regression is visible as such and cannot hide behind a green test run. It posts the metric deltas on the PR.
 
 ### Make contract
 
 - **CI-23: Every repo defines the same standard targets,** named in kebab-case, so one habit works across stacks. A target with nothing to do prints "not applicable" and exits 0.
   - `setup`: install dependencies from the lockfile, install git hooks.
   - `dev`: run the app locally.
-  - `lint` and `format`: static checks and auto-fix.
-  - `slop`: the anti-slop rules and the slop metrics, its own step and its own CI job (see [code-quality](code-quality.md)).
+  - `lint`, `format` and `format-check`: general static checks, formatting and its non-mutating check. TypeScript uses Biome; Python keeps its stack linter and formatter.
+  - `slop`: Oxlint restricted to the vendored anti-slop rules for TypeScript, plus separate slop metric collectors, its own step and its own CI job (see [code-quality](code-quality.md)).
   - `typecheck`: the type checker over all source.
   - `test` and `test-integration`: fast tests; tests needing a database or browser.
-  - `arch`: boundary and import rules and the architecture score (see [structure](structure.md), [architecture](architecture.md)).
+  - `arch`: boundary and import rules and the architecture score (ArchUnitTS for TypeScript; import-linter for Python boundaries; see [structure](structure.md), [architecture](architecture.md)).
   - `perf`: the web and bundle budgets of [architecture](architecture.md).
   - `fitness`: every dimension of `architecture.yaml`, writing `fitness-report.json`.
   - `gates-test`: the negative fixtures of every gate (see [testing](testing.md) TEST-19).
