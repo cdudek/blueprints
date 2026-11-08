@@ -43,10 +43,10 @@ jobs:
           --health-cmd "pg_isready -U app -d app" --health-interval 2s --health-timeout 3s
           --health-retries 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0 # the ratchets compare with the merge base; the secret scan reads history
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
         with:
           version: ${{ env.UV_VERSION }}
       - name: Install gitleaks (pinned, checksum verified)
@@ -79,7 +79,7 @@ jobs:
           --health-cmd "pg_isready -U app -d app" --health-interval 2s --health-timeout 3s
           --health-retries 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Build web, worker and migrate
         run: make docker-build IMAGE=app
       - name: migrate applies every migration to an empty database
