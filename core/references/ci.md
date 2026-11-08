@@ -31,19 +31,20 @@ One local command defines "good" and publishes proof for the exact commit. GitHu
 
 ### AI review
 
-- **CI-13: An AI reviewer reads the diff against `REVIEW.md`** once per non-bot PR, and again on a re-review label. It reads the diff once and opens a file only when the diff cannot settle a finding.
+- **CI-13: `scripts/ci-local` runs one AI review on the exact PR head against `REVIEW.md`.** Prefer Codex CLI when installed and logged in; otherwise use authenticated Claude. Read the diff once and open a source file only when the diff cannot settle a finding. Cache the result by exact head and base so body validation never repeats the review; a changed head requires fresh evidence. No Actions minutes are used.
 - **CI-14: `REVIEW.md` defines three passes:** bugs, security (secrets or personal data in logs, missing timeout, swallowed exception, new network egress, widened permission, auth trusting client input), and compliance (the change matches its facts and plan, follows the agent files, and does not make any of them false).
 - **CI-15: "Important" means real breakage:** broken behavior, a write to the wrong system, leaked data, or a breached rule no test catches. Style and preference are nits. Report at most five nits and count the rest.
 - **CI-16: The reviewer skips what the local gate already enforces,** and generated files such as lockfiles.
-- **CI-17: The review ends with a machine-readable tally line the merge gate reads,** bound to the reviewed commit:
+- **CI-17: The review writes a machine-readable tally the local merge gate reads,** bound to the reviewed commit and base. Put a short tally in the PR body inside one collapsed Local AI review block: findings by severity, reviewer and full head SHA. Preserve the rest of the body and update the existing block on a new head:
 
 ```text
-IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
+Reviewer: <codex|claude>  SHA: <head sha>
+Findings: critical <n>, high <n>, medium <n>, low <n>
 ```
 
-- **CI-18: A review gate that docs promise must exist.** If the workflow is off, the docs say so. A "needs owner approval" tier requires a code-owners file and a required-review rule, or it is not called that.
+- **CI-18: A review gate that docs promise must exist.** If the local review is missing or cannot authenticate, the gate fails and the docs say so; a suspended Actions workflow never counts as review evidence. A "needs owner approval" tier requires a code-owners file and a required-review rule, or it is not called that.
 
-- **CI-32: AI review also asks CUPID questions,** inside the same review, not as a second pass. Is the change composable (small, with a clear interface)? Does it add a hidden dependency? Does it have a surprising side effect? Does it follow the idiom of the code around it? Does it use the domain vocabulary (see [code-quality](code-quality.md))? Findings use the existing severity levels, tally line and single fix round. No scores.
+- **CI-32: AI review also asks CUPID questions,** inside the same review, not as a second pass. Is the change composable (small, with a clear interface)? Does it add a hidden dependency? Does it have a surprising side effect? Does it follow the idiom of the code around it? Does it use the domain vocabulary (see [code-quality](code-quality.md))? Findings use the same severity tally and fix loop within that one local review. No scores.
 
 ### Enforcement audit
 
