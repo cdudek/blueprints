@@ -52,7 +52,7 @@ IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
 
 ### Pull requests and merge
 
-- **CI-19: The PR template maps each requirement to its proof:** the fact or rule id, the test or screenshot that shows it, and the change folder link.
+- **CI-19: PR bodies, issues and PR comments are scannable lists with bold labels.** Use What → Why → Proof → Before merge (only if open), then the repo's Decision4 section when `boundary-map.yaml` exists, then Decision record only at Migrate/Answer. One idea per bullet, at most two lines; no paragraph longer than two sentences. Proof names the check and result and maps every requirement id to its test, screenshot or change folder link. Links belong on labels or results. Preserve repo-specific checklists and never tick a human attestation. Use the full example below; never author old plain Decision4 fields or “Repair, choice story:” headings.
 - **CI-25: The PR template asks “How hard is it to undo this PR after merging?”** Use that exact level-three heading. Select one bold class with one coloured circle beside it: `**🟢 Undo**`, `**🟡 Repair**`, `**🟠 Migrate**` or `**🔴 Answer**`; no other coloured circles appear in the section. The sentence after the class explains why this class applies with concrete recovery requirements, never “contained fix-up”. Use the plain labels **Recovery steps**, **Work preserved** (optional), **Responsible for recovery** and **Classification change**. Recovery steps are ordered, numbered when there is more than one; for Undo the sentence may suffice and steps may be omitted. Do not repeat the sentence in the steps, invent steps to fit a class, or claim preserved work or backups unless the PR supports them. Responsible for recovery names a role; Answer requires a named person. Classification change is `None` unless the class changes; then record `<from> -> <to>; <lowered or raised> by <who>; <why>`. Choose one class per PR, the highest that applies; split a PR whose parts need very different classes. Put the writing rules in the template's HTML comment and the four recovery levels in a collapsible “Recovery levels” block: Undo — revert only; Repair — revert plus fixes or a release; Migrate — move data, state or users back; Answer — cannot fully recover, a named person is accountable.
 - **CI-26: The required `decision4` status comes from the gate's Decision4 validation.** It validates `boundary-map.yaml` against the schema, pinned by commit SHA (the recorded Decision4 commit, see [sources](sources.md)), never by a movable tag. It strips HTML comments from the PR body non-greedily across lines, including an unterminated comment's remaining text. The selected bold class under CI-25's heading maps to Decision4 v1 `Decision-Class` (the circle is optional for parsing); **Recovery steps** maps to `Put-right`, **Responsible for recovery** (also accepted: **Accountable person**) to `Answerer`, and **Classification change** to `Class-Change`. **Work preserved** is optional context. The old `Field: value` and `- **Field:** value` forms remain accepted; plain, list and bold-label forms work for all field labels. Exactly one class is allowed; when both the selected bold class and the old field are present they must agree. A value of `none`, `n/a`, `-` or a `<placeholder>` counts as empty. Recovery steps may be a numbered list on following indented lines; at least one non-placeholder step fills the field. It computes the floor from the PR's changed paths (the API file list or a diff against the merge base) matched against the map's path selectors, and takes the highest. It fails when the declared class is below that floor unless Classification change (or old Class-Change) records the lowering. From the effective class (the higher of declared and floor), Repair and above need Recovery steps (or Put-right), and Migrate and Answer need Responsible for recovery (or Accountable person / Answerer). It prints the floor and the entries that matched. Bot update PRs stay exempt from body fields; their grouped update still passes the local suite through `scripts/deps-land` (CI-41). PR body or boundary-map changes invalidate prior Decision4 evidence and require validation again.
 - **CI-27: Changes to `boundary-map.yaml` need the owner's review.** List it in the code-owners file and require that review. Changing the map is a recorded Repair decision; nothing lowers a class below its floor except a recorded map change.
@@ -127,3 +127,65 @@ check: format-check lint slop typecheck test test-integration arch perf migrate 
 - A PR template with a Decision-Class field nobody validated, so every PR said Undo.
 - A new required check added to the docs but never applied to the repo settings, so merges ignored it.
 - A map edited in a feature PR by the author, lowering the floor of the ground it changed.
+
+## Pull requests, issues and PR comments: scannable, never a text blob
+
+- **Order:** `## What` → `## Why` → `## Proof` → `## Before merge` (only while something is open) → the repo's Decision4 section (only with `boundary-map.yaml`) → `## Decision record` (only at Migrate/Answer).
+- **Bullets:** Every section is a list; start each bullet with a bold label (`- **Source plan:** 0 adds, 8 updates, 38 destroys.`). Keep one idea per bullet, at most two lines, and no paragraph longer than two sentences. Keep checklist syntax and bold-label the item.
+- **Proof:** Name the check and result (`- **Unit tests:** 1,320 passed.`). Put links on the label or result, never a bare URL in prose. Preserve claims and human checklist attestations when restructuring an existing body.
+- **Decision4:** When the repo has a boundary map, read it and copy the exact readable section from its PR template. Select its highest applicable class in bold with one colour circle and a sentence explaining recovery; use bold-labelled Recovery steps (numbered for multiple steps), optional Work preserved, Responsible for recovery (a named person at Answer), and Classification change. Keep the Recovery levels legend collapsed. Never author old plain `Decision-Class:` lines.
+- **Decision record:** At Migrate/Answer use `## Decision record` with bold-labelled bullets: Chose, Over, Because, Commits us to. Never use “Repair, choice story:” headings; Repair needs no decision record.
+- **Milestone and review text:** The same layout covers milestone-close PRs, issue bodies and PR comments. Put addressed feedback under What, its rationale under Why and its check results under Proof. A short thread reply can be one bold-labelled bullet; include only applicable sections.
+- **Validation:** Validate the proposed body before pushing and the actual body after creation or edits through the repo's Decision4 gate when installed. Use `--body-file`; scannable formatting applies even without Decision4.
+
+Full example for a repository whose boundary map requires Migrate (illustrative evidence, not claims to copy). Omit Before merge when nothing is open; omit both Decision4 sections entirely when the repo has no boundary map, and omit Decision record at Undo/Repair.
+
+```markdown
+## What
+
+- **Change:** Move saved filters to the versioned format.
+- **Requirement F1:** Existing filters remain readable during rollout.
+
+## Why
+
+- **Compatibility:** Clients need time to adopt the new format.
+
+## Proof
+
+- **Migration tests:** 12 passed, including reading the old format.
+- **Local gate:** `scripts/ci-local --check` passed on the proposed head.
+
+## Before merge
+
+- [ ] **Owner review:** Confirm the rollout window.
+
+### How hard is it to undo this PR after merging?
+
+**🟠 Migrate** — Recovering requires moving saved filters back to the previous format before redeploying the old reader.
+
+- **Recovery steps:**
+  1. Pause writes and convert saved filters back with the reverse migration.
+  2. Redeploy the previous reader and verify existing filters.
+- **Work preserved:** The migration retains each original filter until rollout completes.
+- **Responsible for recovery:** Service owner
+- **Classification change:** None
+
+<details>
+<summary>Recovery levels</summary>
+
+Undo — Revert only
+Repair — Revert plus fixes or a release
+Migrate — Move data, state, or users back
+Answer — Cannot fully recover; a named person is accountable
+
+</details>
+
+## Decision record
+
+- **Chose:** A versioned format with a reversible migration.
+- **Over:** Replacing stored filters in place without a compatibility window.
+- **Because:** Existing clients must keep reading their saved filters.
+- **Commits us to:** Retain the reverse migration until rollout is verified.
+
+🤖 Generated with Codex
+```

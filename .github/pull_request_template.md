@@ -1,4 +1,27 @@
-## What and why
+<!--
+Scannable layout: What, Why, Proof, Before merge (only if open), then Decision4
+when boundary-map.yaml exists, then Decision record only at Migrate/Answer.
+Every section uses lists with bold labels; one idea per bullet, at most two lines.
+Proof names each check and result. Links belong on labels or results.
+Keep repo-specific requirements and human checklists; never tick human attestations.
+-->
+## What
+
+- **Change:** <what changes and for whom>
+
+## Why
+
+- **Reason:** <why this change is needed>
+
+## Proof
+
+- **Local gate:** <command and actual result on the proposed head>
+- **Requirements:** <requirement ids and their tests or other evidence>
+
+## Before merge
+
+<!-- Remove this section when nothing is open; never tick a human attestation. -->
+- [ ] **Remaining work:** <open check or owner action>
 
 <!--
 Decision4 writing rules:
@@ -31,3 +54,11 @@ Migrate — Move data, state, or users back
 Answer — Cannot fully recover; a named person is accountable
 
 </details>
+
+<!-- Keep Decision record only at Migrate/Answer; remove it at Undo/Repair. -->
+## Decision record
+
+- **Chose:** <selected option>
+- **Over:** <alternative considered>
+- **Because:** <reason for this choice>
+- **Commits us to:** <follow-up or lasting obligation>
