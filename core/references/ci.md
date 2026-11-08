@@ -52,10 +52,10 @@ IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
 
 ### Pull requests and merge
 
-- **CI-19: PR bodies, issues and PR comments are scannable lists with bold labels.** Use What → Why → Proof → Before merge (only if open), then the repo's Decision4 section when `boundary-map.yaml` exists, then Decision record only at Migrate/Answer. One idea per bullet, at most two lines; no paragraph longer than two sentences. Proof names the check and result and maps every requirement id to its test, screenshot or change folder link. Links belong on labels or results. Preserve repo-specific checklists and never tick a human attestation. Use the full example below; never author old plain Decision4 fields or “Repair, choice story:” headings.
-- **CI-25: The PR template asks “How hard is it to undo this PR after merging?”** Use that exact level-three heading. Select one bold class with one coloured circle beside it: `**🟢 Undo**`, `**🟡 Repair**`, `**🟠 Migrate**` or `**🔴 Answer**`; no other coloured circles appear in the section. The sentence after the class explains why this class applies with concrete recovery requirements, never “contained fix-up”. Use the plain labels **Recovery steps**, **Work preserved** (optional), **Responsible for recovery** and **Classification change**. Recovery steps are ordered, numbered when there is more than one; for Undo the sentence may suffice and steps may be omitted. Do not repeat the sentence in the steps, invent steps to fit a class, or claim preserved work or backups unless the PR supports them. Responsible for recovery names a role; Answer requires a named person. Classification change is `None` unless the class changes; then record `<from> -> <to>; <lowered or raised> by <who>; <why>`. Choose one class per PR, the highest that applies; split a PR whose parts need very different classes. Put the writing rules in the template's HTML comment and the four recovery levels in a collapsible “Recovery levels” block: Undo — revert only; Repair — revert plus fixes or a release; Migrate — move data, state or users back; Answer — cannot fully recover, a named person is accountable.
-- **CI-26: The required `decision4` status comes from the gate's Decision4 validation.** It validates `boundary-map.yaml` against the schema, pinned by commit SHA (the recorded Decision4 commit, see [sources](sources.md)), never by a movable tag. It strips HTML comments from the PR body non-greedily across lines, including an unterminated comment's remaining text. The selected bold class under CI-25's heading maps to Decision4 v1 `Decision-Class` (the circle is optional for parsing); **Recovery steps** maps to `Put-right`, **Responsible for recovery** (also accepted: **Accountable person**) to `Answerer`, and **Classification change** to `Class-Change`. **Work preserved** is optional context. The old `Field: value` and `- **Field:** value` forms remain accepted; plain, list and bold-label forms work for all field labels. Exactly one class is allowed; when both the selected bold class and the old field are present they must agree. A value of `none`, `n/a`, `-` or a `<placeholder>` counts as empty. Recovery steps may be a numbered list on following indented lines; at least one non-placeholder step fills the field. It computes the floor from the PR's changed paths (the API file list or a diff against the merge base) matched against the map's path selectors, and takes the highest. It fails when the declared class is below that floor unless Classification change (or old Class-Change) records the lowering. From the effective class (the higher of declared and floor), Repair and above need Recovery steps (or Put-right), and Migrate and Answer need Responsible for recovery (or Accountable person / Answerer). It prints the floor and the entries that matched. Bot update PRs stay exempt from body fields; their grouped update still passes the local suite through `scripts/deps-land` (CI-41). PR body or boundary-map changes invalidate prior Decision4 evidence and require validation again.
-- **CI-27: Changes to `boundary-map.yaml` need the owner's review.** List it in the code-owners file and require that review. Changing the map is a recorded Repair decision; nothing lowers a class below its floor except a recorded map change.
+- **CI-19: PR bodies, issues and PR comments are scannable lists with bold labels.** Use What → Why → Proof → Before merge (only if open), then the repo's Decision4 section when `boundary-map.yaml` exists, then Decision record at Repair/Migrate/Answer. One idea per bullet, at most two lines; no paragraph longer than two sentences. Proof names the check and result and maps every requirement id to its test, screenshot or change folder link. Links belong on labels or results. Preserve repo-specific checklists and never tick a human attestation. Use the full example below; never author old plain Decision4 fields or “Repair, choice story:” headings.
+- **CI-25: The PR template asks “How hard is it to undo this PR after merging?” in an H2 section.** Select one bold class with its one colour circle and a concrete sentence naming who puts it right and what it takes. Repair and above need a standalone `**Recovery steps**` line followed by a top-level numbered list. Add Responsible for recovery (a named person at Answer) and Classification change (`None` or from -> to, by whom, why). Writing rules live in one HTML comment; the Recovery levels legend is collapsed. Use the upstream meanings: Undo — a revert puts it right; Repair — real work, contained to this team; Migrate — coordinated change involving other people; Answer — someone outside the team with standing to ask is affected, and nothing unmakes it. Decision record contains the Repair choice story, Migrate options (at least two, or one forced with its constraint), or Answer labelled evidence and challenges with no recommendation; omit it at Undo.
+- **CI-26: Share the Decision4 check by reference.** The public shared host is `cdudek/blueprints`: `.github/workflows/decision4-check.yml`, `.github/scripts/decision4.py` and `tests/decision4/*`. Consuming Actions repos have only a caller `decision4.yml`, PR events opened/edited/synchronize/reopened, concurrency cancellation, and a single `uses: cdudek/blueprints/.github/workflows/decision4-check.yml@<40-hex SHA>` job; the called job runs on `ubuntu-slim`. Local-gate repos fetch the single checker at a pinned commit, verify its recorded SHA-256, cache under `.git/ci-local/`, and run it through `scripts/ci-local --decision4`. Never install checker code or fixtures in consumers. The host tests all good/bad fixtures. The checker validates the map against the embedded upstream schema at `4429f821780655f253a954b2659bf38e7b9d5517`, accepts H2/H3 and legacy aliases, strips comments/fences, treats none/n/a/-/placeholders as empty, and computes effective class = max(declared, changed-path floor). A lowering needs Classification change and still satisfies effective-class fields. Repair+ needs recovery; Repair needs its four choice-story fields under Decision record; Migrate needs options and responsibility; Answer needs a named person, labelled evidence, challenges and no recommendation. Unmapped or uncertain selectors log a map gap and never default to Undo. The reusable workflow obtains the body and all changed and renamed paths through the PR API, using both base and proposed maps to prevent silent floor reductions. Body edits invalidate previous evidence.
+- **CI-27: Changes to `boundary-map.yaml` are recorded Repair decisions needing the owner.** Keep the map in CODEOWNERS; multi-person repos require owner review, while solo-owner repos use CI-29. Selectors of different kinds combine with AND; highest matching floor wins. A path-only check cannot establish config, credential or environment selectors, so log a map gap and take the higher class pending owner review. A recorded class lowering alone never changes the map floor; change and review the map itself.
 - **CI-28: The sdlc tool's adopt step installs the review and PR files** (`REVIEW.md`, code-owners file, review workflows, PR template). The blueprint adds the Decision4 sections and the local `decision4` validation on top; there is one way, not two copies (see [sdlc](sdlc.md), [agent-files](agent-files.md)).
 - **CI-29: A solo-owner repo cannot require approving reviews,** because an author cannot approve their own PR and every merge would block. Protect the gates by the required checks, the code-owners listing and the self-covering map entry (STR-28), not by a review count.
 - **CI-20: Squash merge, with a Conventional Commit title.** The title decides the release type (see [release-and-deploy](release-and-deploy.md)). One change per PR.
@@ -102,7 +102,7 @@ check: format-check lint slop typecheck test test-integration arch perf migrate 
 ## How to apply
 
 1. Create the Make contract and full local `check`, then implement `scripts/ci-local`, its pre-push hook and exact-SHA status publication (CI-34).
-2. Add scanners, Decision4 validation, its negative fixtures and the PR fields. Install review and owner files through the sdlc adopt step; verify the local gate is implemented rather than assuming adoption installs it.
+2. Add scanners, a pinned reference to Decision4 validation and the PR fields; fixtures stay only in the shared host. Install review and owner files through the sdlc adopt step; verify the local gate is implemented rather than assuming adoption installs it.
 3. Apply rulesets requiring `local-ci` and `decision4`, enable squash merge and auto-merge, and verify enforcement on default and interior branches.
 4. Add only necessary remote workflows, using CI-37 through CI-39, and skip bot and draft previews ([release-and-deploy](release-and-deploy.md) REL-20).
 5. Configure monthly grouped dependency updates and `scripts/deps-land`; add new guard tests to the local gate in the same PR.
@@ -111,7 +111,7 @@ check: format-check lint slop typecheck test test-integration arch perf migrate 
 
 - Automatic: action SHA pins, timeouts and least privilege; applicable paths and concurrency; no redundant main verification run or per-PR macOS build.
 - Automatic: the local gate and hook reject failed checks, dirty or moved heads and failed status publication; both required statuses refer to the verified head.
-- Automatic: Decision4 fixtures pass; the code-owners file lists the boundary map; every Make target exists; arch, perf, slop, migrate and guard tests feed the local gate.
+- Automatic: shared-host Decision4 fixtures pass; consumers contain only a pinned reference; the code-owners file lists the boundary map; every Make target exists; arch, perf, slop, migrate and guard tests feed the local gate.
 - Automatic: Dependabot routine and security groups, monthly schedule and PR limit; `scripts/deps-land` reruns the gate after a changed head.
 - Review: CI-30 enforcement rows distinguish documentation from installed and applied gates; monthly audit is current; preview eligibility and serialization are correct.
 
@@ -130,62 +130,57 @@ check: format-check lint slop typecheck test test-integration arch perf migrate 
 
 ## Pull requests, issues and PR comments: scannable, never a text blob
 
-- **Order:** `## What` → `## Why` → `## Proof` → `## Before merge` (only while something is open) → the repo's Decision4 section (only with `boundary-map.yaml`) → `## Decision record` (only at Migrate/Answer).
+- **Order:** `## What` → `## Why` → `## Proof` → `## Before merge` (only while something is open) → the repo's Decision4 section (only with `boundary-map.yaml`) → `## Decision record` (at Repair/Migrate/Answer).
 - **Bullets:** Every section is a list; start each bullet with a bold label (`- **Source plan:** 0 adds, 8 updates, 38 destroys.`). Keep one idea per bullet, at most two lines, and no paragraph longer than two sentences. Keep checklist syntax and bold-label the item.
 - **Proof:** Name the check and result (`- **Unit tests:** 1,320 passed.`). Put links on the label or result, never a bare URL in prose. Preserve claims and human checklist attestations when restructuring an existing body.
 - **Decision4:** When the repo has a boundary map, read it and copy the exact readable section from its PR template. Select its highest applicable class in bold with one colour circle and a sentence explaining recovery; use bold-labelled Recovery steps (numbered for multiple steps), optional Work preserved, Responsible for recovery (a named person at Answer), and Classification change. Keep the Recovery levels legend collapsed. Never author old plain `Decision-Class:` lines.
-- **Decision record:** At Migrate/Answer use `## Decision record` with bold-labelled bullets: Chose, Over, Because, Commits us to. Never use “Repair, choice story:” headings; Repair needs no decision record.
+- **Decision record:** At Repair use Chose / Over / Because / Commits us to. At Migrate use at least two real Options, or one Forced option with its Constraint. At Answer use labelled Evidence and Challenges, with no recommendation. Use `## Decision record`; omit it at Undo.
 - **Milestone and review text:** The same layout covers milestone-close PRs, issue bodies and PR comments. Put addressed feedback under What, its rationale under Why and its check results under Proof. A short thread reply can be one bold-labelled bullet; include only applicable sections.
 - **Validation:** Validate the proposed body before pushing and the actual body after creation or edits through the repo's Decision4 gate when installed. Use `--body-file`; scannable formatting applies even without Decision4.
 
-Full example for a repository whose boundary map requires Migrate (illustrative evidence, not claims to copy). Omit Before merge when nothing is open; omit both Decision4 sections entirely when the repo has no boundary map, and omit Decision record at Undo/Repair.
+Full example (illustrative evidence, not claims to copy):
 
 ```markdown
 ## What
 
-- **Change:** Move saved filters to the versioned format.
-- **Requirement F1:** Existing filters remain readable during rollout.
+- **Change:** Correct generated agent guidance.
 
 ## Why
 
-- **Compatibility:** Clients need time to adopt the new format.
+- **Reason:** Already generated files need team follow-up after the rule changes.
 
 ## Proof
 
-- **Migration tests:** 12 passed, including reading the old format.
-- **Local gate:** `scripts/ci-local --check` passed on the proposed head.
+- **Contract fixtures:** All cases passed locally.
 
-## Before merge
+## How hard is it to undo this PR after merging?
 
-- [ ] **Owner review:** Confirm the rollout window.
+**🟡 Repair** — <who has to put it right and what it takes, concrete>
 
-### How hard is it to undo this PR after merging?
+**Recovery steps**
 
-**🟠 Migrate** — Recovering requires moving saved filters back to the previous format before redeploying the old reader.
+1. <first step>
+2. <next step>
 
-- **Recovery steps:**
-  1. Pause writes and convert saved filters back with the reverse migration.
-  2. Redeploy the previous reader and verify existing filters.
-- **Work preserved:** The migration retains each original filter until rollout completes.
-- **Responsible for recovery:** Service owner
+- **Responsible for recovery:** <role; at Answer a named person>
 - **Classification change:** None
+
+## Decision record
+
+- **Chose:** <what was decided>
+- **Over:** <viable alternative>
+- **Because:** <reason>
+- **Commits us to:** <what this ties the team to>
 
 <details>
 <summary>Recovery levels</summary>
 
-Undo — Revert only
-Repair — Revert plus fixes or a release
-Migrate — Move data, state, or users back
-Answer — Cannot fully recover; a named person is accountable
+Undo — a revert puts it right
+Repair — real work, contained to this team
+Migrate — coordinated change involving other people
+Answer — someone outside the team with standing to ask is affected, and nothing unmakes it
 
 </details>
-
-## Decision record
-
-- **Chose:** A versioned format with a reversible migration.
-- **Over:** Replacing stored filters in place without a compatibility window.
-- **Because:** Existing clients must keep reading their saved filters.
-- **Commits us to:** Retain the reverse migration until rollout is verified.
 
 🤖 Generated with Codex
 ```

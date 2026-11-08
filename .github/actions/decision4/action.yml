@@ -1,0 +1,12 @@
+name: Run shared Decision4 checker
+description: Execute the versioned checker without checking out or executing PR code
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        "$RUNNER_TEMP/decision4-venv/bin/python" "$ACTION_PATH/../../scripts/decision4.py" \
+          --body-file "$RUNNER_TEMP/body.md" --files "$RUNNER_TEMP/files.txt" \
+          --map "$RUNNER_TEMP/map.yaml" --base-map "$RUNNER_TEMP/base-map.yaml"

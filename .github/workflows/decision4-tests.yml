@@ -1,0 +1,27 @@
+name: Shared check fixtures
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: decision4-fixtures-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  fixtures:
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: |
+          python3 -m venv "$RUNNER_TEMP/v"
+          "$RUNNER_TEMP/v/bin/pip" install -q PyYAML==6.0.3 jsonschema==4.26.0
+          PATH="$RUNNER_TEMP/v/bin:$PATH" bash tests/decision4/run.sh
+          python3 -m unittest discover -s tests/sources -v

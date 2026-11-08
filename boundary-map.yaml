@@ -10,5 +10,5 @@ entries:
   - select:
       paths: ["boundary-map.yaml", ".github/**", "tests/decision4/**"]
     floor: Migrate
-    put_right: "Floors and gates for the whole repo change; restoring them needs the owner"
+    put_right: "The shared gate contract changes; consuming teams must coordinate their pinned versions to recover"
     answerer: "Owner"

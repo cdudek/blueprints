@@ -1,0 +1,494 @@
+[
+  {
+    "name": "undo",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟢 Undo** — A revert restores the wording.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "repair",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "h3",
+    "body": "### How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "optional-circle",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "standalone-numbered",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "indented-numbered",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n- **Recovery steps:**\n  1. Restore the prior rule.\n  2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "inline-recovery",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n- **Recovery steps:** Restore and verify the rule.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "legacy",
+    "body": "Decision-Class: Repair\nPut-right: Restore and verify the rule.\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "legacy-agrees",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n\nDecision-Class: Repair\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "legacy-disagrees",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n\nDecision-Class: Undo\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "duplicate-legacy",
+    "body": "Decision-Class: Repair\nPut-right: Restore and verify the rule.\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n\nDecision-Class: Repair\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "duplicate-selected",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Undo**\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "no-class",
+    "body": "## What\n- **Change:** Something\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "comment-class",
+    "body": "<!-- ## How hard is it to undo this PR after merging?\n\n**🟢 Undo** — A revert restores the wording.\n -->",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "unclosed-comment",
+    "body": "<!-- ## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "class-outside-heading",
+    "body": "**Repair**\n## How hard is it to undo this PR after merging?\n\n\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "fenced-class",
+    "body": "```md\n## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n\n```\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "migrate-options",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update.\n2. Update all pins together and commit the teams to one contract.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "migrate-forced",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. **Forced:** Update all teams together; **Constraint:** the old endpoint closes on Friday.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "migrate-one-not-forced",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "migrate-forced-no-constraint",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. **Forced:** Update all teams together; \n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "migrate-no-options",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "migrate-no-responsible",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** <role>\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update.\n2. Update all pins together and commit the teams to one contract.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-labelled-evidence",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-name",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Calvin Dudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-role",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Team owner\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-role-cto",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** CTO\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-no-evidence",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Findings**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-unlabelled",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **claim:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-no-challenges",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-recommendation",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n\n- **Recommendation:** Ship it.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "answer-recommend",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🔴 Answer** — An external recipient saw the incorrect result.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** @cdudek\n- **Classification change:** None\n\n## Decision record\n\n**Evidence**\n\n- **observed:** The published report contains the error.\n- **inferred:** The recipient may have relied on it.\n- **asked:** The recipient confirmed receiving it.\n- **unknown:** Whether it influenced a later decision.\n\n**Challenges**\n\n- Establish which recipients relied on the report.\n\nRecommend: Ship it.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "placeholder-recovery-none",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. none\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "lowering-empty-none",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Undo** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** none\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "src/change.py"
+    ]
+  },
+  {
+    "name": "placeholder-recovery-n-a",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. n/a\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "lowering-empty-n-a",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Undo** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** n/a\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "src/change.py"
+    ]
+  },
+  {
+    "name": "placeholder-recovery--",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. -\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "lowering-empty--",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Undo** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** -\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "src/change.py"
+    ]
+  },
+  {
+    "name": "placeholder-recovery-<step>",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. <step>\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "lowering-empty-<step>",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Undo** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** <step>\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "src/change.py"
+    ]
+  },
+  {
+    "name": "repair-missing-Chose",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "repair-missing-Over",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "repair-missing-Because",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Commits us to:** Maintaining the shared contract.",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "repair-missing-Commits us to",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "repair-record-outside-section",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Other\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "steps-outside-section",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n## Other\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "steps-from-next-field",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n- **Work preserved:**\n  1. Something else\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ]
+  },
+  {
+    "name": "below-floor",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "cross-team/contract"
+    ]
+  },
+  {
+    "name": "lowered-recorded-effective-migrate",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Repair** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** Migrate -> Repair; lowered by Calvin; recorded map review\n\n## Decision record\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update.\n2. Update all pins together and commit the teams to one contract.\n",
+    "valid": true,
+    "paths": [
+      "cross-team/contract"
+    ]
+  },
+  {
+    "name": "lowered-effective-still-migrate",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** Migrate -> Repair; lowered by Calvin; map review\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": false,
+    "paths": [
+      "cross-team/contract"
+    ]
+  },
+  {
+    "name": "legacy-lowering",
+    "body": "## How hard is it to undo this PR after merging?\n\n**Repair** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update.\n2. Update all pins together and commit the teams to one contract.\n\nClass-Change: Migrate -> Repair; lowered by Calvin; map review\n",
+    "valid": true,
+    "paths": [
+      "cross-team/contract"
+    ]
+  },
+  {
+    "name": "unmapped-repair",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": true,
+    "paths": [
+      "unmapped/new.txt"
+    ],
+    "contains": "map gap:"
+  },
+  {
+    "name": "unmapped-never-undo",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟢 Undo** — A revert restores the wording.\n",
+    "valid": false,
+    "paths": [
+      "unmapped/new.txt"
+    ]
+  },
+  {
+    "name": "glob-nested",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": true,
+    "paths": [
+      "src/nested/foo.py"
+    ],
+    "contains": "floor Repair"
+  },
+  {
+    "name": "glob-root",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟡 Repair** — The team must correct already generated instructions.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n- **Chose:** One shared check.\n- **Over:** Copying the check per repo.\n- **Because:** Fixes propagate through explicit pins.\n- **Commits us to:** Maintaining the shared contract.\n",
+    "valid": true,
+    "paths": [
+      "main.py"
+    ],
+    "map": {
+      "version": 1,
+      "entries": [
+        {
+          "select": {
+            "paths": [
+              "**/*.py"
+            ]
+          },
+          "floor": "Repair"
+        }
+      ]
+    }
+  },
+  {
+    "name": "selector-conjunction-unknown",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟠 Migrate** — The consuming teams must coordinate the pin changes.\n\n**Recovery steps**\n\n1. Restore the prior rule.\n2. Verify the affected consumers.\n\n- **Responsible for recovery:** Service owner\n- **Classification change:** None\n\n## Decision record\n\n**Options**\n\n1. Keep the old pin while teams prepare a coordinated update.\n2. Update all pins together and commit the teams to one contract.\n",
+    "valid": true,
+    "paths": [
+      "docs/readme.md"
+    ],
+    "map": {
+      "version": 1,
+      "entries": [
+        {
+          "select": {
+            "paths": [
+              "docs/**"
+            ],
+            "environments": [
+              "production"
+            ]
+          },
+          "floor": "Migrate"
+        }
+      ]
+    },
+    "contains": "map gap: non-path"
+  },
+  {
+    "name": "invalid-map",
+    "body": "## How hard is it to undo this PR after merging?\n\n**🟢 Undo** — A revert restores the wording.\n",
+    "valid": false,
+    "paths": [
+      "docs/readme.md"
+    ],
+    "map": {
+      "version": 2,
+      "entries": []
+    }
+  }
+]

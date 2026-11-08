@@ -1,0 +1,10 @@
+# Synthetic test policy, never installed in consumers.
+version: 1
+precedence: highest-floor-wins
+entries:
+  - select: {paths: ["docs/**"]}
+    floor: Undo
+  - select: {paths: ["src/**"]}
+    floor: Repair
+  - select: {paths: ["cross-team/**"]}
+    floor: Migrate

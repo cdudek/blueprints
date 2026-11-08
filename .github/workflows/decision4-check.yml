@@ -1,0 +1,66 @@
+name: Shared Decision4 check
+
+on:
+  workflow_call:
+    inputs:
+      map-path:
+        description: Boundary map in the calling repository
+        type: string
+        default: boundary-map.yaml
+      body:
+        description: Optional proposed body; otherwise read the actual PR via API
+        type: string
+        default: ''
+      changed-files:
+        description: Optional newline-separated paths; otherwise read all PR files and rename sources via API
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  decision4:
+    name: decision4
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - name: Install checker dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/decision4-venv"
+          "$RUNNER_TEMP/decision4-venv/bin/pip" install -q PyYAML==6.0.3 jsonschema==4.26.0
+      - name: Fetch PR data (no PR code execution)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MAP_PATH: ${{ inputs.map-path }}
+          PROPOSED_BODY: ${{ inputs.body }}
+          PROPOSED_FILES: ${{ inputs.changed-files }}
+        run: |
+          set -euo pipefail
+          if [ -n "$PROPOSED_BODY" ]; then
+            printf '%s' "$PROPOSED_BODY" > "$RUNNER_TEMP/body.md"
+          else
+            gh api "repos/$GH_REPO/pulls/$PR" --jq '.body // ""' > "$RUNNER_TEMP/body.md"
+          fi
+          if [ -n "$PROPOSED_FILES" ]; then
+            printf '%s\n' "$PROPOSED_FILES" > "$RUNNER_TEMP/files.txt"
+          else
+            gh api --paginate "repos/$GH_REPO/pulls/$PR/files" --jq '.[] | .filename, (.previous_filename // empty)' > "$RUNNER_TEMP/files.txt"
+          fi
+          gh api "repos/$GH_REPO/contents/$MAP_PATH?ref=$HEAD_SHA" --jq .content | base64 --decode > "$RUNNER_TEMP/map.yaml"
+          if gh api "repos/$GH_REPO/contents/$MAP_PATH?ref=$BASE_SHA" --jq .content > "$RUNNER_TEMP/base-map.b64" 2> "$RUNNER_TEMP/base-map.error"; then
+            base64 --decode "$RUNNER_TEMP/base-map.b64" > "$RUNNER_TEMP/base-map.yaml"
+          elif grep -q '(HTTP 404)' "$RUNNER_TEMP/base-map.error"; then
+            echo 'map gap: first adoption; no boundary map exists at the PR base'
+            cp "$RUNNER_TEMP/map.yaml" "$RUNNER_TEMP/base-map.yaml"
+          else
+            cat "$RUNNER_TEMP/base-map.error"
+            exit 1
+          fi
+      - name: Validate schema, changed-path floor and class-specific handoff
+        uses: cdudek/blueprints/.github/actions/decision4@95dc1586f9e807841ad9b46b69b12780a72c9671 # shared checker v1
