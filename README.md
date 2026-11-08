@@ -7,7 +7,7 @@ Documents an AI agent follows to set up and grow a new product: how things are s
 | Blueprint | What it is |
 | --- | --- |
 | [`core/`](./core) | Stack-agnostic. Start with [`core/BLUEPRINT.md`](./core/BLUEPRINT.md); it links to one reference per topic. |
-| [`nextjs/`](./nextjs) | The default stack: a modular monolith on Next.js, TypeScript and Postgres. Being converted to docs only. |
+| [`nextjs/BLUEPRINT.md`](./nextjs/BLUEPRINT.md) | The default stack: a modular monolith on Next.js App Router, TypeScript and Postgres. Read after core; adds framework boundaries, UI, providers, checks and container delivery. |
 | [`fastapi/BLUEPRINT.md`](./fastapi/BLUEPRINT.md) | Python-specific additions to core: FastAPI, async SQLAlchemy, Postgres and durable workers. Entry doc plus topic references. |
 
 ## How to use a blueprint
