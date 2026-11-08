@@ -33,6 +33,17 @@ Decision4 v1.0.1
 
 Credit: Decision4 by Habitat Thinking, CC BY 4.0. [DECISION4.md v1.0.1](https://github.com/Habitat-Thinking/decision4/blob/v1.0.1/DECISION4.md).
 
+### Squawk
+
+- **URL:** [repository](https://github.com/sbdchd/squawk), [CLI and inline ignores](https://squawkhq.com/docs/cli/), [migration safety rules](https://squawkhq.com/docs/).
+- **Pinned:** v2.72.0 (checked 2026-11-08).
+- **Takes:** Postgres migration linting with default rules, production-version and transaction context, and narrowly justified inline ignores. See [data-and-migrations](data-and-migrations.md) DAT-25 and [ci](ci.md) CI-42; release compatibility and preflight coverage remain separate guards.
+- **Licence:** Apache-2.0 or MIT; ideas restated, no code vendored.
+- **Tracking:** monthly and manually dispatched source check on GitHub tags; adoption is a reviewed PR, never an automatic pin change. A new major is an ADR-level change.
+
+<!-- source: github-tags sbdchd/squawk -->
+Squawk v2.72.0
+
 ### cct (Calvin's Claude Tools)
 
 - **URL:** https://github.com/cdudek/calvins-claude-tools

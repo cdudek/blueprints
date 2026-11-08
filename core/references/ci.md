@@ -63,6 +63,7 @@ IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
 - **CI-22: Branch from a freshly fetched default branch,** never from a stale local copy.
 - **CI-33: `arch` and `perf` are separate steps in the local gate,** next to `slop`. `arch` runs boundaries and score dimensions using the stack's tools; `perf` runs applicable web and bundle budgets. Each reports its own failure and deltas, or "not applicable". See [architecture](architecture.md).
 - **CI-24: Slop is a separate step in the local gate.** It runs the `slop` target: vendored anti-slop rules through Oxlint for TypeScript, plus separate metric collectors compared with the merge base. Biome stays in `lint` and `format-check`; it cannot run the Oxlint JavaScript plugins. Report slop failures and metric deltas separately.
+- **CI-42: `migrate` is a separate step in the local gate,** next to `slop`, `arch` and `perf`. It runs Squawk over every new or changed migration (DAT-25), the released-version expand/contract guard (DAT-26), preflight coverage and specific-refusal tests (DAT-27), then all migrations from zero on disposable real Postgres and a schema drift comparison (DAT-28). It reports each result and checked file set separately; a failed check or unavailable dependency fails the gate. Only a product with no database reports "not applicable"; no changed migrations skips only the changed-file checks, not the fresh-database and drift checks. See [data-and-migrations](data-and-migrations.md).
 
 ### Local verification and cheap remote work
 
@@ -89,12 +90,13 @@ IMPORTANT: <n>  NITS: <m>  SHA: <head sha>
   - `fitness`: every dimension of `architecture.yaml`, writing `fitness-report.json`.
   - `gates-test`: the negative fixtures of every gate (see [testing](testing.md) TEST-19).
   - `check`: every local verification step, in order. This is the verify command of CI-1.
-  - `migrate`: apply migrations. `docker-build`: build the image.
+  - `migrate`: migration safety checks, refusal tests, application from zero to disposable Postgres and schema drift comparison (CI-42). The release job separately invokes the production migration runner with its DDL identity (DAT-17).
+  - `docker-build`: build the image.
   - `help` is the default goal and lists every target with its one-line description.
   Each stack maps these names to its own tools; the names stay fixed. Agent files name these targets, not raw tool commands.
 
 ```make
-check: format-check lint slop typecheck test test-integration arch perf gates-test  ## full local verification suite
+check: format-check lint slop typecheck test test-integration arch perf migrate gates-test  ## full local verification suite
 ```
 
 ## How to apply
@@ -109,7 +111,7 @@ check: format-check lint slop typecheck test test-integration arch perf gates-te
 
 - Automatic: action SHA pins, timeouts and least privilege; applicable paths and concurrency; no redundant main verification run or per-PR macOS build.
 - Automatic: the local gate and hook reject failed checks, dirty or moved heads and failed status publication; both required statuses refer to the verified head.
-- Automatic: Decision4 fixtures pass; the code-owners file lists the boundary map; every Make target exists; arch, perf, slop and guard tests feed the local gate.
+- Automatic: Decision4 fixtures pass; the code-owners file lists the boundary map; every Make target exists; arch, perf, slop, migrate and guard tests feed the local gate.
 - Automatic: Dependabot routine and security groups, monthly schedule and PR limit; `scripts/deps-land` reruns the gate after a changed head.
 - Review: CI-30 enforcement rows distinguish documentation from installed and applied gates; monthly audit is current; preview eligibility and serialization are correct.
 
