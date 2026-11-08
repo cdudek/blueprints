@@ -8,6 +8,7 @@ The caller owns PR-body publication; this command only updates the supplied loca
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -38,8 +39,20 @@ SCHEMA = {
 }
 
 
+def child_environment():
+    # Nested reviews must not report lifecycle events for the calling IDE worker.
+    return {
+        name: value
+        for name, value in os.environ.items()
+        if not name.startswith("ORCA_") and name != "CODEX_THREAD_ID"
+    }
+
+
 def command(args, **kwargs):
-    return subprocess.run(args, check=True, capture_output=True, text=True, **kwargs)
+    return subprocess.run(
+        args, check=True, capture_output=True, text=True,
+        env=child_environment(), **kwargs
+    )
 
 
 def reviewer():
@@ -49,13 +62,15 @@ def reviewer():
             ["codex", "login", "status"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            env=child_environment(),
         ).returncode
         == 0
     ):
         return "codex"
     if shutil.which("claude"):
         auth = subprocess.run(
-            ["claude", "auth", "status", "--json"], capture_output=True, text=True
+            ["claude", "auth", "status", "--json"], capture_output=True, text=True,
+            env=child_environment()
         )
         if auth.returncode == 0 and json.loads(auth.stdout).get("loggedIn") is True:
             return "claude"
