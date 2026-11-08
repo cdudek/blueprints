@@ -1,12 +1,33 @@
 ## What and why
 
-## How hard to undo? <🟢 Undo | 🟡 Repair | 🟠 Migrate | 🔴 Answer>
-*If this turns out wrong, what does it take to put right? (Decision4, one class per PR: the highest that applies)*
-<!-- Decision4 v1.0.1: the decision4 check reads the four lines below. Fill the brackets; write "none" where a field does not apply. -->
+<!--
+Decision4 writing rules:
+- Use the exact heading below and one coloured circle only, beside the selected class: 🟢 Undo, 🟡 Repair, 🟠 Migrate or 🔴 Answer.
+- The sentence after the class explains why this class applies with concrete recovery requirements; do not write "contained fix-up".
+- List Recovery steps in order, numbered when there is more than one. For Undo the sentence may suffice and Recovery steps may be omitted.
+- Do not repeat the sentence in the steps or invent steps to fit a class.
+- Include Work preserved only when this PR really keeps something recoverable; claim backups only when the PR supports them.
+- Responsible for recovery is a role; Answer requires a named person.
+- Choose one class per PR, the highest that applies; split a PR whose parts need very different classes.
+- Classification change is None unless the class changes; then record from -> to, by whom and why.
+-->
+### How hard is it to undo this PR after merging?
 
-- **Decision-Class:** <Undo|Repair|Migrate|Answer>
-- **Put-right:** <Repair and above: what it takes to put right>
-- **Answerer:** <Migrate and Answer: who answers for it>
-- **Class-Change:** <none, or when the class was lowered: from -> to, by whom, why>
+**🟡 Repair** — <why this class: what goes wrong beyond a plain revert, specific>
 
-🟢 Undo: revert the PR, nothing else · 🟡 Repair: revert plus contained fix-up · 🟠 Migrate: data, state or users must be moved back · 🔴 Answer: cannot be fully put right; a named person answers for it
+- **Recovery steps:**
+  1. <first step>
+  2. <next step>
+- **Work preserved:** <optional; only when the PR really keeps something recoverable>
+- **Responsible for recovery:** <role; at Answer a named person>
+- **Classification change:** None
+
+<details>
+<summary>Recovery levels</summary>
+
+Undo — Revert only
+Repair — Revert plus fixes or a release
+Migrate — Move data, state, or users back
+Answer — Cannot fully recover; a named person is accountable
+
+</details>
