@@ -175,12 +175,23 @@ run_decision4() {
     review_base=$(git merge-base HEAD "$base_sha")
     review_body "$review_base" "$log_dir/body.md" || return 1
     if ! cmp -s "$log_dir/body.md" <(jq -r .body "$log_dir/pr.json"); then
-      gh pr edit "$number" --repo "$repo" --body-file "$log_dir/body.md"
-      gh pr view "$number" --repo "$repo" --json body,baseRefName,baseRefOid,headRefOid > "$log_dir/pr.json"
-      jq -r .body "$log_dir/pr.json" > "$log_dir/body.md"
-      if [[ $(jq -r .headRefOid "$log_dir/pr.json") != "$sha" ]]; then
-        echo 'PR head moved while publishing review tally.' >&2; return 1
+      # A review may take minutes: never overwrite a concurrent owner decision edit.
+      gh pr view "$number" --repo "$repo" --json body,baseRefName,baseRefOid,headRefOid > "$log_dir/pr-before-publish.json"
+      if ! cmp -s "$log_dir/pr.json" "$log_dir/pr-before-publish.json"; then
+        echo 'PR changed during AI review; refusing to overwrite its body.' >&2; return 1
       fi
+      gh pr edit "$number" --repo "$repo" --body-file "$log_dir/body.md"
+      gh pr view "$number" --repo "$repo" --json body,baseRefName,baseRefOid,headRefOid > "$log_dir/pr-with-review.json"
+      if ! python3 - "$log_dir/pr.json" "$log_dir/pr-with-review.json" "$log_dir/body.md" <<'PYBODY'
+import json, pathlib, sys
+before, after = [json.loads(pathlib.Path(p).read_text()) for p in sys.argv[1:3]]
+expected = pathlib.Path(sys.argv[3]).read_text().rstrip('\n')
+if any(before[key] != after[key] for key in ('baseRefName', 'baseRefOid', 'headRefOid')) or after['body'].rstrip('\n') != expected:
+    raise SystemExit('PR changed while publishing AI review; refusing stale evidence.')
+PYBODY
+      then return 1; fi
+      mv "$log_dir/pr-with-review.json" "$log_dir/pr.json"
+      jq -r .body "$log_dir/pr.json" > "$log_dir/body.md"
     fi
   fi
   validate_decision4 "$log_dir/body.md" "$log_dir/files.txt" "$base_sha" > "$log_dir/decision4.log" 2>&1 || result=$?
