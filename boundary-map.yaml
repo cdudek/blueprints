@@ -8,7 +8,7 @@ entries:
     put_right: "The blueprint is read by agents building products; a wrong rule is fixed forward in a new PR, and products that already followed it need their own follow-up"
     answerer: "Owner"
   - select:
-      paths: ["boundary-map.yaml", ".github/**", "renovate.json", "tests/decision4/**"]
+      paths: ["boundary-map.yaml", ".github/**", "tests/decision4/**"]
     floor: Migrate
     put_right: "Floors and gates for the whole repo change; restoring them needs the owner"
     answerer: "Owner"

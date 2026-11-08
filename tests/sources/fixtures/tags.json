@@ -1,0 +1,10 @@
+{
+  "github-tags/example": [
+    {"name": "v1.9.0"},
+    {"name": "v2.0.0-rc.1"},
+    {"name": "v1.10.0"},
+    {"name": "v1.2.0"},
+    {"name": "not-a-version"}
+  ],
+  "github-tags/current": [{"name": "2.0.0"}, {"name": "v1.9.0"}]
+}

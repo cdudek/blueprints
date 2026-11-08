@@ -1,7 +1,7 @@
 ---
 name: sources
 description: The registry of every external source the blueprint relies on, with its pinned version, what we take, its licence and how it is tracked.
-read-when: citing an outside source, adding or updating one, or when a Renovate PR proposes a new tag of a source.
+read-when: citing an outside source, adding or updating one, or when the monthly source check reports a new tag.
 skip-when: you are building product code and the references already tell you what to do.
 ---
 
@@ -15,7 +15,7 @@ The blueprint restates outside work in its own words and says where it came from
 - **SRC-2 Credit what the licence requires.** For Decision4: "Decision4 by Habitat Thinking, CC BY 4.0", with a link to the tagged document. For MIT sources, keep the licence text with any vendored file.
 - **SRC-3 Pin every source.** A tag, a commit or a date. Library and standard versions stay out of the other references; this file is where a version may appear.
 - **SRC-4 Follow minors and patches, review majors.** A new minor or patch is read and adopted in a normal PR. A new major is an ADR-level blueprint change: a class-aware record (see [decisions](decisions.md)) before the blueprint moves.
-- **SRC-5 Renovate watches tagged sources.** A line marked with a `<!-- renovate: datasource=github-tags depName=<owner/repo> -->` comment, followed by its version, gets a PR when a new tag appears. Sources without tags (a commit, a date) are re-checked by hand when their reference is next edited.
+- **SRC-5 Check tagged sources monthly.** The monthly and manually dispatched source check reads a `<!-- source: github-tags <owner/repo> -->` marker followed immediately by its version line. It compares stable semantic tags using the GitHub API, opens or updates one "Source updates" issue listing current → newest, and closes it when nothing is behind. Adopt updates in a reviewed PR; the check never changes pins. Sources without tags (a commit, a date) are re-checked by hand when their reference is next edited.
 - **SRC-6 One entry per source.** Each entry has URL, pinned version, what we take, licence, tracking. A reference that cites a source not listed here is incomplete.
 
 ## Registry
@@ -26,9 +26,9 @@ The blueprint restates outside work in its own words and says where it came from
 - **Pinned:** v1 (follow minors); current tag below.
 - **Takes:** the question, the four classes, the three rules, the handoff contract, annotation fields, class-aware records, the boundary map and its schema. See [compatibility](compatibility.md), [decisions](decisions.md), [agent-files](agent-files.md), [ci](ci.md), [structure](structure.md).
 - **Licence:** text CC BY 4.0, schema and examples MIT.
-- **Tracking:** Renovate on the tag; a new major is an ADR-level change.
+- **Tracking:** monthly source check on the tag; a new major is an ADR-level change.
 
-<!-- renovate: datasource=github-tags depName=Habitat-Thinking/decision4 -->
+<!-- source: github-tags Habitat-Thinking/decision4 -->
 Decision4 v1.0.1
 
 Credit: Decision4 by Habitat Thinking, CC BY 4.0. [DECISION4.md v1.0.1](https://github.com/Habitat-Thinking/decision4/blob/v1.0.1/DECISION4.md).
@@ -47,9 +47,9 @@ Credit: Decision4 by Habitat Thinking, CC BY 4.0. [DECISION4.md v1.0.1](https://
 - **Pinned:** 1.3.2 (2026-11-06).
 - **Takes:** ideas only, restated: rule IDs as a constitution with a justified-violations table, coverage table, read-only analyze, converge, requirements checklist, budgeted clarify, stage purity, context packs, bug lifecycle. It is the alternative tool to the owner's sdlc-run skill. See [sdlc](sdlc.md).
 - **Licence:** MIT.
-- **Tracking:** Renovate on the tag; a new major is an ADR-level change.
+- **Tracking:** monthly source check on the tag; a new major is an ADR-level change.
 
-<!-- renovate: datasource=github-tags depName=github/spec-kit -->
+<!-- source: github-tags github/spec-kit -->
 spec-kit v1.3.2
 
 ### ai-literacy-superpowers
@@ -67,7 +67,7 @@ spec-kit v1.3.2
 - **Pinned:** entrix 0.19.0 (latest when recorded, 2026-11-07); the book's second edition.
 - **Takes:** ideas only, restated: architecture as data, fitness functions as CI checks over it, scores with a floor and a ratchet. See [architecture](architecture.md).
 - **Licence:** see the crate listing; the book is cited, not copied.
-- **Tracking:** manual. A crate is not a tagged repository, so Renovate does not watch it; re-check when architecture is next edited.
+- **Tracking:** manual. This entry has no tagged repository marker, so the source check does not watch it; re-check when architecture is next edited.
 
 ### anti-slop
 
@@ -136,16 +136,16 @@ spec-kit v1.3.2
 ## How to apply
 
 1. Adding a source: add its entry here first, then cite it from the reference that uses it.
-2. A Renovate PR for Decision4: read the tag's changelog, update the pinned lines in agent-files, ci and structure, and merge. A major tag: stop and write the record.
+2. A source-check issue for Decision4: read the tag's changelog, open a PR, update the pinned lines in agent-files, ci and structure, and merge. A major tag: stop and write the record.
 3. Check the licence line before pasting any text.
 
 ## Checks
 
-- Automatic: Renovate runs on this file; a test confirms every source linked from a reference has an entry here.
+- Automatic: the monthly source check reads tagged markers in this file; fixture tests cover parsing, tag comparisons and the issue lifecycle. Review confirms every source linked from a reference has an entry here.
 - Review: whether a new source is restated or copied.
 
 ## Mistakes to avoid
 
 - Pinning a branch name, so the source changed under the blueprint.
 - Pasting a definition instead of restating it, and dropping the attribution.
-- Adopting a new major because the bot opened a PR.
+- Adopting a new major because the source check reported it.

@@ -21,7 +21,7 @@ jobs:
   decision4:
     name: decision4
     # bot PRs cannot carry the fields
-    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -37,6 +37,8 @@ jobs:
         run: '"$RUNNER_TEMP/v/bin/check-jsonschema" --schemafile https://raw.githubusercontent.com/Habitat-Thinking/decision4/4429f821780655f253a954b2659bf38e7b9d5517/boundary-map.schema.json boundary-map.yaml'
       - name: The check fails and passes on its fixtures
         run: PATH="$RUNNER_TEMP/v/bin:$PATH" tests/decision4/run.sh
+      - name: Source check fixtures
+        run: python3 -m unittest discover -s tests/sources -v
       - name: PR body meets the floor of the changed paths
         env:
           BODY: ${{ github.event.pull_request.body }}
