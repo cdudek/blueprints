@@ -99,11 +99,16 @@ def validate(result):
     return tally
 
 
-def body_with_tally(body, receipt):
-    if (START in body or END in body) and (
-        body.count(START) != 1 or body.count(END) != 1
-    ):
+def validate_body_markers(body):
+    if START not in body and END not in body:
+        return
+    if (body.count(START) != 1 or body.count(END) != 1
+            or body.index(START) > body.index(END)):
         raise ValueError("malformed AI-review block in PR body")
+
+
+def body_with_tally(body, receipt):
+    validate_body_markers(body)
     counts = ", ".join(f"{level} {receipt['tally'][level]}" for level in SEVERITIES)
     block = (
         f"{START}\n<details>\n<summary>Local AI review</summary>\n\n"

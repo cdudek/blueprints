@@ -96,6 +96,11 @@ def aggregate(policy, checks, decision, body, folder):
     head, base = checks["head"], checks["base"]
     if decision.get("head") != head or decision.get("body_sha256") != digest(body):
         raise ValueError("missing or stale exact-head/body Decision4 result")
+    if decision.get("comparison_base") != base:
+        raise ValueError(
+            "stale comparison-base evidence; rerun the full gate with "
+            "CI_LOCAL_BASE_REF set to the current PR target"
+        )
     if decision.get("pass") is not True:
         raise ValueError("actual PR Decision4 did not pass")
     rows = [

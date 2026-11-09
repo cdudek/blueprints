@@ -148,6 +148,8 @@ class RunnerTest(unittest.TestCase):
         checks = json.loads((folder / 'checks.json').read_text())
         self.assertEqual(checks['checks']['code']['kind'], 'actual-check')
         self.assertEqual(checks['checks']['code']['exit_code'], 0)
+        decision = json.loads((folder / 'decision4-result.json').read_text())
+        self.assertEqual(decision['comparison_base'], self.git('merge-base', 'HEAD', 'origin/main'))
 
     def test_review_failure_never_writes_success_marker(self):
         self.enable_evidence(fail_review=True)
@@ -216,7 +218,26 @@ else:
         self.assertNotEqual(result.returncode, 0, result.stdout)
         self.assertIn('refusing to overwrite', result.stderr)
         self.assertEqual(json.loads(server.read_text())['body'], 'valid new owner decision')
-        self.assertFalse((self.root / 'gh.log').exists())
+        log = (self.root / 'gh.log').read_text()
+        self.assertNotIn('edit\n', log)
+        self.assertNotIn('state=success', log)
+        self.assertIn('state=pending', log)
+
+    def test_blocking_review_invalidates_prior_same_head_success(self):
+        import json
+        server = self.publication_fixture()
+        self.edit('scripts/reviewer.py', 'raise SystemExit(1)\n')
+        data = json.loads(server.read_text())
+        data['headRefOid'] = self.git('rev-parse', 'HEAD')
+        server.write_text(json.dumps(data))
+        log = self.root / 'gh.log'
+        log.write_text('status context=decision4 state=success\n')
+        result = self.gate('--decision4')
+        self.assertNotEqual(result.returncode, 0)
+        lines = log.read_text().splitlines()
+        self.assertIn('state=pending', lines[-2])
+        self.assertIn('state=failure', lines[-1])
+        self.assertEqual(json.loads(server.read_text())['body'], 'valid owner decision')
 
     def test_stable_body_receives_review_tally_and_exact_head_status(self):
         import json
