@@ -51,6 +51,16 @@ Findings: critical <n>, high <n>, medium <n>, low <n>
 - **CI-30: Every rule that claims a check has an enforcement row.** Per rule: the checker, what invokes it (hook or job), whether its status is required, and the last run with evidence. Installed, configured, executed and passed are four separate states. A check that is not required, or never ran, means the rule is unenforced and the docs say so (CI-18). A ruleset or required check that needs a manual apply leaves a new gate optional until someone applies it, so the audit lists "applied" too.
 - **CI-31: A monthly harness audit runs independently of the pipeline.** Each rule's check is exercised on its own, so one failing check cannot hide another, and the result is compared with the enforcement rows of CI-30. Gaps become findings with an owner.
 
+### Monthly local harness audit
+
+- **Operation:** An agent runs `scripts/harness-audit --issue` on the owner's Mac once each month in every adopting repository. Keep this reminder in that repository's engineering docs; use no Actions schedule, cron or launchd job.
+- **Shared source:** The executable and legacy fixture adapters belong to [the canonical CCT skill](https://github.com/cdudek/calvins-claude-tools/blob/main/plugins/cct/skills/sdlc-run/references/harness-audit.md). Blueprints owns this contract; consumers sync immutable source pins and hashes with repository-owned command and owner manifests.
+- **Fresh proof:** Start from a fetched default branch, locked dependencies and a clean committed head. Reset declared safe caches, run every claimed checker from scratch, and record head/tree/comparison base, tool versions, configuration hashes and fresh logs for installed, configured, executed, passed and applied states.
+- **Applied enforcement:** Exercise real refusal and allowed cases against checker configurations. Separately read GitHub's active rulesets and branch protection to verify required statuses on default and protected interior branches; configuration text alone is insufficient.
+- **Inventory:** Include every older hook and check with its owner, caller or registration evidence and actual fixture invocation. Run forbidden-edit, missing-evidence, stale-lock and allowed controls in the local gate; retain the newer migration, architecture and scanner negatives.
+- **Gaps:** Open or update one continuing GitHub issue per repository, assigning an explicit owner for each gap. Missing access, skipped checks and unproved operator-only guards stay visible as gaps; never turn unknown evidence into a pass.
+- **Failure loop:** Read and reproduce the named failing checker locally, fix it, rerun that checker and the directly affected suite, then run the full local gate once before pushing. Batch fixes into one verified push; remote CI confirms the result.
+
 ### Pull requests and merge
 
 - **CI-19: PR bodies, issues and PR comments are scannable lists with bold labels.** Use What → Why → Proof → Before merge (only if open), then the repo's Decision4 section when `boundary-map.yaml` exists, then Decision record at Repair/Migrate/Answer. One idea per bullet, at most two lines; no paragraph longer than two sentences. Proof names the check and result and maps every requirement id to its test, screenshot or change folder link. Links belong on labels or results. Preserve repo-specific checklists and never tick a human attestation. Use the full example below; never author old plain Decision4 fields or “Repair, choice story:” headings.
@@ -107,6 +117,7 @@ check: format-check lint slop typecheck test test-integration arch perf migrate 
 3. Apply rulesets requiring `local-ci` and `decision4`, enable squash merge and auto-merge, and verify enforcement on default and interior branches.
 4. Add only necessary remote workflows, using CI-37 through CI-39, and skip bot and draft previews ([release-and-deploy](release-and-deploy.md) REL-20).
 5. Configure monthly grouped dependency updates and `scripts/deps-land`; add new guard tests to the local gate in the same PR.
+6. Adopt the pinned monthly auditor, inventory older guards and add its cheap configuration and refusal fixtures to the local gate; keep the monthly command reminder in engineering docs (CI-30/31).
 
 ## Checks
 
@@ -114,7 +125,7 @@ check: format-check lint slop typecheck test test-integration arch perf migrate 
 - Automatic: the local gate and hook reject failed checks, dirty or moved heads and failed status publication; both required statuses refer to the verified head.
 - Automatic: shared-host Decision4 fixtures pass; consumers contain only a pinned reference; the code-owners file lists the boundary map; every Make target exists; arch, perf, slop, migrate and guard tests feed the local gate.
 - Automatic: Dependabot routine and security groups, monthly schedule and PR limit; `scripts/deps-land` reruns the gate after a changed head.
-- Review: CI-30 enforcement rows distinguish documentation from installed and applied gates; monthly audit is current; preview eligibility and serialization are correct.
+- Review: CI-30 enforcement rows distinguish documentation from installed and applied gates; the monthly local audit and its continuing owner-assigned issue are current; preview eligibility and serialization are correct.
 
 ## Mistakes to avoid
 
