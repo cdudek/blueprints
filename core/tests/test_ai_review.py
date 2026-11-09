@@ -1,12 +1,14 @@
 """CLI selection, exact-head cache and PR-body review tally regression tests."""
 
 import importlib.util
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from unittest.mock import patch
 
@@ -153,6 +155,51 @@ class ReviewTests(unittest.TestCase):
             self.assertEqual(second["base"], "base-b")
             self.assertEqual(sum(args[:2] == ["git", "diff"] for args in calls), 2)
             self.assertEqual(sum(args[0] == "codex" for args in calls), 2)
+
+    def test_concurrent_bases_keep_review_outputs_and_receipts_separate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            (folder / "REVIEW.md").write_text("Review the supplied change.")
+            written = threading.Barrier(2)
+            outputs = []
+
+            def cli(args, **kwargs):
+                if args[0] == "git":
+                    return subprocess.CompletedProcess(args, 0, args[5], "")
+                base = "base-a" if "base-a" in kwargs["input"] else "base-b"
+                output = Path(args[args.index("--output-last-message") + 1])
+                outputs.append(output)
+                output.write_text(json.dumps({
+                    "findings": [{"severity": "low", "summary": base}],
+                    "extra_nits": 0,
+                }))
+                # Both CLIs finish writing before either caller reads a result.
+                written.wait(timeout=10)
+                return subprocess.CompletedProcess(args, 0, base, "")
+
+            previous = Path.cwd()
+            try:
+                os.chdir(folder)
+                with (
+                    patch.object(review, "reviewer", return_value="codex") as select,
+                    patch.object(review, "command", side_effect=cli),
+                    ThreadPoolExecutor(max_workers=2) as workers,
+                ):
+                    bases = ("base-a", "base-b")
+                    results = list(workers.map(
+                        lambda base: review.review(base, "same-head", folder / "proof"),
+                        bases,
+                    ))
+                    for base, result in zip(bases, results):
+                        self.assertEqual(result["base"], base)
+                        self.assertEqual(result["findings"][0]["summary"], base)
+                        self.assertEqual(
+                            review.review(base, "same-head", folder / "proof"), result
+                        )
+                    self.assertEqual(select.call_count, 2)
+            finally:
+                os.chdir(previous)
+            self.assertEqual(len(set(outputs)), 2)
 
     def test_real_git_diff_is_read_once_and_cached_across_body_updates(self):
         with tempfile.TemporaryDirectory() as directory:

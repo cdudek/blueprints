@@ -185,8 +185,9 @@ def review(base, head, folder):
         + "\n\nDIFF (already read once for you):\n"
         + diff
     )
-    schema = folder / "ai-review-schema.json"
-    output = folder / "ai-review-result.json"
+    # Different comparison bases may share one head's evidence directory.
+    schema = receipt_path.with_suffix(".schema.json")
+    output = receipt_path.with_suffix(".result.json")
     schema.write_text(json.dumps(SCHEMA))
     if chosen == "codex":
         result = command(
@@ -225,7 +226,7 @@ def review(base, head, folder):
         raw = envelope.get("structured_output")
         if raw is None:
             raise ValueError("Claude returned no structured review result")
-    (folder / "ai-review-cli.log").write_text(result.stdout + result.stderr)
+    receipt_path.with_suffix(".cli.log").write_text(result.stdout + result.stderr)
     tally = validate(raw)
     receipt = {
         **raw,
