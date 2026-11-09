@@ -208,6 +208,17 @@ class HarnessAudit(unittest.TestCase):
         self.assertTrue(all(report["checks"][0]["states"].values()))
         self.assertIn(report["base_tip"], (Path(report["artifact"]) / "probe.log").read_text())
 
+    def test_monthly_run_requests_full_selection_even_on_a_docs_comparison(self):
+        self.gate(
+            'if [[ "${CI_LOCAL_FULL_SUITE:-}" != 1 ]]; then printf "PASS docs-format (0s)\\n"; exit 0; fi\n'
+            'printf "fresh checker\\n" > "$logs/probe.log"\n'
+            'printf "PASS probe (0s)\\n"\n'
+        )
+        with patch.dict(os.environ, {"CI_LOCAL_FULL_SUITE": "0"}):
+            report = self.execute()
+        self.assertEqual(report["gaps"], [])
+        self.assertTrue(all(report["checks"][0]["states"].values()))
+
     def test_missing_tool_and_unproved_ruleset_are_owned_gaps(self):
         row = self.config["checks"][0]
         row["tools"] = [["nonexistent-audit-tool-xyz", "--version"]]

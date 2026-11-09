@@ -476,7 +476,12 @@ def audit(
     output.mkdir(parents=True)
     reset_caches(root, config.get("reset", []))
     started_ns = time.time_ns()
-    environment = {**os.environ, "HARNESS_AUDIT_ACTIVE": "1", "CI_LOCAL_BASE_REF": base_tip}
+    environment = {
+        **os.environ,
+        "HARNESS_AUDIT_ACTIVE": "1",
+        "CI_LOCAL_BASE_REF": base_tip,
+        "CI_LOCAL_FULL_SUITE": "1",
+    }
     if head == base_tip:
         # The owned runner also verifies review/Decision4 in --check mode. A default-head
         # monthly run has no PR body; supply an honest no-change review context instead.

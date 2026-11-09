@@ -275,6 +275,14 @@ while IFS= read -r -d '' path; do
   case "$path" in *.md|*.mdx|*.txt) ;; *) code_count=$((code_count + 1)) ;; esac
 done < <(git diff --name-only --no-renames -z "$base_sha" HEAD)
 if (( path_count > 0 && code_count == 0 )); then docs_only=true; fi
+# Whole-harness audits need every checker even for a documentation-only comparison.
+case ${CI_LOCAL_FULL_SUITE:-0} in
+  0) ;;
+  1) docs_only=false ;;
+  *) echo 'CI_LOCAL_FULL_SUITE must be 0 or 1.' >&2; exit 2 ;;
+esac
+# The override belongs to this invocation, never nested runner/test fixtures.
+unset CI_LOCAL_FULL_SUITE
 
 # Baseline-aware Markdown checks avoid turning old unrelated debt into a blocker.
 # Check only documents in the diff; never open environment or credential files.

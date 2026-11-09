@@ -71,6 +71,28 @@ class RunnerTest(unittest.TestCase):
         self.assertIn('PASS docs-links', r.stdout)
         self.assertNotIn('PASS code', r.stdout)
 
+    def test_explicit_full_suite_overrides_docs_scope_without_leaking_to_checks(self):
+        script = self.work / 'scripts/ci-local'
+        lines = script.read_text().splitlines()
+        lines = [
+            'CHECK_COMMANDS=(\'test "${FAIL_CODE:-}" != 1 && test "${CI_LOCAL_FULL_SUITE-unset}" = unset\')'
+            if line.startswith('CHECK_COMMANDS=') else line for line in lines
+        ]
+        script.write_text('\n'.join(lines) + '\n')
+        self.commit()
+        self.git('update-ref', 'refs/remotes/origin/main', 'HEAD')
+        self.edit('README.md', '# Docs-only audit comparison\n')
+        failed = self.gate('--check', CI_LOCAL_FULL_SUITE='1', FAIL_CODE='1')
+        self.assertEqual(failed.returncode, 1, failed.stdout + failed.stderr)
+        self.assertIn('FAIL code', failed.stderr)
+        passed = self.gate('--check', CI_LOCAL_FULL_SUITE='1')
+        self.assertEqual(passed.returncode, 0, passed.stdout + passed.stderr)
+        self.assertIn('PASS code', passed.stdout)
+        import json
+        evidence = self.work / '.git/ci-local' / self.git('rev-parse', 'HEAD') / 'checks.json'
+        self.assertEqual(json.loads(evidence.read_text())['selection'], 'full')
+        self.assertEqual(self.gate('--check', CI_LOCAL_FULL_SUITE='invalid').returncode, 2)
+
     def test_mixed_and_unknown_paths_run_full_gate(self):
         for path in ['docs/tool.py', 'changes/policy.json', 'src/code.ts', 'unrecognised.config']:
             with self.subTest(path=path):
