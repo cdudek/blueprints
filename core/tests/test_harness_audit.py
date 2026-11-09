@@ -249,6 +249,10 @@ class HarnessAudit(unittest.TestCase):
             "Tests 49 passed | 8 skipped (57)",
             "OK (skipped=1)",
             "# tests 8\n# pass 0\n# skipped 8",
+            "# tests 3\n# pass 2\n# todo 1",
+            "ℹ tests 3\nℹ pass 2\nℹ skipped 1",
+            "ℹ tests 3\nℹ pass 2\nℹ todo 1",
+            "ℹ tests 0\nℹ pass 0",
         ):
             with self.subTest(text=text):
                 self.gate(
@@ -256,6 +260,29 @@ class HarnessAudit(unittest.TestCase):
                 )
                 report = self.execute()
                 self.assertFalse(report["checks"][0]["states"]["passed"])
+
+    def test_completed_node_summaries_with_zero_skip_and_todo_counts_pass(self):
+        row = self.config["checks"][0]
+        row["kind"] = "ruleset"
+        for prefix in ("#", "ℹ"):
+            with self.subTest(prefix=prefix):
+                output = "refused\nallowed\n" + "\n".join(
+                    f"{prefix} {counter}"
+                    for counter in ("tests 3", "pass 3", "skipped 0", "todo 0")
+                )
+                self.gate(
+                    "printf %s "
+                    + shlex.quote(output)
+                    + ' > "$logs/probe.log"\n'
+                    + "printf 'PASS probe (0s)\\n'\n"
+                )
+                row["applied"] = {
+                    "command": "printf %s " + shlex.quote(output),
+                    "required_output": ["refused", "allowed"],
+                }
+                report = self.execute()
+                self.assertTrue(report["checks"][0]["states"]["passed"])
+                self.assertTrue(report["checks"][0]["states"]["applied"])
 
     def test_command_bounds_network_requests_and_preserves_explicit_probe_timeout(self):
         result = subprocess.CompletedProcess(["gh", "repo", "view"], 0, "", "")
@@ -283,6 +310,9 @@ class HarnessAudit(unittest.TestCase):
             "SKIPPED required scanner",
             "OK (skipped=1)",
             "1 skipped",
+            "# tests 3\n# pass 2\n# todo 1",
+            "ℹ tests 3\nℹ pass 2\nℹ skipped 1",
+            "ℹ tests 3\nℹ pass 2\nℹ todo 1",
             "No test files found",
             "0 tests",
             "Checked 0 files",

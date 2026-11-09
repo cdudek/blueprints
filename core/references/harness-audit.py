@@ -277,7 +277,7 @@ def incomplete_execution(output: str) -> bool:
     return bool(
         re.search(
             NO_EXECUTION + r"|\b[1-9]\d* (?:skipped|todo)\b|\bskipped=[1-9]\d*\b"
-            r"|(?m:^# (?:tests 0|pass 0|skipped [1-9]\d*)\b)",
+            r"|(?m:^(?:#|ℹ)\s+(?:tests 0|pass 0|(?:skipped|todo) [1-9]\d*)\b)",
             text,
         )
     )
