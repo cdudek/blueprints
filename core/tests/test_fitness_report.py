@@ -42,6 +42,7 @@ class FitnessTests(unittest.TestCase):
         self.decision = {
             "head": "head",
             "base": "base",
+            "comparison_base": "base",
             "pass": True,
             "body_sha256": fitness.digest(self.body),
         }
@@ -57,6 +58,15 @@ class FitnessTests(unittest.TestCase):
         self.assertIn("arch.score: 100", report["rows"][0]["value"]["output"])
         self.assertIsNone(report["rows"][-1]["pass"])
         self.assertEqual(report["rows"][1]["value"]["head"], "head")
+
+    def test_retargeted_comparison_base_requires_new_full_checks(self):
+        self.decision["comparison_base"] = "new-merge-base"
+        with self.assertRaisesRegex(ValueError, "comparison-base"):
+            self.aggregate()
+
+    def test_new_target_tip_with_same_comparison_base_keeps_valid_checks(self):
+        self.decision["base"] = "new-target-tip"
+        self.assertTrue(self.aggregate()["pass"])
 
     def test_fixture_success_cannot_replace_actual_result(self):
         self.checks["checks"]["arch"]["kind"] = "fixture"

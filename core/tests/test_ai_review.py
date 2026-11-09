@@ -59,8 +59,9 @@ class ReviewTests(unittest.TestCase):
         ):
             with self.assertRaises(ValueError):
                 review.validate(result)
-        with self.assertRaises(ValueError):
-            review.body_with_tally(review.START + review.START, {})
+        for malformed in (review.START + review.START, review.END + review.START):
+            with self.subTest(body=malformed), self.assertRaises(ValueError):
+                review.body_with_tally(malformed, {})
 
     def test_codex_is_preferred_only_when_logged_in(self):
         with (

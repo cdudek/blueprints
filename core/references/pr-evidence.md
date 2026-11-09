@@ -41,3 +41,9 @@ hotspot must become simpler. `--record` removes resolved debt and records a redu
 after comparing it with the old baseline. Empty baselines cannot grow. Tests in the shared
 host cover replacement hotspots, same-complexity edits, quoted CSV, reductions and forged
 baseline changes against a real base tree.
+
+A complete report also binds actual checks to the PR comparison merge base. After
+retargeting a PR, run the full gate with `CI_LOCAL_BASE_REF=origin/<target>` before
+revalidating its body. Advancing the target tip while its merge base is unchanged
+does not invalidate otherwise identical checks. Revalidation first makes the
+Decision4 status pending; a blocked review makes it fail, replacing prior proof.

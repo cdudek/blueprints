@@ -122,11 +122,11 @@ validate_decision4() {
 }
 
 record_decision4() {
-  python3 - "$log_dir" "$sha" "$1" "$2" "$3" <<'PY'
+  python3 - "$log_dir" "$sha" "$1" "$2" "$3" "$(git merge-base "$sha" "$1")" <<'PY'
 import hashlib, json, pathlib, sys
-folder, head, base, body, result = sys.argv[1:]
+folder, head, base, body, result, comparison_base = sys.argv[1:]
 path = pathlib.Path(folder)
-data = {'head': head, 'base': base, 'body_sha256': hashlib.sha256(pathlib.Path(body).read_bytes()).hexdigest(),
+data = {'head': head, 'base': base, 'comparison_base': comparison_base, 'body_sha256': hashlib.sha256(pathlib.Path(body).read_bytes()).hexdigest(),
         'pass': result == '0', 'source': 'actual-pr-body-and-changed-paths'}
 (path / 'decision4-result.json').write_text(json.dumps(data, indent=2) + '\n')
 PY
@@ -162,6 +162,8 @@ run_decision4() {
   if [[ $(jq -r .headRefOid "$log_dir/pr.json") != "$sha" ]]; then
     echo 'PR head does not match HEAD; refusing Decision4 status.' >&2; return 1
   fi
+  # Invalidate earlier same-SHA proof before any revalidation can fail.
+  post_status decision4 pending 'Revalidating the current PR body, base and local review'
   # Include previous filenames too, so a rename cannot lower the decision floor.
   gh api --paginate "repos/$repo/pulls/$number/files" \
     --jq '.[] | .filename, (.previous_filename // empty)' > "$log_dir/files.txt"
@@ -173,7 +175,10 @@ run_decision4() {
     # Reuse the exact-head review: body edits do not trigger a second diff read.
     local review_base
     review_base=$(git merge-base HEAD "$base_sha")
-    review_body "$review_base" "$log_dir/body.md" || return 1
+    review_body "$review_base" "$log_dir/body.md" || {
+      post_status decision4 failure 'Local AI review blocked current PR evidence'
+      return 1
+    }
     if ! cmp -s "$log_dir/body.md" <(jq -r .body "$log_dir/pr.json"); then
       # A review may take minutes: never overwrite a concurrent owner decision edit.
       gh pr view "$number" --repo "$repo" --json body,baseRefName,baseRefOid,headRefOid > "$log_dir/pr-before-publish.json"
