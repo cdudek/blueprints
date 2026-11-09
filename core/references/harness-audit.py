@@ -448,6 +448,22 @@ def audit(
     reset_caches(root, config.get("reset", []))
     started_ns = time.time_ns()
     environment = {**os.environ, "HARNESS_AUDIT_ACTIVE": "1", "CI_LOCAL_BASE_REF": base_tip}
+    if head == base_tip:
+        # The owned runner also verifies review/Decision4 in --check mode. A default-head
+        # monthly run has no PR body; supply an honest no-change review context instead.
+        review_body = output / "audit-body.md"
+        review_body.write_text(
+            "## What\n\n- **Audit:** Verify this existing default-branch head; no source change is proposed.\n\n"
+            "## Why\n\n- **Operation:** Monthly local whole-harness verification.\n\n"
+            f"## Proof\n\n- **Head:** `{head}`; comparison base is this same commit.\n"
+            "- **Results:** The owned runner will append its actual review and fitness evidence.\n\n"
+            "## How hard is it to undo this PR after merging?\n\n"
+            "**🟢 Undo** — No source change is proposed; discard the local audit output if needed.\n\n"
+            f"- **Responsible for recovery:** @{owner(config['owner'])}.\n"
+            "- **Classification change:** None.\n\n🤖 Generated with Codex\n"
+        )
+        environment["CI_LOCAL_PR_BODY"] = str(review_body)
+        environment.pop("CI_LOCAL_BODY_FILE", None)
     with (output / "gate.log").open("w") as log:
         gate = subprocess.run(
             ["bash", "scripts/ci-local", "--check"],
@@ -584,6 +600,7 @@ def audit(
     policy, policy_gaps = branch_policy(root, config)
     gaps.extend(policy_gaps)
     report = {
+        "repository": config.get("repository"),
         "gate_rulesets": policy,
         "version": 1,
         "head": head,
@@ -632,7 +649,9 @@ def issue_body(report: dict[str, Any]) -> str:
 
 
 def update_issue(root: Path, report: dict[str, Any], responsible: str) -> str:
-    repo = github_repository(root, report.get("gate_rulesets", {}).get("repository"))
+    repo = github_repository(
+        root, report.get("repository") or report.get("gate_rulesets", {}).get("repository")
+    )
     result = command(
         [
             "gh",

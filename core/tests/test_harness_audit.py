@@ -328,6 +328,58 @@ class HarnessAudit(unittest.TestCase):
             ["config/allowed", "config/missing-check", "config/stale-lock"],
         )
 
+    def test_manifest_repository_mismatch_prevents_every_issue_write(self):
+        self.config["repository"] = "example-owner/repo"
+        report = self.execute()
+        calls = []
+
+        def github(args, root, **kwargs):
+            calls.append(args)
+            return subprocess.CompletedProcess(args, 0, "other-owner/repo\n", "")
+
+        with patch.object(audit, "command", side_effect=github):
+            with self.assertRaisesRegex(ValueError, "differs"):
+                audit.update_issue(self.root, report, "example-owner")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][1:3], ["repo", "view"])
+
+    def test_default_head_audit_supplies_a_fresh_owned_review_body(self):
+        self.gate(
+            "test -f \"$CI_LOCAL_PR_BODY\"\nprintf 'fresh checker\\n' > \"$logs/probe.log\"\nprintf 'PASS probe (0s)\\n'\n"
+        )
+        self.commit()
+        self.git("update-ref", "refs/remotes/origin/main", "HEAD")
+        config, checks, gaps = audit.configuration(self.root)
+        report = audit.audit(self.root, config, checks, gaps)
+        self.assertEqual(report["gaps"], [])
+        body = (Path(report["artifact"]) / "audit-body.md").read_text()
+        self.assertIn(report["head"], body)
+        self.assertIn("**🟢 Undo**", body)
+        self.assertNotIn("tests passed", body)
+        paths = self.write("audit-paths.txt", "")
+        map_path = self.write(
+            "audit-map.yaml",
+            "version: 1\nprecedence: highest-floor-wins\nentries:\n- select:\n    paths: ['**']\n  floor: Migrate\n  put_right: Restore the source and revalidate consumers.\n  answerer: Owner\n",
+        )
+        checker = HERE.parents[1] / ".github/scripts/decision4.py"
+        decision = subprocess.run(
+            [
+                sys.executable,
+                str(checker),
+                "--body-file",
+                str(Path(report["artifact"]) / "audit-body.md"),
+                "--files",
+                str(paths),
+                "--map",
+                str(map_path),
+            ],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(decision.returncode, 0, decision.stdout + decision.stderr)
+
     def test_existing_issue_is_updated_once_and_each_gap_owner_is_assigned(self):
         report = self.execute()
         report["gaps"] = [
