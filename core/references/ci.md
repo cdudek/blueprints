@@ -58,6 +58,9 @@ Findings: critical <n>, high <n>, medium <n>, low <n>
 - **Adoption:** From a clean blueprint checkout, run `python3 core/references/sync-harness-audit.py <consumer-worktree> --pin <merged-source-sha>`; inspect the dry run, then add `--write`. Commit the two copied executables and `.harness-audit.lock`.
 - **Manifest:** `.harness-audit.json` declares an explicit GitHub owner, default branch, actual local check IDs, tool version probes, configuration paths, claimed rules and legacy caller/fixture evidence. Optional repository binding and protected refs keep platform proof explicit.
 - **Gate wiring:** Run `python3 scripts/legacy-guards-test.py` and `python3 scripts/harness-audit --verify-config` as cheap checks in the existing full local gate; only the monthly command runs the whole harness and optionally updates its issue.
+- **Full selection:** The monthly auditor sets `CI_LOCAL_FULL_SUITE=1`, so even a docs-only comparison executes every configured checker.
+- **Paired pins:** Sync the supporting shared runner body and `.ci-local.lock` with the audit assets.
+- **Nested checks:** The runner consumes the override before child checks; ordinary local docs checks retain their shortcut.
 - **Default-head review:** At the fetched default head, the auditor supplies a fresh no-change body for the owned review and Decision4 checks; it does not claim a pass or publish commit statuses. Issue writes recheck the manifest repository binding.
 - **Fresh proof:** Start from a fetched default branch, locked dependencies and a clean committed head. Reset declared safe caches, run every claimed checker from scratch, and record head/tree/comparison base, tool versions, configuration hashes and fresh logs for installed, configured, executed, passed and applied states.
 - **Input boundary:** Hash only permitted committed configuration files. Ignore untracked/local artifacts, and refuse state/value files, backend caches and symlinks before opening their contents.
