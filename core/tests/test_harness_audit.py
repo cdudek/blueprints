@@ -307,6 +307,51 @@ class HarnessAudit(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "leaves"):
             audit.safe_path(self.root, "outside/config.json")
 
+    def test_configuration_hashes_only_committed_inputs_without_opening_local_files(
+        self,
+    ):
+        self.write("config/public.json", "{}\n")
+        self.write(".gitignore", "config/local*\nconfig/.terraform/\n")
+        self.commit()
+        withheld = [
+            self.write("config/local.tfvars", "synthetic private fixture\n"),
+            self.write("config/local.tfstate", "synthetic state fixture\n"),
+            self.write("config/.terraform/backend.json", "synthetic backend fixture\n"),
+            self.write("config/untracked.json", "uncommitted fixture\n"),
+        ]
+        real_digest = audit.digest
+        opened = []
+
+        def observed(path):
+            self.assertNotIn(path, withheld, "audit attempted to read local private input")
+            opened.append(path.relative_to(self.root).as_posix())
+            return real_digest(path)
+
+        with patch.object(audit, "digest", side_effect=observed):
+            hashes = audit.config_hashes(self.root, ["config"])
+            self.assertEqual(set(hashes), {"config/public.json"})
+            self.assertEqual(opened, ["config/public.json"])
+            with self.assertRaisesRegex(ValueError, "committed"):
+                audit.config_hashes(self.root, ["config/untracked.json"])
+        self.assertEqual(opened, ["config/public.json"])
+
+    def test_configuration_refuses_tracked_state_values_and_links_before_opening(self):
+        self.write("config/public.json", "{}\n")
+        self.write("config/private.tfvars", "synthetic private fixture\n")
+        self.commit()
+        with patch.object(audit, "digest") as opened:
+            with self.assertRaisesRegex(ValueError, "Withheld"):
+                audit.config_hashes(self.root, ["config"])
+            opened.assert_not_called()
+        self.git("rm", "config/private.tfvars")
+        self.commit()
+        (self.root / "config/link.json").symlink_to(self.root / "fixture.json")
+        self.commit()
+        with patch.object(audit, "digest") as opened:
+            with self.assertRaisesRegex(ValueError, "linked"):
+                audit.config_hashes(self.root, ["config"])
+            opened.assert_not_called()
+
     def test_reset_cannot_remove_tracked_product_configuration(self):
         with self.assertRaisesRegex(ValueError, "tracked"):
             audit.reset_caches(self.root, ["fixture.json"])

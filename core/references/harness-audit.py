@@ -60,7 +60,8 @@ def safe_path(root: Path, name: str) -> Path:
     if relative.is_absolute() or not relative.parts or ".." in relative.parts:
         raise ValueError(f"Not a repository-relative path: {name}")
     if any(
-        part.startswith(".env") or part in {".git", "secrets", ".secrets", ".npmrc", ".pypirc"}
+        part.startswith(".env")
+        or part in {".git", "secrets", ".secrets", ".npmrc", ".pypirc", ".terraform"}
         for part in relative.parts
     ):
         raise ValueError(f"Withheld environment/credential path: {name}")
@@ -70,9 +71,20 @@ def safe_path(root: Path, name: str) -> Path:
         re.I,
     ):
         raise ValueError(f"Withheld credential path: {name}")
+    if re.search(
+        r"(?:\.tfstate(?:\..*)?$|\.tfvars(?:\.json)?$|\.tfplan$|^(?:tfplan(?:\.json)?|plan\.txt)$)",
+        relative.name,
+        re.I,
+    ):
+        raise ValueError(f"Withheld state/value path: {name}")
     path = root / relative
     if not path.resolve().is_relative_to(root.resolve()):
         raise ValueError(f"Path leaves the repository: {name}")
+    if any(
+        (root / Path(*relative.parts[:end])).is_symlink()
+        for end in range(1, len(relative.parts) + 1)
+    ):
+        raise ValueError(f"Refusing linked repository input: {name}")
     return path
 
 
@@ -221,20 +233,24 @@ def configuration(root: Path) -> tuple[dict[str, Any], dict[str, str], list[Gap]
 
 
 def config_hashes(root: Path, names: list[str]) -> dict[str, str]:
+    """Hash permitted committed inputs, never ignored or untracked local artifacts."""
+    tracked = set(git(root, "ls-files", "--cached", "-z").split("\0")) - {""}
     hashes = {}
     for name in names:
         path = safe_path(root, name)
+        relative = path.relative_to(root).as_posix()
         if path.is_dir():
-            children = sorted(path.rglob("*"))
             files = [
-                safe_path(root, item.relative_to(root).as_posix())
-                for item in children
-                if item.is_file()
+                safe_path(root, item) for item in sorted(tracked) if item.startswith(relative + "/")
             ]
             if not files:
-                raise ValueError(f"Configuration directory is empty: {name}")
+                raise ValueError(f"Configuration directory has no committed files: {name}")
+            if any(not item.is_file() for item in files):
+                raise ValueError(f"Committed configuration file is missing: {name}")
             hashes.update({item.relative_to(root).as_posix(): digest(item) for item in files})
         elif path.is_file():
+            if relative not in tracked:
+                raise ValueError(f"Configuration is not committed: {name}")
             hashes[name] = digest(path)
         else:
             raise ValueError(f"Configuration is missing: {name}")
