@@ -230,13 +230,29 @@ class HarnessAudit(unittest.TestCase):
         self.assertFalse(report["checks"][0]["states"]["passed"])
 
     def test_skip_and_empty_suite_are_not_passes(self):
-        for text in ("SKIPPED absent scanner", "No test files found", "Checked 0 files"):
+        for text in (
+            "SKIPPED absent scanner",
+            "No test files found",
+            "Checked 0 files",
+            "Tests 8 skipped (8)",
+            "Tests 49 passed | 8 skipped (57)",
+            "OK (skipped=1)",
+            "# tests 8\n# pass 0\n# skipped 8",
+        ):
             with self.subTest(text=text):
                 self.gate(
                     f"printf '%s\\n' '{text}' > \"$logs/probe.log\"\nprintf 'PASS probe (0s)\\n'\n"
                 )
                 report = self.execute()
                 self.assertFalse(report["checks"][0]["states"]["passed"])
+
+    def test_command_bounds_network_requests_and_preserves_explicit_probe_timeout(self):
+        result = subprocess.CompletedProcess(["gh", "repo", "view"], 0, "", "")
+        with patch.object(audit.subprocess, "run", return_value=result) as child:
+            audit.command(["gh", "repo", "view"], self.root)
+            self.assertEqual(child.call_args.kwargs.get("timeout"), 60)
+            audit.command(["bash", "fixture"], self.root, timeout=180)
+            self.assertEqual(child.call_args.kwargs["timeout"], 180)
 
     def test_ruleset_requires_actual_refusal_and_allowed_evidence(self):
         row = self.config["checks"][0]
