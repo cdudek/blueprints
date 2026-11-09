@@ -71,6 +71,41 @@ class ComplexityTests(unittest.TestCase):
         self.record()
         self.assertEqual(self.gate().returncode, 0)
 
+    def test_simultaneous_deletion_and_simplification_preserves_survivor_identity(self):
+        import shutil
+
+        self.anonymous_source([12, 14])
+        self.record()
+        base = self.root / "base"
+        shutil.copytree(self.root / "src", base / "src")
+        shutil.copytree(self.root / ".fitness", base / ".fitness")
+        self.anonymous_source([13])
+        result = self.gate("--record", "--base", str(base))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        rows = complexity.read_baseline(self.root / complexity.BASELINE)
+        self.assertEqual(set(rows), {"src/main.ts|(anonymous)#2"})
+        self.assertEqual(next(iter(rows.values()))["metric"], 14)
+        result = self.gate("--base", str(base))
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_multiple_simplified_callbacks_keep_compatible_identities(self):
+        self.anonymous_source([14, 12])
+        self.record()
+        self.anonymous_source([11, 13])
+        self.record()
+        rows = complexity.read_baseline(self.root / complexity.BASELINE)
+        self.assertEqual(rows["src/main.ts|(anonymous)#1"]["metric"], 14)
+        self.assertEqual(rows["src/main.ts|(anonymous)#2"]["metric"], 12)
+        self.assertEqual(self.gate().returncode, 0)
+
+    def test_growing_callback_cannot_claim_unchanged_sibling_identity(self):
+        self.anonymous_source([12, 14])
+        self.record()
+        self.anonymous_source([13, 14])
+        result = self.gate("--record")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("complexity rose", result.stderr)
+
     def test_new_complex_callback_cannot_steal_an_unchanged_allowance(self):
         self.anonymous_source([12])
         self.record()

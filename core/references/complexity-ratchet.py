@@ -110,6 +110,16 @@ def assign_identity(result, row, key, previous):
     result[key] = {**row, "symbol": symbol}
 
 
+def edited_identity(key, row, matches, previous):
+    if len(matches) == 1:
+        return matches[0]
+    shrinking = [candidate for candidate in matches
+                 if previous[candidate]["metric"] > row["metric"]]
+    if key in shrinking:
+        return key
+    return min(shrinking, key=lambda candidate: previous[candidate]["metric"], default=key)
+
+
 def align_anonymous(current, previous):
     result, pending = {}, []
     # Reserve unchanged bodies first, so a new callback cannot steal their allowance.
@@ -122,9 +132,10 @@ def align_anonymous(current, previous):
             assign_identity(result, row, matches[0], previous)
         else:
             pending.append((key, row))
-    for key, row in pending:
+    # Larger edits have fewer valid shrinking identities; match them first.
+    for key, row in sorted(pending, key=lambda item: item[1]["metric"], reverse=True):
         matches = anonymous_candidates(row, previous, result, exact=False)
-        chosen = matches[0] if len(matches) == 1 else key
+        chosen = edited_identity(key, row, matches, previous)
         assign_identity(result, row, chosen, previous)
     return result
 
