@@ -38,6 +38,7 @@ class Gap:
 
 
 def command(args: list[str], root: Path, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    kwargs.setdefault("timeout", 60)
     return subprocess.run(args, cwd=root, text=True, capture_output=True, check=False, **kwargs)
 
 
@@ -254,11 +255,23 @@ def reset_caches(root: Path, patterns: list[str]) -> None:
                 path.unlink()
 
 
+def incomplete_execution(output: str) -> bool:
+    """Detect empty/skipped proof in human summaries, unittest and TAP output."""
+    text = re.sub(r"\x1b\[[0-9;]*m", "", output)
+    return bool(
+        re.search(
+            NO_EXECUTION + r"|\b[1-9]\d* (?:skipped|todo)\b|\bskipped=[1-9]\d*\b"
+            r"|(?m:^# (?:tests 0|pass 0|skipped [1-9]\d*)\b)",
+            text,
+        )
+    )
+
+
 def probe(root: Path, spec: dict[str, Any], log: Path) -> bool:
     result = command(["bash", "-euo", "pipefail", "-c", spec["command"]], root, timeout=180)
     output = result.stdout + result.stderr
     log.write_text(output)
-    if re.search(NO_EXECUTION + r"|\b[1-9]\d* (?:skipped|todo)\b|\bskipped=[1-9]\d*\b", output):
+    if incomplete_execution(output):
         return False
     required = spec.get("required_output", [])
     return result.returncode == 0 and bool(required) and all(text in output for text in required)
@@ -525,7 +538,7 @@ def audit(
             log_text = source_log.read_text()
             shutil.copy2(source_log, output / (name + ".log"))
             log_hash = digest(source_log)
-            if re.search(NO_EXECUTION, log_text):
+            if incomplete_execution(log_text):
                 state["passed"] = False
         if row.get("kind") == "ruleset":
             if row.get("applied"):
