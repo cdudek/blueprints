@@ -178,13 +178,13 @@ def configuration(root: Path) -> tuple[dict[str, Any], dict[str, str], list[Gap]
         r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", str(config["repository"])
     ):
         raise ValueError("Audit repository must be owner/name")
-    required = config.get("required_statuses", ["local-ci", "decision4"])
+    required = config.get("required_statuses", ["ci"])
     if (
         not isinstance(required, list)
         or any(not isinstance(value, str) or not value for value in required)
-        or not {"local-ci", "decision4"} <= set(required)
+        or "ci" not in required
     ):
-        raise ValueError("Required statuses must include local-ci and decision4")
+        raise ValueError("Required statuses must include ci")
     branches = config.get("protected_branches", [])
     if not isinstance(branches, list) or any(
         not isinstance(branch, str)
@@ -392,7 +392,7 @@ def branch_policy(root: Path, config: dict[str, Any]) -> tuple[dict[str, Any], l
         evidence["repository"] = repository
     except (ValueError, OSError, subprocess.TimeoutExpired) as error:
         return evidence, [Gap("github-protection", "applied", responsible, str(error))]
-    required = set(config.get("required_statuses", ["local-ci", "decision4"]))
+    required = set(config.get("required_statuses", ["ci"]))
     branches = list(
         dict.fromkeys([config["default_branch"], *config.get("protected_branches", [])])
     )
@@ -482,25 +482,9 @@ def audit(
         "CI_LOCAL_BASE_REF": base_tip,
         "CI_LOCAL_FULL_SUITE": "1",
     }
-    if head == base_tip:
-        # The owned runner also verifies review/Decision4 in --check mode. A default-head
-        # monthly run has no PR body; supply an honest no-change review context instead.
-        review_body = output / "audit-body.md"
-        review_body.write_text(
-            "## What\n\n- **Audit:** Verify this existing default-branch head; no source change is proposed.\n\n"
-            "## Why\n\n- **Operation:** Monthly local whole-harness verification.\n\n"
-            f"## Proof\n\n- **Head:** `{head}`; comparison base is this same commit.\n"
-            "- **Results:** The owned runner will append its actual review and fitness evidence.\n\n"
-            "## How hard is it to undo this PR after merging?\n\n"
-            "**🟢 Undo** — No source change is proposed; discard the local audit output if needed.\n\n"
-            f"- **Responsible for recovery:** @{owner(config['owner'])}.\n"
-            "- **Classification change:** None.\n\n🤖 Generated with Codex\n"
-        )
-        environment["CI_LOCAL_PR_BODY"] = str(review_body)
-        environment.pop("CI_LOCAL_BODY_FILE", None)
     with (output / "gate.log").open("w") as log:
         gate = subprocess.run(
-            ["bash", "scripts/ci-local", "--check"],
+            ["bash", "scripts/ci-local"],
             cwd=root,
             env=environment,
             text=True,

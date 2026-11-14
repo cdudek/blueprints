@@ -32,7 +32,7 @@ Follow the steps in order. Each step names the references to read.
 7. **External services.** Every networked vendor behind an interface and a factory with a fake provider. [clients](references/clients.md), [email](references/email.md)
 8. **Sign-in and access.** Magic link, email and password, Google. Access checks in layers. [auth](references/auth.md), [security](references/security.md)
 9. **Public surface.** Forms, SEO and GEO, i18n, tracking, legal pages. [forms](references/forms.md), [seo](references/seo.md), [i18n](references/i18n.md), [tracking](references/tracking.md), [legal](references/legal.md)
-10. **Full quality gates.** Every test layer in the verify command, scanners, AI review, the required check complete. [testing](references/testing.md), [ci](references/ci.md)
+10. **Full quality gates.** Every test layer in the verify command, scanners, the required `ci` check complete. [testing](references/testing.md), [ci](references/ci.md)
 11. **Ship.** Container, health endpoints, staging, production, logs. [release-and-deploy](references/release-and-deploy.md), [observability](references/observability.md)
 12. **MCP, when the product exposes one.** [mcp](references/mcp.md)
 

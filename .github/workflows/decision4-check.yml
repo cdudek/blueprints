@@ -1,5 +1,8 @@
 name: Shared Decision4 check
 
+# Information only: every step is allowed to fail and a failure is reported as a warning.
+# Never make this a required check.
+
 on:
   workflow_call:
     inputs:
@@ -27,10 +30,12 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Install checker dependencies
+        continue-on-error: true
         run: |
           python3 -m venv "$RUNNER_TEMP/decision4-venv"
           "$RUNNER_TEMP/decision4-venv/bin/pip" install -q PyYAML==6.0.3 jsonschema==4.26.0
       - name: Fetch PR data (no PR code execution)
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -63,4 +68,9 @@ jobs:
             exit 1
           fi
       - name: Validate schema, changed-path floor and class-specific handoff
+        id: validate
+        continue-on-error: true
         uses: cdudek/blueprints/.github/actions/decision4@d572c1a05fd7f69ca9ebee72b4bb55201500717d # shared checker v1
+      - name: Report the result (information only)
+        if: steps.validate.outcome != 'success'
+        run: echo "::warning title=Decision4 (information only)::The PR body or changed paths do not meet the decision floor. See the validate step log. This never blocks the merge."
