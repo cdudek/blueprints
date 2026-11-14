@@ -294,6 +294,50 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(log.read_text(), 'ran\n')
         self.assertTrue(lock.exists())
 
+    def cheap_config(self):
+        self.configure({'a': 'echo a >> "$ORDER_LOG"; test "${FAIL_A:-}" != 1', 'big': 'echo big >> "$ORDER_LOG"', 'c': 'echo c >> "$ORDER_LOG"'},
+                       'HEAVY_CHECKS=(big)')
+
+    def test_cheap_skips_heavy_checks_keeps_order_and_ends_with_a_pass_line(self):
+        log = self.root / 'order.log'
+        self.cheap_config()
+        durations = self.work / '.git/ci-local/durations.json'
+        durations.parent.mkdir(exist_ok=True)
+        durations.write_text(json.dumps({'a': 9, 'c': 3}))
+        lock = self.root / 'heavy.lock'
+        r = self.gate('--cheap', ORDER_LOG=str(log), CI_LOCAL_LOCK=str(lock))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(log.read_text().split(), ['c', 'a'])
+        self.assertIn('SKIP big (heavy)', r.stdout)
+        self.assertEqual(r.stdout.splitlines()[-1], f'CHEAP PASS {self.git("rev-parse", "HEAD")}')
+        self.assertFalse(lock.exists())
+
+    def test_cheap_writes_no_receipt(self):
+        self.cheap_config()
+        self.assertEqual(self.gate('--cheap', ORDER_LOG='/dev/null').returncode, 0)
+        self.assertFalse((self.work / '.git/ci-local' / self.git('rev-parse', 'HEAD') / 'checks.json').exists())
+        self.assertEqual(self.gate(ORDER_LOG='/dev/null').returncode, 0)
+        self.assertTrue((self.work / '.git/ci-local' / self.git('rev-parse', 'HEAD') / 'checks.json').exists())
+
+    def test_cheap_failure_stops_names_the_check_and_honours_keep_going(self):
+        log = self.root / 'order.log'
+        self.cheap_config()
+        r = self.gate('--cheap', ORDER_LOG=str(log), FAIL_A='1')
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('STOP at the first failure', r.stderr)
+        self.assertEqual(r.stdout.splitlines()[-1], 'CHEAP FAIL check=a')
+        self.assertEqual(log.read_text().split(), ['a'])
+        log.unlink()
+        r = self.gate('--cheap', '--keep-going', ORDER_LOG=str(log), FAIL_A='1')
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(log.read_text().split(), ['a', 'c'])
+        self.assertEqual(r.stdout.splitlines()[-1], 'CHEAP FAIL check=a')
+
+    def test_cheap_with_ci_is_an_error(self):
+        r = self.gate('--cheap', '--ci')
+        self.assertEqual(r.returncode, 2)
+        self.assertIn('cannot be combined', r.stderr)
+
     def test_script_has_no_publication_code(self):
         source = (ROOT / 'references/ci-local.sh').read_text()
         for needle in ('gh ', 'git push', '/statuses', 'AI_REVIEW', 'CI_LOCAL_PR'):
