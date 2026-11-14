@@ -16,6 +16,8 @@ permissions:
 jobs:
   checks:
     if: github.event.pull_request.draft == false
+    # Use ubuntu-slim (1 vCPU, a third of the price) when the check set is light and fits its
+    # 15 min job limit; it has no Docker and no service containers. Heavier sets keep ubuntu-latest.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -39,15 +41,6 @@ jobs:
       # - run: uv sync --locked
       - name: Run every check except LOCAL_ONLY_CHECKS
         run: bash scripts/ci-local --ci
-
-  # Information only: reports the decision class in the PR, never blocks.
-  # Pin to the merge SHA of cdudek/blueprints that carries the information-only workflow.
-  decision4:
-    if: github.event.pull_request.draft == false
-    permissions:
-      contents: read
-      pull-requests: read
-    uses: cdudek/blueprints/.github/workflows/decision4-check.yml@0000000000000000000000000000000000000000 # replace with the merge SHA
 
   # The required check. It is skipped for drafts, which cannot merge anyway.
   ci:

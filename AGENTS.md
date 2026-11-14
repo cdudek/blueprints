@@ -31,7 +31,7 @@ Never read `.env*` files or secret values.
 
 Run `python3 -m unittest discover -s core/tests -v` for changes to the shared local runner or dependency driver.
 Pushes are never gated. Push to a draft PR, run `scripts/ci-local` before marking it ready, and open one PR per milestone.
-GitHub Actions runs `ci` once on the ready PR; `ci` is the only required check. Decision4 is information only.
+GitHub Actions runs `ci` once on the ready PR; `ci` is the only required check. Decision4 is a PR-body section only: no job, workflow or check downstream.
 After the exact head passes `ci`, arm squash auto-merge only at Undo or Repair and without approval-gated tiers.
 Never arm it for `terraform/**`, Terraform workflows or classes above Repair; hand those decisions to the owner.
 Check the merge state, rerun the local gate after a rebase, and batch fixes into one push.
