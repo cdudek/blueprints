@@ -1,8 +1,12 @@
 """Shared runner behavioural fixtures; Git is real, checks and transport are local."""
+import json
 import os
 from pathlib import Path
+import shlex
+import shutil
 import subprocess
 import tempfile
+import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +22,7 @@ class RunnerTest(unittest.TestCase):
         self.bin = self.root / 'bin'
         self.bin.mkdir()
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('GIT_')}
+        self.env.pop('GITHUB_ACTIONS', None)
         self.env.update(PATH=f'{self.bin}:{os.environ["PATH"]}', CI_LOCAL_BASE_REF='origin/main',
                         GIT_CONFIG_GLOBAL='/dev/null', GIT_CONFIG_SYSTEM='/dev/null')
         (self.work / 'scripts').mkdir()
@@ -51,6 +56,16 @@ class RunnerTest(unittest.TestCase):
         file = self.work / path
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(text)
+        self.commit()
+
+    def configure(self, checks, extra=''):
+        """Replace the repo config block with `checks` ({name: command}) plus extra bash lines, and commit."""
+        script = self.work / 'scripts/ci-local'
+        body = script.read_text().split('# END REPO CONFIG\n', 1)[1]
+        names = ' '.join(checks)
+        commands = ' '.join(shlex.quote(c) for c in checks.values())
+        script.write_text(f"#!/usr/bin/env bash\nset -euo pipefail\nCHECK_NAMES=({names})\nCHECK_COMMANDS=({commands})\n"
+                          f"CHECK_TOOLS=({' '.join([chr(39)*2] * len(checks))})\n{extra}\n# END REPO CONFIG\n{body}")
         self.commit()
 
     def gate(self, *args, **env):
@@ -174,6 +189,110 @@ class RunnerTest(unittest.TestCase):
                 self.assertEqual(self.gate(*args).returncode, 0)
         self.assertFalse(marker.exists())
         self.assertEqual(self.git('ls-remote', 'origin', 'refs/heads/feature'), '')
+
+    def test_failing_check_prints_the_last_80_log_lines(self):
+        self.configure({'code': 'for i in $(seq 100); do echo "line$i"; done; exit 1'})
+        r = self.gate()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('line100\n', r.stdout)
+        self.assertIn('line21\n', r.stdout)
+        self.assertNotIn('line20\n', r.stdout)
+        self.assertNotIn('::group::', r.stdout)
+        r = self.gate('--ci', GITHUB_ACTIONS='true')
+        self.assertIn('::group::code log (last 80 lines)\nline21\n', r.stdout)
+        self.assertRegex(r.stdout, r'line100\n::endgroup::')
+
+    def test_checks_run_cheapest_first_and_serial_checks_keep_their_slot(self):
+        log = self.root / 'order.log'
+        self.configure({n: f'echo {n} >> "$ORDER_LOG"' for n in 'abc'})
+        durations = self.work / '.git/ci-local/durations.json'
+        durations.parent.mkdir(exist_ok=True)
+        durations.write_text(json.dumps({'a': 9, 'b': 5, 'c': 3}))
+        self.assertEqual(self.gate(ORDER_LOG=str(log)).returncode, 0)
+        self.assertEqual(log.read_text().split(), ['c', 'b', 'a'])
+        self.assertEqual(sorted(json.loads(durations.read_text())), ['a', 'b', 'c', 'docs-format', 'docs-links'])
+        log.unlink()
+        durations.write_text(json.dumps({'a': 9, 'b': 5, 'c': 3}))
+        self.configure({n: f'echo {n} >> "$ORDER_LOG"' for n in 'abc'}, 'CHECK_SERIAL=(a)')
+        self.assertEqual(self.gate(ORDER_LOG=str(log)).returncode, 0)
+        self.assertEqual(log.read_text().split(), ['a', 'c', 'b'])
+        log.unlink()
+        durations.unlink()
+        self.assertEqual(self.gate(ORDER_LOG=str(log)).returncode, 0)
+        self.assertEqual(log.read_text().split(), ['a', 'b', 'c'])
+
+    def test_first_failure_stops_the_run_unless_keep_going(self):
+        log = self.root / 'ran.log'
+        self.configure({'first': 'exit 1', 'second': 'echo second >> "$RAN_LOG"'})
+        r = self.gate(RAN_LOG=str(log))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('STOP at the first failure', r.stderr)
+        self.assertFalse(log.exists())
+        r = self.gate('--keep-going', RAN_LOG=str(log))
+        self.assertEqual(r.returncode, 1)
+        self.assertNotIn('STOP', r.stderr)
+        self.assertEqual(log.read_text(), 'second\n')
+        self.assertIn('Seconds per check: first=', r.stdout)
+
+    def test_clean_start_removes_declared_paths_runner_leftovers_and_relative_env(self):
+        self.configure({'code': 'test ! -e test-results && test -z "${PYTHONPATH:-}"'}, "CI_LOCAL_CLEAN_PATHS=(test-results)")
+        (self.work / 'test-results').mkdir()
+        (self.work / 'test-results/old.xml').write_text('stale')
+        leftover = self.work / '.git/ci-local/containers/auth.json'
+        leftover.parent.mkdir(parents=True)
+        leftover.write_text('{}')
+        r = self.gate(PYTHONPATH='relative/dir')
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertFalse(leftover.exists())
+        self.configure({'code': 'true'}, "CI_LOCAL_CLEAN_PATHS=(../outside)")
+        self.assertEqual(self.gate().returncode, 2)
+
+    def heavy_gate(self, lock, **env):
+        self.configure({'code': 'echo ran >> "$HEAVY_LOG"'}, 'HEAVY_CHECKS=(code)')
+        return subprocess.Popen(['bash', 'scripts/ci-local'], cwd=self.work, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                env={**self.env, 'CI_LOCAL_LOCK': str(lock), 'CI_LOCAL_LOCK_POLL': '0.1', **env})
+
+    def hold(self, lock, pid):
+        lock.mkdir()
+        (lock / 'pid').write_text(str(pid))
+
+    def test_heavy_check_waits_for_a_live_holder_then_runs(self):
+        lock, log = self.root / 'heavy.lock', self.root / 'heavy.log'
+        holder = subprocess.Popen(['sleep', '60'])
+        self.addCleanup(holder.kill)
+        self.hold(lock, holder.pid)
+        p = self.heavy_gate(lock, HEAVY_LOG=str(log))
+        self.addCleanup(p.kill)
+        time.sleep(1)
+        self.assertIsNone(p.poll())
+        self.assertFalse(log.exists())
+        shutil.rmtree(lock)
+        out, err = p.communicate(timeout=20)
+        self.assertEqual(p.returncode, 0, out + err)
+        self.assertIn(f'waiting for heavy lock held by pid {holder.pid}', out)
+        self.assertEqual(log.read_text(), 'ran\n')
+        self.assertFalse(lock.exists())
+
+    def test_heavy_check_takes_over_a_dead_holders_lock(self):
+        lock, log = self.root / 'heavy.lock', self.root / 'heavy.log'
+        dead = subprocess.Popen(['true'])
+        dead.wait()
+        self.hold(lock, dead.pid)
+        out, err = self.heavy_gate(lock, HEAVY_LOG=str(log)).communicate(timeout=20)
+        self.assertNotIn('waiting', out)
+        self.assertEqual(log.read_text(), 'ran\n')
+        self.assertFalse(lock.exists())
+
+    def test_heavy_lock_is_skipped_in_actions(self):
+        lock, log = self.root / 'heavy.lock', self.root / 'heavy.log'
+        holder = subprocess.Popen(['sleep', '60'])
+        self.addCleanup(holder.kill)
+        self.hold(lock, holder.pid)
+        p = self.heavy_gate(lock, HEAVY_LOG=str(log), GITHUB_ACTIONS='true')
+        out, err = p.communicate(timeout=20)
+        self.assertEqual(p.returncode, 0, out + err)
+        self.assertEqual(log.read_text(), 'ran\n')
+        self.assertTrue(lock.exists())
 
     def test_script_has_no_publication_code(self):
         source = (ROOT / 'references/ci-local.sh').read_text()
