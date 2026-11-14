@@ -7,7 +7,9 @@ CHECK_COMMANDS=('make format-check' 'make lint' 'make typecheck' 'make test')
 CHECK_TOOLS=('' '' '' '')
 # Names from CHECK_NAMES that run on your machine but not in GitHub Actions (e2e, docker, macOS builds).
 LOCAL_ONLY_CHECKS=()
-# Optional. Checks that need a machine-wide lock (e2e, docker, anything memory-hungry); skipped in Actions.
+# Optional. Checks that need a machine-wide lock (e2e, docker, anything memory-hungry); skipped in Actions and by --cheap.
+# A check that needs the output of a heavy check (it runs against its build, reads its report) belongs in HEAVY_CHECKS too:
+# --cheap cannot tell the dependency, so an unlisted dependent fails there.
 HEAVY_CHECKS=()
 # Optional. Checks that must keep their config position because they depend on an earlier check.
 CHECK_SERIAL=()
@@ -15,17 +17,20 @@ CHECK_SERIAL=()
 CI_LOCAL_CLEAN_PATHS=()
 # END REPO CONFIG
 
-usage() { echo 'Usage: scripts/ci-local [--ci] [--keep-going] | --help  (no flag: every check, locally, stopping at the first failure; --ci: all but LOCAL_ONLY_CHECKS, for Actions; --keep-going: run every check after a failure)'; }
+usage() { echo 'Usage: scripts/ci-local [--ci | --cheap] [--keep-going] | --help  (no flag: every check, locally, stopping at the first failure; --ci: all but LOCAL_ONLY_CHECKS, for Actions; --cheap: all but HEAVY_CHECKS, no lock, no receipt, ends with CHEAP PASS <sha> or CHEAP FAIL check=<name>; --keep-going: run every check after a failure)'; }
 ci=false
+cheap=false
 keep_going=false
 for arg in "$@"; do
   case $arg in
     --ci) ci=true ;;
+    --cheap) cheap=true ;;
     --keep-going) keep_going=true ;;
     --help|-h) usage; exit 0 ;;
     *) usage >&2; exit 2 ;;
   esac
 done
+if [[ $ci == true && $cheap == true ]]; then echo '--cheap and --ci cannot be combined.' >&2; usage >&2; exit 2; fi
 
 cd "$(git rev-parse --show-toplevel)"
 # Clean start: a relative path inherited from the caller breaks once checks run elsewhere.
@@ -68,6 +73,8 @@ fi
 sha=$(git rev-parse HEAD)
 git_dir=$(git rev-parse --absolute-git-dir)
 log_dir="$git_dir/ci-local/$sha"
+# A cheap pass is not evidence for the head: its logs stay apart from the receipt folder.
+if [[ $cheap == true ]]; then log_dir="$git_dir/ci-local/cheap/$sha"; fi
 mkdir -p "$log_dir"
 export CI_LOCAL_EVIDENCE="$log_dir"
 
@@ -213,13 +220,15 @@ ci_trivy_image() (
 )
 export -f ci_container_setup trivy ci_trivy_image
 
-python3 - "$log_dir/checks.json" "$sha" "$base_sha" "$docs_only" <<'PY'
+if [[ $cheap == false ]]; then python3 - "$log_dir/checks.json" "$sha" "$base_sha" "$docs_only" <<'PY'
 import json, pathlib, subprocess, sys
 paths = subprocess.check_output(["git", "diff", "--name-only", "--no-renames", "-z", sys.argv[3], "HEAD"]).decode().split("\0")
 pathlib.Path(sys.argv[1]).write_text(json.dumps({"head": sys.argv[2], "base": sys.argv[3], "checks": {},
     "selection": "docs-only" if sys.argv[4] == "true" else "full", "changed_paths": [p for p in paths if p]}))
 PY
+fi
 record_check() {
+  [[ $cheap == false ]] || return 0
   python3 - "$log_dir" "$1" "$2" <<'PY'
 import hashlib, json, pathlib, sys
 folder, name, status = sys.argv[1:]
@@ -273,6 +282,7 @@ log_tail() {
   if [[ ${GITHUB_ACTIONS:-} == true ]]; then echo '::endgroup::'; fi
 }
 timings=()
+first_failed=
 for i in "${order[@]}"; do
   if (( failed > 0 )) && [[ $keep_going == false ]]; then
     echo 'STOP at the first failure; later checks did not run (--keep-going runs them all).' >&2
@@ -280,6 +290,10 @@ for i in "${order[@]}"; do
   fi
   name=${CHECK_NAMES[$i]}
   tool=${CHECK_TOOLS[$i]:-}
+  if [[ $cheap == true && " ${HEAVY_CHECKS[*]:-} " == *" $name "* ]]; then
+    echo "SKIP $name (heavy)" | tee "$log_dir/$name.log"
+    continue
+  fi
   if [[ $ci == true && " ${LOCAL_ONLY_CHECKS[*]:-} " == *" $name "* ]]; then
     echo "SKIP $name (local only)" | tee "$log_dir/$name.log"
     continue
@@ -296,6 +310,7 @@ for i in "${order[@]}"; do
     if (( engine_result == 2 )); then cat "$log_dir/$name.log"; continue; fi
     if (( engine_result != 0 )); then
       failed=$((failed + 1))
+      first_failed=${first_failed:-$name}
       echo "FAIL $name engine setup (see $log_dir/$name.log)" >&2
       log_tail "$name"
       continue
@@ -310,6 +325,7 @@ for i in "${order[@]}"; do
   else
     record_check "$name" 1
     failed=$((failed + 1))
+    first_failed=${first_failed:-$name}
     echo "FAIL $name ($((SECONDS - check_started))s; $log_dir/$name.log)" >&2
     log_tail "$name"
   fi
@@ -329,7 +345,11 @@ PY
 if [[ $ci == false && -n "$(git status --porcelain --untracked-files=normal)" ]]; then
   echo 'FAIL worktree changed during checks' >&2
   failed=$((failed + 1))
+  first_failed=${first_failed:-worktree}
 fi
 printf '%s checks passed in %ss; %s failed. Logs: %s\n' "$passed" "$((SECONDS - started))" "$failed" "$log_dir"
 echo "Seconds per check: ${timings[*]:-none}"
+if [[ $cheap == true ]]; then
+  if (( failed > 0 )); then echo "CHEAP FAIL check=$first_failed"; else echo "CHEAP PASS $sha"; fi
+fi
 exit $(( failed > 0 ))
