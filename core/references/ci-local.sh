@@ -5,23 +5,16 @@ set -euo pipefail
 CHECK_NAMES=(format lint typecheck test)
 CHECK_COMMANDS=('make format-check' 'make lint' 'make typecheck' 'make test')
 CHECK_TOOLS=('' '' '' '')
-DECISION4_COMMAND='python3 "$(fetch_decision4)"'
-# Optional until installed with the tested reference scripts; consumers enable both.
-AI_REVIEW_COMMAND=''
-FITNESS_COMMAND=''
-# Optional remote-only evidence, after pushing (for example an infrastructure plan).
-POST_PUSH_COMMAND=''
+# Names from CHECK_NAMES that run on your machine but not in GitHub Actions (e2e, docker, macOS builds).
+LOCAL_ONLY_CHECKS=()
 # END REPO CONFIG
 
-usage() { echo 'Usage: scripts/ci-local [--check | --no-push | --decision4 | --proposed-body | --help] (CI_LOCAL_PR_BODY=proposed.md before first push)'; }
-mode=full
+usage() { echo 'Usage: scripts/ci-local [--ci | --help]  (no flag: every check, locally; --ci: all but LOCAL_ONLY_CHECKS, for Actions)'; }
+ci=false
 if (( $# > 1 )); then usage >&2; exit 2; fi
 case "${1:-}" in
   '') ;;
-  --check) mode=check ;;
-  --no-push) mode=no-push ;;
-  --decision4) mode=decision4 ;;
-  --proposed-body) mode=proposed-body ;;
+  --ci) ci=true ;;
   --help|-h) usage; exit 0 ;;
   *) usage >&2; exit 2 ;;
 esac
@@ -49,7 +42,8 @@ if (process.versions.node.split('.')[0] !== expected) fail(`ci-local needs Node 
 console.log(`PASS node ${process.version} (from ${source})`);
 NODE
 fi
-if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
+# Actions starts from a clean checkout and its own setup steps; only a local run needs the refusal.
+if [[ $ci == false && -n "$(git status --porcelain --untracked-files=normal)" ]]; then
   echo 'Refusing a dirty worktree; commit or remove changes first.' >&2
   exit 1
 fi
@@ -58,173 +52,6 @@ git_dir=$(git rev-parse --absolute-git-dir)
 log_dir="$git_dir/ci-local/$sha"
 mkdir -p "$log_dir"
 export CI_LOCAL_EVIDENCE="$log_dir"
-repo=''
-branch=''
-if [[ $mode != check && $mode != proposed-body ]]; then
-  branch=$(git symbolic-ref --quiet --short HEAD) || {
-    if [[ $mode != no-push || -z ${CI_LOCAL_PR:-} ]]; then echo 'A branch or CI_LOCAL_PR with --no-push is required.' >&2; exit 1; fi
-  }
-  repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
-fi
-
-post_status() {
-  gh api --method POST "repos/$repo/statuses/$sha" \
-    -f "context=$1" -f "state=$2" -f "description=$3" > /dev/null
-}
-
-# Fetch only the shared host's checker; consumers never carry checker code or fixtures.
-fetch_decision4() (
-  set -euo pipefail
-  local pin digest cache staged actual
-  read -r pin digest < <(python3 - <<'LOCK'
-import json, re
-with open('.decision4.lock') as source:
-    lock = json.load(source)
-assert re.fullmatch(r'[0-9a-f]{40}', lock['pin']), 'Invalid Decision4 pin'
-assert re.fullmatch(r'[0-9a-f]{64}', lock['sha256']), 'Invalid Decision4 sha256'
-print(lock['pin'], lock['sha256'])
-LOCK
-  )
-  [[ -n $pin && -n $digest ]] || { echo 'Invalid Decision4 lock' >&2; exit 1; }
-  cache="$(git rev-parse --absolute-git-dir)/ci-local/decision4/$pin"
-  mkdir -p "$cache"
-  staged=''
-  trap '[[ -z $staged ]] || rm -f "$staged"' EXIT
-  if [[ ! -f $cache/checker.py ]]; then
-    staged=$(mktemp "$cache/download.XXXXXX")
-    curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
-      "https://raw.githubusercontent.com/cdudek/blueprints/$pin/.github/scripts/decision4.py" -o "$staged"
-  fi
-  actual=$(python3 - "${staged:-$cache/checker.py}" <<'HASH'
-import hashlib, pathlib, sys
-print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())
-HASH
-  )
-  if [[ $actual != "$digest" ]]; then
-    echo 'Decision4 SHA-256 mismatch; refusing to execute the checker' >&2
-    exit 1
-  fi
-  if [[ -n $staged ]]; then mv -f "$staged" "$cache/checker.py"; staged=''; fi
-  printf '%s\n' "$cache/checker.py"
-)
-export -f fetch_decision4
-
-validate_decision4() {
-  local body_file=$1 files_file=$2 base_sha=$3
-  local base_map="$log_dir/base-boundary-map.yaml"
-  # An absent base map is normal when first adopting Decision4; other errors fail closed.
-  local args=(--body-file "$body_file" --files "$files_file" --map boundary-map.yaml)
-  if git cat-file -e "$base_sha:boundary-map.yaml" 2>/dev/null; then
-    git show "$base_sha:boundary-map.yaml" > "$base_map"
-    args+=(--base-map "$base_map")
-  fi
-  bash -euo pipefail -c "$DECISION4_COMMAND \"\$@\"" -- "${args[@]}"
-}
-
-record_decision4() {
-  python3 - "$log_dir" "$sha" "$1" "$2" "$3" "$(git merge-base "$sha" "$1")" <<'PY'
-import hashlib, json, pathlib, sys
-folder, head, base, body, result, comparison_base = sys.argv[1:]
-path = pathlib.Path(folder)
-data = {'head': head, 'base': base, 'comparison_base': comparison_base, 'body_sha256': hashlib.sha256(pathlib.Path(body).read_bytes()).hexdigest(),
-        'pass': result == '0', 'source': 'actual-pr-body-and-changed-paths'}
-(path / 'decision4-result.json').write_text(json.dumps(data, indent=2) + '\n')
-PY
-}
-
-review_body() {
-  if [[ -n ${AI_REVIEW_COMMAND:-} ]]; then
-    bash -euo pipefail -c "$AI_REVIEW_COMMAND --base \"\$1\" --head \"\$2\" --out \"\$3\" --body \"\$4\"" \
-      -- "$1" "$sha" "$log_dir" "$2" > "$log_dir/ai-review.log" 2>&1 || {
-      echo "FAIL AI review (see $log_dir/ai-review.log)" >&2; return 1;
-    }
-  fi
-}
-
-complete_fitness() {
-  if [[ -n ${FITNESS_COMMAND:-} ]]; then
-    bash -euo pipefail -c "$FITNESS_COMMAND --evidence \"\$1\" --body \"\$2\"" -- "$log_dir" "$1" \
-      > "$log_dir/fitness.log" 2>&1 || {
-      echo "FAIL complete fitness report (see $log_dir/fitness.log)" >&2; return 1;
-    }
-  fi
-}
-
-run_decision4() {
-  # An absent PR is normal before opening one; an API error must not look like absence.
-  if [[ -z ${CI_LOCAL_PR:-} ]]; then
-    gh pr list --repo "$repo" --head "$branch" --state open --json number > "$log_dir/pr-list.json"
-  fi
-  local number
-  number=${CI_LOCAL_PR:-$(jq -r '.[0].number // empty' "$log_dir/pr-list.json")}
-  if [[ -z $number ]]; then echo 'Decision4: no open PR; rerun after opening it.'; return 0; fi
-  gh pr view "$number" --repo "$repo" --json body,baseRefName,baseRefOid,headRefOid > "$log_dir/pr.json"
-  if [[ $(jq -r .headRefOid "$log_dir/pr.json") != "$sha" ]]; then
-    echo 'PR head does not match HEAD; refusing Decision4 status.' >&2; return 1
-  fi
-  # Invalidate earlier same-SHA proof before any revalidation can fail.
-  post_status decision4 pending 'Revalidating the current PR body, base and local review'
-  # Include previous filenames too, so a rename cannot lower the decision floor.
-  gh api --paginate "repos/$repo/pulls/$number/files" \
-    --jq '.[] | .filename, (.previous_filename // empty)' > "$log_dir/files.txt"
-  jq -r .body "$log_dir/pr.json" > "$log_dir/body.md"
-  local base_sha result=0
-  base_sha=$(jq -r .baseRefOid "$log_dir/pr.json")
-  git cat-file -e "$base_sha^{commit}" 2>/dev/null || git fetch origin "$(jq -r .baseRefName "$log_dir/pr.json")"
-  if [[ -n ${AI_REVIEW_COMMAND:-} ]]; then
-    # Reuse the exact-head review: body edits do not trigger a second diff read.
-    local review_base
-    review_base=$(git merge-base HEAD "$base_sha")
-    review_body "$review_base" "$log_dir/body.md" || {
-      post_status decision4 failure 'Local AI review blocked current PR evidence'
-      return 1
-    }
-    if ! cmp -s "$log_dir/body.md" <(jq -r .body "$log_dir/pr.json"); then
-      # A review may take minutes: never overwrite a concurrent owner decision edit.
-      gh pr view "$number" --repo "$repo" --json body,baseRefName,baseRefOid,headRefOid > "$log_dir/pr-before-publish.json"
-      if ! cmp -s "$log_dir/pr.json" "$log_dir/pr-before-publish.json"; then
-        echo 'PR changed during AI review; refusing to overwrite its body.' >&2; return 1
-      fi
-      gh pr edit "$number" --repo "$repo" --body-file "$log_dir/body.md"
-      gh pr view "$number" --repo "$repo" --json body,baseRefName,baseRefOid,headRefOid > "$log_dir/pr-with-review.json"
-      if ! python3 - "$log_dir/pr.json" "$log_dir/pr-with-review.json" "$log_dir/body.md" <<'PYBODY'
-import json, pathlib, sys
-before, after = [json.loads(pathlib.Path(p).read_text()) for p in sys.argv[1:3]]
-expected = pathlib.Path(sys.argv[3]).read_text().rstrip('\n')
-if any(before[key] != after[key] for key in ('baseRefName', 'baseRefOid', 'headRefOid')) or after['body'].rstrip('\n') != expected:
-    raise SystemExit('PR changed while publishing AI review; refusing stale evidence.')
-PYBODY
-      then return 1; fi
-      mv "$log_dir/pr-with-review.json" "$log_dir/pr.json"
-      jq -r .body "$log_dir/pr.json" > "$log_dir/body.md"
-    fi
-  fi
-  validate_decision4 "$log_dir/body.md" "$log_dir/files.txt" "$base_sha" > "$log_dir/decision4.log" 2>&1 || result=$?
-  record_decision4 "$base_sha" "$log_dir/body.md" "$result"
-  if (( result == 0 )); then complete_fitness "$log_dir/body.md" || result=1; fi
-  gh pr view "$number" --repo "$repo" --json body,baseRefName,baseRefOid,headRefOid > "$log_dir/pr-after.json"
-  if ! cmp -s "$log_dir/pr.json" "$log_dir/pr-after.json" || \
-      [[ $(git rev-parse HEAD) != "$sha" || -n $(git status --porcelain --untracked-files=normal) ]]; then
-    echo 'PR or worktree changed during validation; rerun Decision4.' >&2; return 1
-  fi
-  if (( result == 0 )); then
-    post_status decision4 success 'PR body meets the changed-path decision floor'
-    echo 'PASS decision4'
-  else
-    post_status decision4 failure 'PR body does not meet the changed-path decision floor'
-    echo "FAIL decision4 (see $log_dir/decision4.log)" >&2
-  fi
-  return "$result"
-}
-
-if [[ $mode == no-push ]]; then
-  # A bot head may be detached and must never be pushed to an owner-authored branch.
-  if [[ ! ${CI_LOCAL_PR:-} =~ ^[1-9][0-9]*$ ]]; then echo '--no-push requires CI_LOCAL_PR.' >&2; exit 2; fi
-  remote_sha=$(gh pr view "$CI_LOCAL_PR" --repo "$repo" --json headRefOid --jq .headRefOid)
-  if [[ $remote_sha != "$sha" ]]; then echo 'PR head does not match HEAD.' >&2; exit 1; fi
-fi
-
-if [[ $mode == decision4 ]]; then run_decision4; exit $?; fi
 
 # A fresh base snapshot makes ratchets independent of changes in another checkout.
 base_ref=${CI_LOCAL_BASE_REF:-$(git symbolic-ref --quiet refs/remotes/origin/HEAD)} || {
@@ -232,34 +59,9 @@ base_ref=${CI_LOCAL_BASE_REF:-$(git symbolic-ref --quiet refs/remotes/origin/HEA
   exit 1
 }
 base_sha=$(git merge-base HEAD "$base_ref")
-validate_proposed_body() {
-  local body=${CI_LOCAL_PR_BODY:-${CI_LOCAL_BODY_FILE:-}}
-  if [[ -z $body || ! -f $body || ! -s $body ]]; then
-    echo 'First push requires CI_LOCAL_PR_BODY (or CI_LOCAL_BODY_FILE) naming a proposed PR body file.' >&2
-    return 1
-  fi
-  # A rename includes both paths, just like validation through the PR API.
-  git diff --name-only --no-renames "$base_sha" HEAD > "$log_dir/proposed-files.txt"
-  validate_decision4 "$body" "$log_dir/proposed-files.txt" "$base_sha" > "$log_dir/proposed-decision4.log" 2>&1 || {
-    cat "$log_dir/proposed-decision4.log" >&2
-    return 1
-  }
-  [[ $(git rev-parse HEAD) == "$sha" && -z $(git status --porcelain --untracked-files=normal) ]] || {
-    echo 'Worktree changed during proposed body validation.' >&2; return 1;
-  }
-  echo 'PASS proposed Decision4 body'
-}
-if [[ $mode == proposed-body ]]; then validate_proposed_body; exit $?; fi
-if [[ $mode == check && -n ${CI_LOCAL_PR_BODY:-${CI_LOCAL_BODY_FILE:-}} ]]; then validate_proposed_body; fi
-# Refuse before checks, receipt creation or a push; the pre-push hook repeats this.
-if [[ $mode == full ]]; then
-  remote_sha=$(git ls-remote origin "refs/heads/$branch" | cut -f1)
-  if [[ -z $remote_sha ]]; then validate_proposed_body; fi
-fi
 started=$SECONDS
 passed=0
 failed=0
-rm -f "$git_dir/ci-local/$sha.ok"
 export CI_LOCAL_BASE_TREE="$log_dir/base"
 rm -rf "$CI_LOCAL_BASE_TREE"
 mkdir -p "$CI_LOCAL_BASE_TREE"
@@ -415,7 +217,13 @@ PY
 for (( i=0; i<${#CHECK_NAMES[@]}; i++ )); do
   name=${CHECK_NAMES[$i]}
   tool=${CHECK_TOOLS[$i]:-}
+  if [[ $ci == true && " ${LOCAL_ONLY_CHECKS[*]:-} " == *" $name "* ]]; then
+    echo "SKIP $name (local only)" | tee "$log_dir/$name.log"
+    continue
+  fi
   if [[ -n $tool && $tool != docker ]] && ! command -v "$tool" >/dev/null 2>&1; then
+    # A required check must not go green because Actions lacks its tool.
+    if [[ $ci == true ]]; then failed=$((failed + 1)); echo "FAIL $name: $tool is not installed" >&2; continue; fi
     echo "WARN $name skipped: $tool is not installed" | tee "$log_dir/$name.log"
     continue
   fi
@@ -430,7 +238,7 @@ for (( i=0; i<${#CHECK_NAMES[@]}; i++ )); do
     fi
   fi
   check_started=$SECONDS
-  if env -u CI_LOCAL_PR bash -euo pipefail -c "${CHECK_COMMANDS[$i]}" > "$log_dir/$name.log" 2>&1; then
+  if bash -euo pipefail -c "${CHECK_COMMANDS[$i]}" > "$log_dir/$name.log" 2>&1; then
     record_check "$name" 0
     passed=$((passed + 1))
     echo "PASS $name ($((SECONDS - check_started))s)"
@@ -440,59 +248,10 @@ for (( i=0; i<${#CHECK_NAMES[@]}; i++ )); do
     echo "FAIL $name ($((SECONDS - check_started))s; $log_dir/$name.log)" >&2
   fi
 done
-if (( failed == 0 )) && [[ -n ${AI_REVIEW_COMMAND:-}${FITNESS_COMMAND:-} ]]; then
-  evidence_body=${CI_LOCAL_PR_BODY:-${CI_LOCAL_BODY_FILE:-}}
-  if [[ -z $evidence_body ]]; then
-    # Existing PR bodies become the proposed local body before pushing a new head.
-    if [[ -z $repo ]]; then repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner); fi
-    if [[ -z $branch ]]; then branch=$(git branch --show-current); fi
-    number=${CI_LOCAL_PR:-$(gh pr list --repo "$repo" --head "$branch" --state open --json number --jq '.[0].number // empty')}
-    if [[ -z $number ]]; then
-      echo 'Complete PR evidence requires CI_LOCAL_PR_BODY before opening the PR.' >&2; failed=$((failed + 1))
-    else
-      evidence_body="$log_dir/proposed-body.md"
-      gh pr view "$number" --repo "$repo" --json body --jq '.body // ""' > "$evidence_body"
-    fi
-  fi
-  if (( failed == 0 )); then
-    if review_body "$base_sha" "$evidence_body"; then
-      git diff --name-only --no-renames "$base_sha" HEAD > "$log_dir/proposed-files.txt"
-      evidence_result=0
-      validate_decision4 "$evidence_body" "$log_dir/proposed-files.txt" "$base_sha" > "$log_dir/proposed-decision4.log" 2>&1 || evidence_result=$?
-      record_decision4 "$base_sha" "$evidence_body" "$evidence_result"
-      if (( evidence_result != 0 )) || ! complete_fitness "$evidence_body"; then failed=$((failed + 1)); fi
-    else
-      failed=$((failed + 1))
-    fi
-  fi
-fi
-# Never attest a different commit or files changed by a check.
-if [[ $(git rev-parse HEAD) != "$sha" || -n "$(git status --porcelain --untracked-files=normal)" ]]; then
+# Never attest files changed by a check (a clean Actions checkout does not need this).
+if [[ $ci == false && -n "$(git status --porcelain --untracked-files=normal)" ]]; then
   echo 'FAIL worktree changed during checks' >&2
   failed=$((failed + 1))
 fi
-elapsed=$((SECONDS - started))
-description="$passed checks passed in ${elapsed}s"
-printf '%s; %s failed. Logs: %s\n' "$description" "$failed" "$log_dir"
-if (( failed > 0 )); then
-  if [[ $mode != check ]]; then post_status local-ci failure "$description"; fi
-  exit 1
-fi
-printf '%s\n' "$description" > "$git_dir/ci-local/$sha.ok"
-if [[ $mode == check ]]; then exit 0; fi
-# The receipt above lets the pre-push hook pass without recursively running this suite.
-if [[ $mode == full ]]; then
-  remote_sha=$(git ls-remote origin "refs/heads/$branch" | cut -f1)
-  if [[ $remote_sha != "$sha" ]]; then git push --set-upstream origin "$branch"; fi
-fi
-if [[ -n ${POST_PUSH_COMMAND:-} ]]; then
-  export CI_LOCAL_REPO="$repo" CI_LOCAL_SHA="$sha" CI_LOCAL_BRANCH="$branch" CI_LOCAL_BASE_SHA="$base_sha"
-  if ! bash -euo pipefail -c "$POST_PUSH_COMMAND" > "$log_dir/post-push.log" 2>&1; then
-    post_status local-ci failure 'Required remote-only evidence is missing'
-    echo "FAIL remote-only evidence (see $log_dir/post-push.log)" >&2
-    run_decision4
-    exit 1
-  fi
-fi
-post_status local-ci success "$description"
-run_decision4
+printf '%s checks passed in %ss; %s failed. Logs: %s\n' "$passed" "$((SECONDS - started))" "$failed" "$log_dir"
+exit $(( failed > 0 ))

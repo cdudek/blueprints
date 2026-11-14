@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run monthly: locally check Dependabot heads, squash safe updates, report majors."""
+"""Run weekly: locally check Dependabot heads, squash safe updates, report majors."""
 
 import json
 import os
@@ -148,9 +148,8 @@ def main():
             add_contract(pr, paths, root)
             if INSTALL:
                 run("bash", "-euo", "pipefail", "-c", INSTALL, cwd=work)
-            env = {**os.environ, "CI_LOCAL_PR": number}
             # Use the trusted current gate even if the bot branch predates its addition.
-            run("bash", str(root / "scripts/ci-local"), "--no-push", cwd=work, env=env)
+            run("bash", str(root / "scripts/ci-local"), cwd=work)
             kind = update_kind(pr)
             if kind != "minor/patch":
                 summary.append(f"OWNER ({kind}; gate passed) {pr['url']}")

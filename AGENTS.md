@@ -30,10 +30,11 @@ Run `bash tests/decision4/run.sh` and `python3 -m unittest discover -s tests/sou
 Never read `.env*` files or secret values.
 
 Run `python3 -m unittest discover -s core/tests -v` for changes to the shared local runner or dependency driver.
-Before the first branch push, validate a proposed PR body through the shared Decision4 checker; consumers pass its file as `CI_LOCAL_PR_BODY`.
-After the exact head passes local-ci and Decision4, arm squash auto-merge only at Undo or Repair and without approval-gated tiers.
+Pushes are never gated. Push to a draft PR, run `scripts/ci-local` before marking it ready, and open one PR per milestone.
+GitHub Actions runs `ci` once on the ready PR; `ci` is the only required check. Decision4 is information only.
+After the exact head passes `ci`, arm squash auto-merge only at Undo or Repair and without approval-gated tiers.
 Never arm it for `terraform/**`, Terraform workflows or classes above Repair; hand those decisions to the owner.
-Check the merge state, rerun the full local gate after a rebase, and batch local fixes into one verified push.
+Check the merge state, rerun the local gate after a rebase, and batch fixes into one push.
 
 ## Decision4 records (§7 and §9)
 

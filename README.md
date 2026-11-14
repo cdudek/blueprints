@@ -22,3 +22,15 @@ Documents an AI agent follows to set up and grow a new product: how things are s
 - Version-agnostic: libraries are named, versions are not. Agents use the latest stable version at build time.
 - Every reference has `read-when` and `skip-when` frontmatter and rules with stable IDs, so products, reviews and tests can cite them.
 - The layout mirrors a Claude Code skill (entry file plus `references/`), so a blueprint can become a plugin later.
+
+## How CI works in repos that use these blueprints
+
+- **Pushes:** Pushes are never gated. There is no pre-push hook.
+- **Actions:** GitHub Actions runs `ci` once per ready pull request. Draft PRs cost nothing, and nothing runs on push to the default branch.
+- **Required check:** `ci` is the only required check. It runs `scripts/ci-local --ci`.
+- **Local-only checks:** Heavy checks (e2e, docker, macOS builds) are `LOCAL_ONLY_CHECKS`. Actions skips them; run them with `scripts/ci-local`.
+- **Decision4:** Decision4 is information only. It annotates the PR and never blocks it.
+- **Review:** There is no AI review in the gate.
+- **Dependabot:** Dependabot runs weekly, with one grouped PR per ecosystem and a cooldown.
+
+Templates: [`ci-local.sh`](./core/references/ci-local.sh), [`ci.yml`](./core/references/ci.yml) and [`dependabot.yml`](./core/references/dependabot.yml). The rules and the migration checklist are in [`core/references/ci.md`](./core/references/ci.md).

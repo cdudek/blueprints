@@ -57,8 +57,7 @@ class PlatformPolicy(unittest.TestCase):
                         "type": "required_status_checks",
                         "parameters": {
                             "required_status_checks": [
-                                {"context": "local-ci"},
-                                {"context": "decision4"},
+                                {"context": "ci"},
                             ]
                         },
                     }
@@ -66,7 +65,7 @@ class PlatformPolicy(unittest.TestCase):
             ),
             (
                 "branches/main/protection/required_status_checks",
-                {"contexts": ["local-ci", "decision4"]},
+                {"contexts": ["ci"]},
             ),
         ):
             with self.subTest(source=suffix):
@@ -78,7 +77,7 @@ class PlatformPolicy(unittest.TestCase):
         evidence, gaps = self.run_policy(
             {
                 "repos/example-owner/repo/branches/main/protection/required_status_checks": {
-                    "checks": [{"context": "local-ci"}, {"context": "decision4"}]
+                    "checks": [{"context": "ci"}]
                 }
             },
             protected_branches=["milestone/audit"],
@@ -87,7 +86,7 @@ class PlatformPolicy(unittest.TestCase):
         self.assertEqual(len(gaps), 1)
         self.assertEqual(gaps[0].check, "github-protection:milestone/audit")
         self.assertEqual(gaps[0].owner, "example-owner")
-        self.assertIn("decision4", gaps[0].reason)
+        self.assertTrue(gaps[0].reason.endswith(": ci"))
         _, gaps = self.run_policy({"repos/example-owner/repo/rules/branches/main": []})
         self.assertEqual(len(gaps), 1)
 
@@ -402,20 +401,6 @@ class HarnessAudit(unittest.TestCase):
         self.assertEqual(legacy.chain_cases(self.root), [])
         self.assertEqual(legacy.verify_cases(self.root), [])
 
-    def test_actual_shared_pre_push_runs_four_refusal_and_allowed_cases(self):
-        source = self.root / "hook-source"
-        for original, copied in (
-            ("ci-local.sh", "scripts/ci-local"),
-            ("ci-local-pre-push.sh", ".githooks/pre-push"),
-        ):
-            destination = source / copied
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(HERE / original, destination)
-        self.assertEqual(
-            legacy.prepush_cases(source),
-            ["forbidden-edit", "missing-evidence", "stale-lock", "allowed"],
-        )
-
     def test_consumer_config_refusal_fixtures_use_the_canonical_auditor(self):
         source = self.root / "consumer-source"
         for original, copied in (
@@ -444,43 +429,6 @@ class HarnessAudit(unittest.TestCase):
                 audit.update_issue(self.root, report, "example-owner")
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0][1:3], ["repo", "view"])
-
-    def test_default_head_audit_supplies_a_fresh_owned_review_body(self):
-        self.gate(
-            "test -f \"$CI_LOCAL_PR_BODY\"\nprintf 'fresh checker\\n' > \"$logs/probe.log\"\nprintf 'PASS probe (0s)\\n'\n"
-        )
-        self.commit()
-        self.git("update-ref", "refs/remotes/origin/main", "HEAD")
-        config, checks, gaps = audit.configuration(self.root)
-        report = audit.audit(self.root, config, checks, gaps)
-        self.assertEqual(report["gaps"], [])
-        body = (Path(report["artifact"]) / "audit-body.md").read_text()
-        self.assertIn(report["head"], body)
-        self.assertIn("**🟢 Undo**", body)
-        self.assertNotIn("tests passed", body)
-        paths = self.write("audit-paths.txt", "")
-        map_path = self.write(
-            "audit-map.yaml",
-            "version: 1\nprecedence: highest-floor-wins\nentries:\n- select:\n    paths: ['**']\n  floor: Migrate\n  put_right: Restore the source and revalidate consumers.\n  answerer: Owner\n",
-        )
-        checker = HERE.parents[1] / ".github/scripts/decision4.py"
-        decision = subprocess.run(
-            [
-                sys.executable,
-                str(checker),
-                "--body-file",
-                str(Path(report["artifact"]) / "audit-body.md"),
-                "--files",
-                str(paths),
-                "--map",
-                str(map_path),
-            ],
-            cwd=self.root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(decision.returncode, 0, decision.stdout + decision.stderr)
 
     def test_existing_issue_is_updated_once_and_each_gap_owner_is_assigned(self):
         report = self.execute()

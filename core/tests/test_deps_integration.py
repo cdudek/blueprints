@@ -45,7 +45,7 @@ class DepsLandTest(unittest.TestCase):
         source = source.replace(next(line for line in source.splitlines() if line.startswith("INSTALL =")),
                                 'INSTALL = "printf install >> \\\"$DEPS_LOG\\\""')
         (self.work / "scripts/deps-land").write_text(source)
-        (self.work / "scripts/ci-local").write_text('echo "gate $CI_LOCAL_PR $*" >> "$DEPS_LOG"; test "${FAIL_GATE:-}" != "$CI_LOCAL_PR"\n')
+        (self.work / "scripts/ci-local").write_text('echo "gate $(basename "$PWD")" >> "$DEPS_LOG"; test "${FAIL_GATE:-}" != "${PWD##*-}"\n')
         (self.work / "boundary-map.yaml").write_text('version: 1\nentries:\n- select:\n    paths: ["**"]\n  floor: Repair\n')
         (self.work / "sdlc.json").write_text('{"tiers": false}')
         self.git("add", ".")
@@ -95,9 +95,9 @@ else: sys.exit(2)
         self.assertEqual(result.returncode, 0, result.stderr)
         log = self.log.read_text()
         self.assertIn("pr list --author app/dependabot", log)
-        self.assertIn("gate 1 --no-push", log)
-        self.assertIn("gate 2 --no-push", log)
-        self.assertIn("gate 3 --no-push", log)
+        self.assertIn("gate deps-1", log)
+        self.assertIn("gate deps-2", log)
+        self.assertIn("gate deps-3", log)
         self.assertIn(f"pr merge 1 --squash --auto --match-head-commit {self.sha}", log)
         self.assertNotIn("pr merge 2", log)
         self.assertNotIn("pr merge 3", log)
@@ -126,46 +126,6 @@ else: sys.exit(2)
         self.assertEqual(result.returncode, 1)
         self.assertEqual({path.name for path in (self.work / ".worktrees").iterdir()}, {"deps-1"})
         self.assertEqual(self.run_script([]).returncode, 0)
-
-    def test_no_push_gate_attests_detached_bot_head_and_rejects_mismatch(self):
-        source = (ROOT / "references/ci-local.sh").read_text()
-        common = source.split("# END REPO CONFIG\n", 1)[1]
-        config = "#!/usr/bin/env bash\nset -euo pipefail\nCHECK_NAMES=(fixture)\nCHECK_COMMANDS=('true')\nCHECK_TOOLS=('')\nSLOW_CHECKS=()\nDECISION4_COMMAND=true\n# END REPO CONFIG\n"
-        (self.work / "scripts/ci-local").write_text(config + common)
-        self.git("add", "scripts/ci-local")
-        self.git("commit", "-m", "gate fixture")
-        sha = self.git("rev-parse", "HEAD")
-        self.git("checkout", "--detach")
-        gh = self.bin / "gh"
-        gh.write_text('''#!/usr/bin/env python3
-import json, os, sys
-args = sys.argv[1:]
-with open(os.environ['DEPS_LOG'], 'a') as file: file.write('gh ' + ' '.join(args) + '\\n')
-if args[:2] == ['repo', 'view']: print('example/repo')
-elif args[:2] == ['pr', 'view']:
-    if '--jq' in args: print(os.environ['EXPECTED_SHA'])
-    else: print(json.dumps({'body':'Decision-Class: Undo', 'headRefOid':os.environ['EXPECTED_SHA'], 'baseRefOid':os.environ['EXPECTED_SHA'], 'baseRefName':'main'}))
-elif args[0] == 'api':
-    if args[-1] != 'success' and '/files' in ' '.join(args): print('package-lock.json')
-else: sys.exit(2)
-''')
-        env = {**self.env, "CI_LOCAL_PR": "1", "EXPECTED_SHA": sha, "CI_LOCAL_BASE_REF": "origin/main"}
-        # Any attempted push is a failure, even if the tree and commit are unchanged.
-        hook = self.root / "origin.git/hooks/pre-receive"
-        hook.write_text("#!/bin/sh\nexit 1\n")
-        hook.chmod(0o755)
-        result = subprocess.run(["bash", "scripts/ci-local", "--no-push"], cwd=self.work,
-                                env=env, text=True, capture_output=True)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        log = self.log.read_text()
-        self.assertIn(f"statuses/{sha}", log)
-        self.assertIn("context=local-ci -f state=success", log)
-        self.assertIn("context=decision4 -f state=success", log)
-        self.log.write_text("")
-        result = subprocess.run(["bash", "scripts/ci-local", "--no-push"], cwd=self.work,
-                                env={**env, "EXPECTED_SHA": "f" * 40}, text=True, capture_output=True)
-        self.assertEqual(result.returncode, 1)
-        self.assertNotIn("statuses/", self.log.read_text())
 
     def test_group_versions_and_major_labels(self):
         deps = module(ROOT / "references/deps-land.py")

@@ -114,6 +114,14 @@ class Decision4Tests(unittest.TestCase):
             "d6e2616262c4e3e7d4f2a85d62a348181f4bab21ce5a50f0f899a3b86fca4b9e",
         )
 
+    def test_shared_workflow_is_information_only(self):
+        workflow = yaml.safe_load((ROOT / ".github/workflows/decision4-check.yml").read_text())
+        steps = workflow["jobs"]["decision4"]["steps"]
+        fallible = [step for step in steps if "if" not in step]
+        self.assertTrue(fallible)
+        self.assertTrue(all(step.get("continue-on-error") is True for step in fallible))
+        self.assertIn("warning", steps[-1]["run"])
+
 
 if __name__ == "__main__":
     unittest.main()

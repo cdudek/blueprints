@@ -25,8 +25,6 @@ def run(root: Path, argv: list[str], payload: object = None) -> subprocess.Compl
         if not key.startswith(("GIT_", "CI_LOCAL_", "HARNESS_AUDIT_"))
     }
     env["CLAUDE_PROJECT_DIR"] = str(root)
-    env.pop("CI_LOCAL_PR_BODY", None)
-    env.pop("CI_LOCAL_BODY_FILE", None)
     return subprocess.run(
         argv,
         cwd=root,
@@ -64,91 +62,6 @@ def source_text(root: Path, name: str) -> str:
         for part in path.resolve().relative_to(root.resolve()).parts
     ), "Credential source refused"
     return path.read_text()
-
-
-def prepush_cases(source: Path) -> list[str]:
-    required = [source / ".githooks/pre-push", source / "scripts/ci-local"]
-    assert all(path.is_file() for path in required), (
-        "Installed pre-push hook and ci-local are required"
-    )
-    passed = []
-    for case in ("forbidden-edit", "missing-evidence", "stale-lock", "allowed"):
-        with tempfile.TemporaryDirectory(prefix="legacy-guard-") as directory:
-            parent = Path(directory)
-            root = parent / "repo"
-            root.mkdir()
-            gate = source_text(source, "scripts/ci-local")
-            assert "# END REPO CONFIG\n" in gate, "Unsupported shared runner format"
-            # Keep the actual runner body; replace expensive product commands with a controlled checker.
-            checker = f"test -f {shlex.quote(str(parent / 'allow'))} && printf 'ran\\n' >> {shlex.quote(str(parent / 'ran'))}"
-            config = (
-                "#!/usr/bin/env bash\nset -euo pipefail\nCHECK_NAMES=(fixture)\n"
-                f"CHECK_COMMANDS=({shlex.quote(checker)})\nCHECK_TOOLS=('')\n"
-                "DECISION4_COMMAND='false'\nPOST_PUSH_COMMAND=''\n# END REPO CONFIG\n"
-            )
-            write(root, "scripts/ci-local", config + gate.split("# END REPO CONFIG\n", 1)[1]).chmod(
-                0o755
-            )
-            write(root, ".githooks/pre-push", source_text(source, ".githooks/pre-push")).chmod(
-                0o755
-            )
-            # Shared evidence helpers can evolve without replacing them with test doubles.
-            for path in (source / "scripts").glob("ci[-_]*"):
-                if path.is_file() and not path.is_symlink() and path.name != "ci-local":
-                    shutil.copy2(path, root / "scripts" / path.name)
-            for name in (".ci-local.lock", ".decision4.lock", "boundary-map.yaml"):
-                if (source / name).is_file():
-                    write(root, name, source_text(source, name))
-            write(root, "src/probe.ts", "export const value = 1;\n")
-            write(root, ".gitignore", "__pycache__/\n*.py[cod]\n")
-            git(root, "init", "-q", "-b", "main")
-            git(root, "add", ".")
-            git(root, "commit", "-qm", "fixture")
-            git(root, "update-ref", "refs/remotes/origin/main", "HEAD")
-            git(root, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
-            head = git(root, "rev-parse", "HEAD")
-            marker = root / ".git/ci-local" / (head + ".ok")
-            allow = parent / "allow"
-            if case != "missing-evidence":
-                allow.write_text("yes\n")
-                result = run(root, ["bash", "scripts/ci-local", "--check"])
-                assert result.returncode == 0 and marker.is_file(), result.stdout + result.stderr
-            if case == "forbidden-edit":
-                write(root, "src/probe.ts", "export const value = 2;\n")
-            if case == "stale-lock":
-                write(root, "src/probe.ts", "export const value = 3;\n")
-                git(root, "commit", "-qam", "move head")
-                allow.unlink()
-            current = git(root, "rev-parse", "HEAD")
-            # An existing branch update isolates receipt enforcement from first-push PR-body validation.
-            payload = f"refs/heads/main {current} refs/heads/main {head}\n"
-            env = {
-                key: value
-                for key, value in os.environ.items()
-                if not key.startswith(("GIT_", "CI_LOCAL_", "HARNESS_AUDIT_"))
-            }
-            env.pop("CI_LOCAL_PR_BODY", None)
-            env.pop("CI_LOCAL_BODY_FILE", None)
-            result = subprocess.run(
-                ["bash", ".githooks/pre-push"],
-                cwd=root,
-                env=env,
-                input=payload,
-                text=True,
-                capture_output=True,
-                check=False,
-            )
-            if case == "allowed":
-                assert result.returncode == 0, result.stdout + result.stderr
-                assert (parent / "ran").read_text().splitlines() == ["ran"], (
-                    "Hook reran a verified head"
-                )
-            else:
-                assert result.returncode != 0, f"{case}: publication was incorrectly allowed"
-                if case in {"missing-evidence", "stale-lock"}:
-                    assert not (root / ".git/ci-local" / (current + ".ok")).exists()
-            passed.append(case)
-    return passed
 
 
 def chain_cases(source: Path) -> list[str]:
@@ -350,13 +263,11 @@ def config_cases(source: Path) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--case", choices=("all", "prepush", "chain", "verify", "config"), default="all"
+        "--case", choices=("all", "chain", "verify", "config"), default="all"
     )
     args = parser.parse_args()
     source = Path.cwd()
     passed = []
-    if args.case in {"all", "prepush"}:
-        passed.extend(prepush_cases(source))
     if args.case in {"all", "chain"}:
         passed.extend(chain_cases(source))
     if args.case in {"all", "verify"}:

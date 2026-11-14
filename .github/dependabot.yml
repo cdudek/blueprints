@@ -1,17 +1,19 @@
+# Follows core/references/dependabot.yml; blueprints only has GitHub Actions to update.
+# Weekly on the same weekday, one grouped PR per ecosystem (all update types), a cooldown
+# before new releases are proposed, and at most two open PRs. Security updates stay individual.
+# Cooldown semver-* days only exist for npm, pip and uv; the other ecosystems take default-days.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
-    open-pull-requests-limit: 3
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
     groups:
-      minor-and-patch:
-        applies-to: version-updates
+      github-actions:
         patterns: ['*']
-        update-types: [minor, patch]
-      security:
-        applies-to: security-updates
-        patterns: ['*']
-        update-types: [minor, patch]
-    # Major upgrades stay individual PRs.

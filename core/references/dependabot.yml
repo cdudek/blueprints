@@ -1,0 +1,92 @@
+# Consumer template: copy to .github/dependabot.yml and uncomment the ecosystems the repo uses.
+# Weekly on the same weekday, one grouped PR per ecosystem (all update types), a cooldown
+# before new releases are proposed, and at most two open PRs. Security updates stay individual.
+# Cooldown semver-* days only exist for npm, pip and uv; the other ecosystems take default-days.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+    groups:
+      github-actions:
+        patterns: ['*']
+
+  # - package-ecosystem: npm
+  #   directory: /
+  #   schedule:
+  #     interval: weekly
+  #     day: monday
+  #   cooldown:
+  #     default-days: 5
+  #     semver-major-days: 14
+  #   open-pull-requests-limit: 2
+  #   commit-message:
+  #     prefix: chore
+  #   groups:
+  #     npm:
+  #       patterns: ['*']
+
+  # - package-ecosystem: pip # requirements.txt or pyproject.toml without uv.lock
+  #   directory: /
+  #   schedule:
+  #     interval: weekly
+  #     day: monday
+  #   cooldown:
+  #     default-days: 5
+  #     semver-major-days: 14
+  #   open-pull-requests-limit: 2
+  #   commit-message:
+  #     prefix: chore
+  #   groups:
+  #     pip:
+  #       patterns: ['*']
+
+  # - package-ecosystem: uv # pyproject.toml with uv.lock
+  #   directory: /
+  #   schedule:
+  #     interval: weekly
+  #     day: monday
+  #   cooldown:
+  #     default-days: 5
+  #     semver-major-days: 14
+  #   open-pull-requests-limit: 2
+  #   commit-message:
+  #     prefix: chore
+  #   groups:
+  #     uv:
+  #       patterns: ['*']
+
+  # - package-ecosystem: docker
+  #   directory: /
+  #   schedule:
+  #     interval: weekly
+  #     day: monday
+  #   cooldown:
+  #     default-days: 5
+  #   open-pull-requests-limit: 2
+  #   commit-message:
+  #     prefix: chore
+  #   groups:
+  #     docker:
+  #       patterns: ['*']
+
+  # - package-ecosystem: terraform
+  #   directory: /terraform
+  #   schedule:
+  #     interval: weekly
+  #     day: monday
+  #   cooldown:
+  #     default-days: 5
+  #   open-pull-requests-limit: 2
+  #   commit-message:
+  #     prefix: chore
+  #   groups:
+  #     terraform:
+  #       patterns: ['*']
