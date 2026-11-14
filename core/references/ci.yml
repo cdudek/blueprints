@@ -16,6 +16,8 @@ permissions:
 jobs:
   checks:
     if: github.event.pull_request.draft == false
+    # Use ubuntu-slim (1 vCPU, a third of the price) when the check set is light and fits its
+    # 15 min job limit; it has no Docker and no service containers. Heavier sets keep ubuntu-latest.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
