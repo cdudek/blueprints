@@ -7,8 +7,7 @@ CI-4; the other checks are absent from `checks.json`, never recorded as passed. 
 stale results and edited logs cannot stand in for real execution.
 
 `fitness-report.py` is not called by the runner. Run it by hand when you want a complete
-`architecture.yaml` report from `checks.json`; it still expects a Decision4 result file and a
-PR body.
+`architecture.yaml` report from `checks.json`.
 
 For CQ-19, copy `complexity-ratchet.py`, declare source paths and exclusion globs in
 `.fitness/complexity.json`, and record `.fitness/complexity-baseline.json` from the fetched

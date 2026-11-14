@@ -1,4 +1,4 @@
-"""Missing, stale, fixture-only and changed results must never become PR proof."""
+"""Missing, fixture-only and changed results must never become PR proof."""
 
 import importlib.util
 from pathlib import Path
@@ -16,14 +16,11 @@ class FitnessTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.folder = Path(self.temp.name)
-        self.body = self.folder / "body.md"
-        self.body.write_text("actual proposed PR body")
         self.log = self.folder / "arch.log"
         self.log.write_text("arch.score: 100; baseline: 100; cycles: 0\n")
         self.policy = {
             "fitness": [
                 {"id": "arch.score", "target": "arch", "gate": "score >= 90 and base"},
-                {"id": "decision4", "target": "decision4", "gate": "actual PR"},
             ],
             "not_applicable": {"perf.web": "no HTTP product pages"},
         }
@@ -39,34 +36,15 @@ class FitnessTests(unittest.TestCase):
                 }
             },
         }
-        self.decision = {
-            "head": "head",
-            "base": "base",
-            "comparison_base": "base",
-            "pass": True,
-            "body_sha256": fitness.digest(self.body),
-        }
 
     def aggregate(self):
-        return fitness.aggregate(
-            self.policy, self.checks, self.decision, self.body, self.folder
-        )
+        return fitness.aggregate(self.policy, self.checks, self.folder)
 
     def test_report_contains_real_output_and_stack_na_reason(self):
         report = self.aggregate()
-        self.assertEqual(len(report["rows"]), 3)
+        self.assertEqual(len(report["rows"]), 2)
         self.assertIn("arch.score: 100", report["rows"][0]["value"]["output"])
         self.assertIsNone(report["rows"][-1]["pass"])
-        self.assertEqual(report["rows"][1]["value"]["head"], "head")
-
-    def test_retargeted_comparison_base_requires_new_full_checks(self):
-        self.decision["comparison_base"] = "new-merge-base"
-        with self.assertRaisesRegex(ValueError, "comparison-base"):
-            self.aggregate()
-
-    def test_new_target_tip_with_same_comparison_base_keeps_valid_checks(self):
-        self.decision["base"] = "new-target-tip"
-        self.assertTrue(self.aggregate()["pass"])
 
     def test_fixture_success_cannot_replace_actual_result(self):
         self.checks["checks"]["arch"]["kind"] = "fixture"
@@ -78,19 +56,6 @@ class FitnessTests(unittest.TestCase):
             self.checks["checks"] = checks
             with self.assertRaisesRegex(ValueError, "no successful actual"):
                 self.aggregate()
-
-    def test_body_edit_invalidates_decision_evidence(self):
-        self.body.write_text("edited body")
-        with self.assertRaisesRegex(ValueError, "stale"):
-            self.aggregate()
-
-    def test_wrong_head_and_failed_decision_fail(self):
-        self.decision["head"] = "old-head"
-        with self.assertRaisesRegex(ValueError, "stale"):
-            self.aggregate()
-        self.decision.update(head="head", **{"pass": False})
-        with self.assertRaisesRegex(ValueError, "did not pass"):
-            self.aggregate()
 
     def test_modified_dimension_log_is_rejected(self):
         self.log.write_text("invented result")

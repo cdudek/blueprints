@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""ARCH-13: aggregate real local dimension execution and exact-head Decision4.
+"""ARCH-13: aggregate real local dimension execution.
 
-Usage: python3 scripts/fitness-report.py --evidence DIR --body FILE
-Reads architecture.yaml and gate-owned checks.json/decision4-result.json, never fixtures.
+Usage: python3 scripts/fitness-report.py --evidence DIR
+Reads architecture.yaml and gate-owned checks.json, never fixtures.
 The report retains each gate's measured output and digest, threshold and base identity.
 """
 
@@ -44,16 +44,8 @@ def skipped_row(dimension, checks):
     }
 
 
-def dimension_row(dimension, policy, checks, decision, folder):
+def dimension_row(dimension, policy, checks, folder):
     name = dimension["id"]
-    if name == "decision4":
-        return {
-            "id": name,
-            "value": decision,
-            "threshold": dimension["gate"],
-            "baseline": {"base": decision["base"]},
-            "pass": True,
-        }
     reason = dimension.get("enforcement", {}).get("not_applicable") or policy.get(
         "not_applicable", {}
     ).get(name)
@@ -92,19 +84,9 @@ def actual_row(dimension, checks, folder):
     }
 
 
-def aggregate(policy, checks, decision, body, folder):
-    head, base = checks["head"], checks["base"]
-    if decision.get("head") != head or decision.get("body_sha256") != digest(body):
-        raise ValueError("missing or stale exact-head/body Decision4 result")
-    if decision.get("comparison_base") != base:
-        raise ValueError(
-            "stale comparison-base evidence; rerun the full gate with "
-            "CI_LOCAL_BASE_REF set to the current PR target"
-        )
-    if decision.get("pass") is not True:
-        raise ValueError("actual PR Decision4 did not pass")
+def aggregate(policy, checks, folder):
     rows = [
-        dimension_row(dimension, policy, checks, decision, folder)
+        dimension_row(dimension, policy, checks, folder)
         for dimension in policy["fitness"]
     ]
     present = {row["id"] for row in rows}
@@ -113,29 +95,18 @@ def aggregate(policy, checks, decision, body, folder):
         for name, reason in policy.get("not_applicable", {}).items()
         if name not in present
     )
-    if "decision4" not in present:
-        raise ValueError("architecture policy must include Decision4")
-    return {
-        "head": head,
-        "base": base,
-        "body_sha256": digest(body),
-        "pass": True,
-        "rows": rows,
-    }
+    return {"head": checks["head"], "base": checks["base"], "pass": True, "rows": rows}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--evidence", required=True, type=Path)
-    parser.add_argument("--body", required=True, type=Path)
     parser.add_argument("--out", type=Path, default=Path("fitness-report.json"))
     args = parser.parse_args()
     folder = args.evidence
     report = aggregate(
         yaml.safe_load(Path("architecture.yaml").read_text()),
         json.loads((folder / "checks.json").read_text()),
-        json.loads((folder / "decision4-result.json").read_text()),
-        args.body,
         folder,
     )
     args.out.write_text(json.dumps(report, indent=2) + "\n")

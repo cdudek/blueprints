@@ -86,7 +86,7 @@ Automatic:
 - A redirect test: every URL in the committed URL list answers 200 or a permanent redirect.
 - Migration lint flags drops, renames and new not-null columns without a default in the live phase.
 - A test reads old-shape job payloads fixtures with the current code.
-- PR template fields are required and the `decision4` check passes (see [ci](ci.md)).
+- PR template fields are filled in; no Decision4 check runs (see [ci](ci.md) CI-26).
 
 Review: whether a change counts as breaking, whether contract is early, whether an ADR exists for each recorded break.
 

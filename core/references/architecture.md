@@ -37,23 +37,23 @@ architecture.yaml
 - **ARCH-8 `quality.slop` points to code quality.** The anti-slop rules and the slop metrics are defined in [code-quality](code-quality.md) (CQ-12 to CQ-23) and run as the `slop` job (CI-24). This row only registers them as a dimension; it does not restate their thresholds.
 - **ARCH-9 `perf.web`, for products with pages.** Lighthouse CI against the PR preview URL; when there is no preview, against a production build served locally (never the dev server, see [testing](testing.md) TEST-10). Gate on the key pages listed in the file: performance at least 90, largest contentful paint at most 2500 ms, layout shift at most 0.1, total blocking time at most 200 ms. Pages are listed by route, not discovered.
 - **ARCH-10 `perf.bundle`, for web apps, extensions and published packages.** A size budget tool (size-limit or equivalent) with a gzip budget per entry written in the file. A PR may not exceed a budget; raising one is a change to the file with a reason (ARCH-4).
-- **ARCH-11 `decision4` is a dimension too.** Its gate is CI-26 ([ci](ci.md)); the row exists so the report and the enforcement audit see it with the others.
+- **ARCH-11 `decision4` is not a dimension.** It is a PR-body section plus `boundary-map.yaml` ([ci](ci.md) CI-26), never a fitness row, job or check.
 
 ### Ratchet and report
 
 - **ARCH-12 Existing violations go in a committed baseline that only shrinks.** One line per finding, for example `.fitness/baseline.json` ([structure](structure.md) quality ratchet, CQ-21). A new gate ships with its baseline in the same PR: baseline first, gate second, both in one change, so main never turns red. A greenfield product starts with an empty baseline.
-- **ARCH-13 A `fitness` target runs every dimension and writes `fitness-report.json`.** Produce one complete report per PR on its exact head and changed-path base, using the real result of every `architecture.yaml` dimension: id, value, threshold, baseline and pass, or an explicit not-applicable reason where the stack has none. Include the exact-head Decision4 result for the actual proposed/PR body and changed paths; record its body digest so a body edit invalidates it. Fixture success proves the checker, never the PR result. Missing, stale, failed or unexecuted applicable evidence fails the report. Under CI-4, docs-only product dimensions instead carry an honest skipped state and validated changed-path evidence; never label a skip executed/passed or stack-level not applicable. Post the deltas on the PR through the local gate; `fitness` reuses the `slop`, `arch`, `perf` and Decision4 results without running a second pipeline.
+- **ARCH-13 A `fitness` target runs every dimension and writes `fitness-report.json`.** Produce one complete report per PR on its exact head and changed-path base, using the real result of every `architecture.yaml` dimension: id, value, threshold, baseline and pass, or an explicit not-applicable reason where the stack has none. Fixture success proves the checker, never the PR result. Missing, stale, failed or unexecuted applicable evidence fails the report. Under CI-4, docs-only product dimensions instead carry an honest skipped state and validated changed-path evidence; never label a skip executed/passed or stack-level not applicable. Post the deltas on the PR through the local gate; `fitness` reuses the `slop`, `arch` and `perf` results without running a second pipeline.
 - **ARCH-14 A dimension that does not apply prints "not applicable" and exits 0** (CI-23). A repo uses the dimensions that fit its stack and never invents a score to fill a row.
 
 | Stack | Fits | Not applicable |
 | --- | --- | --- |
-| Web app | boundaries, score, slop, web, bundle, decision4 | none |
-| API or worker | boundaries, score, slop, decision4 | web, bundle |
-| Browser extension | boundaries, score, slop, bundle, decision4 | web |
-| Published package | boundaries, score, slop, bundle, decision4 | web |
-| Swift app | complexity and clone metrics (lizard, jscpd), app size, decision4 | web, bundle, import graph unless the tool supports it |
-| Terraform | scanner findings (tfsec or equivalent), module graph, decision4 | web, bundle, score |
-| Docs only | decision4 | everything else |
+| Web app | boundaries, score, slop, web, bundle | none |
+| API or worker | boundaries, score, slop | web, bundle |
+| Browser extension | boundaries, score, slop, bundle | web |
+| Published package | boundaries, score, slop, bundle | web |
+| Swift app | complexity and clone metrics (lizard, jscpd), app size | web, bundle, import graph unless the tool supports it |
+| Terraform | scanner findings (tfsec or equivalent), module graph | web, bundle, score |
+| Docs only | document format and link checks only (CI-4) | everything else |
 
 ### Enforcement rows
 
