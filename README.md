@@ -29,7 +29,7 @@ Documents an AI agent follows to set up and grow a new product: how things are s
 - **Actions:** GitHub Actions runs `ci` once per ready pull request. Draft PRs cost nothing, and nothing runs on push to the default branch.
 - **Required check:** `ci` is the only required check. It runs `scripts/ci-local --ci`.
 - **Local-only checks:** Heavy checks (e2e, docker, macOS builds) are `LOCAL_ONLY_CHECKS`. Actions skips them; run them with `scripts/ci-local`.
-- **Decision4:** Decision4 is information only. It annotates the PR and never blocks it.
+- **Decision4:** Decision4 is a section of the PR body only, advisory. No job, workflow or check runs it, and the `ci.yml` template does not call it.
 - **Review:** There is no AI review in the gate.
 - **Dependabot:** Dependabot runs weekly, with one grouped PR per ecosystem and a cooldown.
 
