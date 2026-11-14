@@ -46,12 +46,15 @@ jobs:
   ci:
     name: ci
     needs: [checks]
-    if: always() && github.event.pull_request.draft == false
+    # Never skipped: a skipped required check counts as passed, so a draft would merge unchecked.
+    if: always()
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
       - env:
           RESULT: ${{ needs.checks.result }}
+          DRAFT: ${{ github.event.pull_request.draft }}
         run: |
+          if [ "$DRAFT" = true ]; then echo "draft: CI runs once the PR is ready"; exit 1; fi
           echo "checks: $RESULT"
           test "$RESULT" = success
