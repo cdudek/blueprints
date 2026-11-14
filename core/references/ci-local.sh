@@ -7,19 +7,37 @@ CHECK_COMMANDS=('make format-check' 'make lint' 'make typecheck' 'make test')
 CHECK_TOOLS=('' '' '' '')
 # Names from CHECK_NAMES that run on your machine but not in GitHub Actions (e2e, docker, macOS builds).
 LOCAL_ONLY_CHECKS=()
+# Optional. Checks that need a machine-wide lock (e2e, docker, anything memory-hungry); skipped in Actions.
+HEAVY_CHECKS=()
+# Optional. Checks that must keep their config position because they depend on an earlier check.
+CHECK_SERIAL=()
+# Optional. Repo-relative test output dirs deleted before every run (test-results, coverage).
+CI_LOCAL_CLEAN_PATHS=()
 # END REPO CONFIG
 
-usage() { echo 'Usage: scripts/ci-local [--ci | --help]  (no flag: every check, locally; --ci: all but LOCAL_ONLY_CHECKS, for Actions)'; }
+usage() { echo 'Usage: scripts/ci-local [--ci] [--keep-going] | --help  (no flag: every check, locally, stopping at the first failure; --ci: all but LOCAL_ONLY_CHECKS, for Actions; --keep-going: run every check after a failure)'; }
 ci=false
-if (( $# > 1 )); then usage >&2; exit 2; fi
-case "${1:-}" in
-  '') ;;
-  --ci) ci=true ;;
-  --help|-h) usage; exit 0 ;;
-  *) usage >&2; exit 2 ;;
-esac
+keep_going=false
+for arg in "$@"; do
+  case $arg in
+    --ci) ci=true ;;
+    --keep-going) keep_going=true ;;
+    --help|-h) usage; exit 0 ;;
+    *) usage >&2; exit 2 ;;
+  esac
+done
 
 cd "$(git rev-parse --show-toplevel)"
+# Clean start: a relative path inherited from the caller breaks once checks run elsewhere.
+unset PYTHONPATH PYTHONSTARTUP PYTHONPYCACHEPREFIX NODE_PATH COVERAGE_FILE COVERAGE_RCFILE PYTEST_ADDOPTS
+# Leftovers of an earlier run: its container temp files and the repo's declared test output.
+rm -rf "$(git rev-parse --absolute-git-dir)/ci-local/containers"
+for clean_path in "${CI_LOCAL_CLEAN_PATHS[@]+"${CI_LOCAL_CLEAN_PATHS[@]}"}"; do
+  case $clean_path in
+    ''|/*|..|../*|*/..|*/../*) echo "CI_LOCAL_CLEAN_PATHS needs repo-relative paths; got '$clean_path'." >&2; exit 2 ;;
+  esac
+  rm -rf -- "$clean_path"
+done
 # Shared runner: validate the runtime before dependencies, checks or GitHub calls.
 if [[ -f .nvmrc || -f package.json ]]; then
   if ! command -v node >/dev/null 2>&1; then
@@ -214,7 +232,52 @@ data['checks'][name] = {'exit_code': int(status), 'kind': 'actual-check', 'log':
 path.write_text(json.dumps(data, indent=2) + '\n')
 PY
 }
-for (( i=0; i<${#CHECK_NAMES[@]}; i++ )); do
+# Cheapest first, from the last run's seconds (none in Actions: config order); CHECK_SERIAL names keep their slot.
+durations="$(git rev-parse --path-format=absolute --git-common-dir)/ci-local/durations.json"
+read -r -a order <<< "$(python3 - "$durations" "${CHECK_SERIAL[*]:-}" "${CHECK_NAMES[@]}" <<'PY'
+import json, pathlib, sys
+path, serial, *names = sys.argv[1:]
+try: seen = json.loads(pathlib.Path(path).read_text())
+except (OSError, ValueError): seen = {}
+serial = serial.split()
+movable = iter(sorted((i for i, n in enumerate(names) if n not in serial), key=lambda i: (names[i] not in seen, seen.get(names[i], 0))))
+print(*(i if names[i] in serial else next(movable) for i in range(len(names))))
+PY
+)"
+# Heavy checks share one lock per machine; a dead holder's lock is taken over (shortcut: pid reuse is not detected).
+lock=${CI_LOCAL_LOCK:-${TMPDIR:-/tmp}/ci-local-heavy.lock}
+holding=false
+heavy_unlock() { if [[ $holding == true ]]; then rm -rf "$lock"; holding=false; fi; }
+heavy_lock() {
+  local pid waited=false
+  until mkdir "$lock" 2>/dev/null; do
+    pid=$(cat "$lock/pid" 2>/dev/null || true)
+    if [[ -n $pid ]] && ! ps -p "$pid" >/dev/null 2>&1; then
+      if mv "$lock" "$lock.stale.$$" 2>/dev/null; then rm -rf "$lock.stale.$$"; fi
+      continue
+    fi
+    if [[ $waited == false ]]; then echo "waiting for heavy lock held by pid ${pid:-unknown}"; fi
+    waited=true
+    sleep "${CI_LOCAL_LOCK_POLL:-2}"
+  done
+  echo $$ > "$lock/pid"
+  holding=true
+}
+trap heavy_unlock EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+# The log stays on the runner, so a failing job prints what it needs to show the error.
+log_tail() {
+  if [[ ${GITHUB_ACTIONS:-} == true ]]; then echo "::group::$1 log (last 80 lines)"; else echo "--- $1 log (last 80 lines) ---"; fi
+  tail -n 80 "$log_dir/$1.log"
+  if [[ ${GITHUB_ACTIONS:-} == true ]]; then echo '::endgroup::'; fi
+}
+timings=()
+for i in "${order[@]}"; do
+  if (( failed > 0 )) && [[ $keep_going == false ]]; then
+    echo 'STOP at the first failure; later checks did not run (--keep-going runs them all).' >&2
+    break
+  fi
   name=${CHECK_NAMES[$i]}
   tool=${CHECK_TOOLS[$i]:-}
   if [[ $ci == true && " ${LOCAL_ONLY_CHECKS[*]:-} " == *" $name "* ]]; then
@@ -234,9 +297,11 @@ for (( i=0; i<${#CHECK_NAMES[@]}; i++ )); do
     if (( engine_result != 0 )); then
       failed=$((failed + 1))
       echo "FAIL $name engine setup (see $log_dir/$name.log)" >&2
+      log_tail "$name"
       continue
     fi
   fi
+  if [[ ${GITHUB_ACTIONS:-} != true && " ${HEAVY_CHECKS[*]:-} " == *" $name "* ]]; then heavy_lock; fi
   check_started=$SECONDS
   if bash -euo pipefail -c "${CHECK_COMMANDS[$i]}" > "$log_dir/$name.log" 2>&1; then
     record_check "$name" 0
@@ -246,12 +311,25 @@ for (( i=0; i<${#CHECK_NAMES[@]}; i++ )); do
     record_check "$name" 1
     failed=$((failed + 1))
     echo "FAIL $name ($((SECONDS - check_started))s; $log_dir/$name.log)" >&2
+    log_tail "$name"
   fi
+  timings+=("$name=$((SECONDS - check_started))")
+  heavy_unlock
 done
+python3 - "$durations" "${timings[@]+"${timings[@]}"}" <<'PY'
+import json, pathlib, sys
+path = pathlib.Path(sys.argv[1])
+try: data = json.loads(path.read_text())
+except (OSError, ValueError): data = {}
+data.update({n: int(s) for n, _, s in (kv.partition('=') for kv in sys.argv[2:])})
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text(json.dumps(data, indent=2) + '\n')
+PY
 # Never attest files changed by a check (a clean Actions checkout does not need this).
 if [[ $ci == false && -n "$(git status --porcelain --untracked-files=normal)" ]]; then
   echo 'FAIL worktree changed during checks' >&2
   failed=$((failed + 1))
 fi
 printf '%s checks passed in %ss; %s failed. Logs: %s\n' "$passed" "$((SECONDS - started))" "$failed" "$log_dir"
+echo "Seconds per check: ${timings[*]:-none}"
 exit $(( failed > 0 ))
