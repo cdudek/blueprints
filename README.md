@@ -30,6 +30,7 @@ Documents an AI agent follows to set up and grow a new product: how things are s
 - **Required check:** `ci` is the only required check. It runs `scripts/ci-local --ci`.
 - **Local-only checks:** Heavy checks (e2e, docker, macOS builds) are `LOCAL_ONLY_CHECKS`. Actions skips them; run them with `scripts/ci-local`.
 - **Runner behaviour:** `scripts/ci-local` stops at the first failure (`--keep-going` runs all), prints the last 80 lines of a failing check's log, runs the cheapest checks first from recorded durations, deletes `CI_LOCAL_CLEAN_PATHS` before starting, and serialises `HEAVY_CHECKS` through a machine-wide lock.
+- **Cheap mode:** `scripts/ci-local --cheap` runs all but `HEAVY_CHECKS` with no lock and no receipt, and ends with `CHEAP PASS <sha>` or `CHEAP FAIL check=<name>`. An app's sdlc gate lists it first in `checks.milestone` (CI-42), so cheap failures surface before any heavy run.
 - **Decision4:** Decision4 is a section of the PR body only, advisory. No job, workflow or check runs it, and the `ci.yml` template does not call it.
 - **Review:** There is no AI review in the gate.
 - **Dependabot:** Dependabot runs weekly, with one grouped PR per ecosystem and a cooldown.
