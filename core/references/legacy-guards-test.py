@@ -72,7 +72,7 @@ def chain_cases(source: Path) -> list[str]:
     for case in ("forbidden-edit", "missing-evidence", "stale-lock", "allowed"):
         with tempfile.TemporaryDirectory(prefix="chain-guard-") as directory:
             root = Path(directory)
-            for name in ("chain-gate.sh", "sdlc-config.sh"):
+            for name in ("chain-gate.sh", "sdlc-config.sh", "goal_active.py"):
                 write(root, ".claude/hooks/" + name, source_text(source, ".claude/hooks/" + name))
             write(root, "sdlc.json", json.dumps({"changesDir": "changes", "docs": "docs/sdlc.md"}))
             change = "changes/2026-11-01-guard"
@@ -135,7 +135,7 @@ def verify_cases(source: Path) -> list[str]:
     for case in ("forbidden-edit", "missing-evidence", "stale-lock", "allowed"):
         with tempfile.TemporaryDirectory(prefix="criteria-guard-") as directory:
             root = Path(directory)
-            for name in ("verify_gate.py", "marks.py", "sdlc_version.py"):
+            for name in ("verify_gate.py", "marks.py", "sdlc_version.py", "spec.py"):
                 write(root, "scripts/" + name, source_text(source, "scripts/" + name))
             write(
                 root,
@@ -147,6 +147,7 @@ def verify_cases(source: Path) -> list[str]:
             write(
                 root, prefix + "facts.md", "---\nstatus: approved\n---\n\n- [ ] **F1** It works.\n"
             )
+            write(root, prefix + "plan.md", "---\nstatus: draft\n---\n\n## Order of work\n\nOne step.\n")
             write(root, prefix + "done.json", '{"facts":["F1"]}\n')
             git(root, "init", "-q", "-b", "main")
             git(root, "add", ".")
