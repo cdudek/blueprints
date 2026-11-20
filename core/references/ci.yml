@@ -1,5 +1,8 @@
-# Consumer workflow template: copy to .github/workflows/ci.yml and adapt the toolchain steps.
+# Consumer workflow template: copy to .github/workflows/ci.yml; change only the marked SLOT lines.
 # Runs only on ready (non-draft) pull requests, never on push. `ci` is the one required check.
+# Two jobs run in parallel: `static` (fast, source-only checks) and `checks` (unit, build, extras,
+# e2e-smoke as separate steps). Stage contents are in ci.md (CI-43); the runner maps checks to stages.
+# The tool-install steps are identical in every repo: change them here first, then copy.
 name: CI
 
 on:
@@ -14,12 +17,13 @@ permissions:
   contents: read
 
 jobs:
-  checks:
+  static:
     if: github.event.pull_request.draft == false
-    # Use ubuntu-slim (1 vCPU, a third of the price) when the check set is light and fits its
-    # 15 min job limit; it has no Docker and no service containers. Heavier sets keep ubuntu-latest.
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # SLOT permissions: add `packages: read` when the repo installs from GitHub Packages.
+    permissions:
+      contents: read
     env:
       # The runner compares against the PR base (ratchets, docs-only selection).
       CI_LOCAL_BASE_REF: origin/${{ github.base_ref }}
@@ -28,33 +32,96 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      # Adapt to the repo's toolchain; delete what it does not use.
-      # Node: version comes from .nvmrc, packages from pnpm.
-      # - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      # SLOT toolchain: the repo's language setup and dependency install, for example
       # - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       #   with:
       #     node-version-file: .nvmrc
-      #     cache: pnpm
-      # - run: pnpm install --frozen-lockfile
-      # Python: uv resolves the interpreter and dependencies from pyproject.toml and uv.lock.
-      # - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-      # - run: uv sync --locked
-      - name: Run every check except LOCAL_ONLY_CHECKS
-        run: bash scripts/ci-local --ci
+      #     cache: npm
+      # - run: npm ci --ignore-scripts
+      # BEGIN COMMON TOOLS: identical in every repo and in both jobs.
+      - name: Install lizard, zizmor and pyyaml
+        run: |
+          set -euo pipefail
+          pipx install lizard==1.25.1 zizmor==1.31.1
+          sudo apt-get install -y -qq python3-yaml
+      - name: Install actionlint and gitleaks
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -sSfL -o "$RUNNER_TEMP/actionlint.tgz" https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/actionlint.tgz" -C "$RUNNER_TEMP/bin" actionlint
+          curl -sSfL -o "$RUNNER_TEMP/gitleaks.tgz" https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $RUNNER_TEMP/gitleaks.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gitleaks.tgz" -C "$RUNNER_TEMP/bin" gitleaks
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      # END COMMON TOOLS
+      - name: static
+        run: bash scripts/ci-local --ci --keep-going --stage static
 
-  # The required check. It is skipped for drafts, which cannot merge anyway.
+  checks:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # SLOT permissions: add `packages: read` when the repo installs from GitHub Packages.
+    permissions:
+      contents: read
+    env:
+      CI_LOCAL_BASE_REF: origin/${{ github.base_ref }}
+      # SLOT env: repo variables the checks read, for example a test database URL.
+    # SLOT services: service containers, for example a Postgres image with a health check.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # SLOT toolchain: the same setup as in `static`, plus anything only the heavier stages need
+      # (browser binaries, system packages, native rebuilds).
+      # BEGIN COMMON TOOLS: identical in every repo and in both jobs.
+      - name: Install lizard, zizmor and pyyaml
+        run: |
+          set -euo pipefail
+          pipx install lizard==1.25.1 zizmor==1.31.1
+          sudo apt-get install -y -qq python3-yaml
+      - name: Install actionlint and gitleaks
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -sSfL -o "$RUNNER_TEMP/actionlint.tgz" https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/actionlint.tgz" -C "$RUNNER_TEMP/bin" actionlint
+          curl -sSfL -o "$RUNNER_TEMP/gitleaks.tgz" https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $RUNNER_TEMP/gitleaks.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gitleaks.tgz" -C "$RUNNER_TEMP/bin" gitleaks
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      # END COMMON TOOLS
+      # Each stage is its own step so one failure still shows the others; an empty stage passes.
+      - name: unit
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --keep-going --stage unit
+      - name: build
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --keep-going --stage build
+      - name: extras
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --keep-going --stage extras
+      - name: e2e-smoke
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --keep-going --stage e2e-smoke
+
+  # The required check. Never skipped: a skipped required check counts as passed, so a draft would merge unchecked.
   ci:
     name: ci
-    needs: [checks]
-    # Never skipped: a skipped required check counts as passed, so a draft would merge unchecked.
+    needs: [static, checks]
     if: always()
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
       - env:
-          RESULT: ${{ needs.checks.result }}
+          STATIC: ${{ needs.static.result }}
+          CHECKS: ${{ needs.checks.result }}
           DRAFT: ${{ github.event.pull_request.draft }}
         run: |
           if [ "$DRAFT" = true ]; then echo "draft: CI runs once the PR is ready"; exit 1; fi
-          echo "checks: $RESULT"
-          test "$RESULT" = success
+          echo "static: $STATIC, checks: $CHECKS"
+          test "$STATIC" = success && test "$CHECKS" = success

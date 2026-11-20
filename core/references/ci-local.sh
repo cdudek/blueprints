@@ -13,23 +13,35 @@ LOCAL_ONLY_CHECKS=()
 HEAVY_CHECKS=()
 # Optional. Checks that must keep their config position because they depend on an earlier check.
 CHECK_SERIAL=()
+# Optional. One stage per check, parallel to CHECK_NAMES: static | unit | build | extras | e2e-smoke.
+# Without it every check is in `static`, so a repo can adopt stages whenever it likes.
+CHECK_STAGES=()
 # Optional. Repo-relative test output dirs deleted before every run (test-results, coverage).
 CI_LOCAL_CLEAN_PATHS=()
 # END REPO CONFIG
 
-usage() { echo 'Usage: scripts/ci-local [--ci | --cheap] [--keep-going] | --help  (no flag: every check, locally, stopping at the first failure; --ci: all but LOCAL_ONLY_CHECKS, for Actions; --cheap: all but HEAVY_CHECKS, no lock, no receipt, ends with CHEAP PASS <sha> or CHEAP FAIL check=<name>; --keep-going: run every check after a failure)'; }
+usage() { echo 'Usage: scripts/ci-local [--ci | --cheap] [--keep-going] [--stage <name>] | --help  (no flag: every check, locally, stopping at the first failure; --ci: all but LOCAL_ONLY_CHECKS, for Actions; --cheap: all but HEAVY_CHECKS, no lock, no receipt, ends with CHEAP PASS <sha> or CHEAP FAIL check=<name>; --keep-going: run every check after a failure; --stage: only that stage (static, unit, build, extras, e2e-smoke), logs apart from the receipt folder)'; }
 ci=false
 cheap=false
 keep_going=false
-for arg in "$@"; do
-  case $arg in
+stage=
+while (( $# > 0 )); do
+  case $1 in
     --ci) ci=true ;;
     --cheap) cheap=true ;;
     --keep-going) keep_going=true ;;
+    --stage)
+      if (( $# < 2 )); then usage >&2; exit 2; fi
+      stage=$2
+      shift
+      ;;
     --help|-h) usage; exit 0 ;;
     *) usage >&2; exit 2 ;;
   esac
+  shift
 done
+STAGES=(static unit build extras e2e-smoke)
+if [[ -n $stage && " ${STAGES[*]} " != *" $stage "* ]]; then echo "Unknown stage '$stage'; use one of: ${STAGES[*]}." >&2; exit 2; fi
 if [[ $ci == true && $cheap == true ]]; then echo '--cheap and --ci cannot be combined.' >&2; usage >&2; exit 2; fi
 
 cd "$(git rev-parse --show-toplevel)"
@@ -75,6 +87,8 @@ git_dir=$(git rev-parse --absolute-git-dir)
 log_dir="$git_dir/ci-local/$sha"
 # A cheap pass is not evidence for the head: its logs stay apart from the receipt folder.
 if [[ $cheap == true ]]; then log_dir="$git_dir/ci-local/cheap/$sha"; fi
+# Likewise a single stage: it must not overwrite the receipt of a full run.
+if [[ -n $stage ]]; then log_dir="$git_dir/ci-local/stage-$stage/$sha"; fi
 mkdir -p "$log_dir"
 export CI_LOCAL_EVIDENCE="$log_dir"
 
@@ -158,17 +172,32 @@ if errors:
 print(f'PASS docs {mode}')
 DOCS
 }
+# Stages: a config without CHECK_STAGES is all static, so the stage workflow still covers it.
+CHECK_STAGES=("${CHECK_STAGES[@]+"${CHECK_STAGES[@]}"}")
+if (( ${#CHECK_STAGES[@]} == 0 )); then
+  for _ in "${CHECK_NAMES[@]}"; do CHECK_STAGES+=(static); done
+elif (( ${#CHECK_STAGES[@]} != ${#CHECK_NAMES[@]} )); then
+  echo "CHECK_STAGES needs one stage per check: ${#CHECK_STAGES[@]} stages, ${#CHECK_NAMES[@]} checks." >&2
+  exit 2
+fi
+for check_stage in "${CHECK_STAGES[@]}"; do
+  if [[ " ${STAGES[*]} " != *" $check_stage "* ]]; then echo "Unknown stage '$check_stage' in CHECK_STAGES; use one of: ${STAGES[*]}." >&2; exit 2; fi
+done
 if [[ $docs_only == true ]]; then
   CHECK_NAMES=(docs-format docs-links)
+  CHECK_STAGES=(static static)
   CHECK_COMMANDS=('ci_docs format' 'ci_docs links')
   CHECK_TOOLS=('' '')
 else
   CHECK_NAMES+=(docs-format docs-links)
+  CHECK_STAGES+=(static static)
   CHECK_COMMANDS+=('ci_docs format' 'ci_docs links')
   CHECK_TOOLS+=('' '')
 fi
 export -f ci_docs
 export base_sha
+if [[ -n $stage && " ${CHECK_STAGES[*]} " != *" $stage "* ]]; then echo "no checks in stage $stage"; exit 0; fi
+
 
 # Container checks share the selected engine with build, scanner and smoke subprocesses.
 ci_container_setup() {
@@ -284,6 +313,7 @@ log_tail() {
 timings=()
 first_failed=
 for i in "${order[@]}"; do
+  if [[ -n $stage && ${CHECK_STAGES[$i]} != "$stage" ]]; then continue; fi
   if (( failed > 0 )) && [[ $keep_going == false ]]; then
     echo 'STOP at the first failure; later checks did not run (--keep-going runs them all).' >&2
     break
