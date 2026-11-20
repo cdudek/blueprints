@@ -338,6 +338,63 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(r.returncode, 2)
         self.assertIn('cannot be combined', r.stderr)
 
+    def staged(self, **checks):
+        """Configure checks as {name: (stage, command)}; every command appends its name to $RAN_LOG."""
+        self.configure({n: f'echo {n} >> "$RAN_LOG"; {c}' for n, (_, c) in checks.items()},
+                       f"CHECK_STAGES=({' '.join(st for st, _ in checks.values())})")
+
+    def test_stage_runs_only_its_checks_and_combines_with_ci_and_keep_going(self):
+        log = self.root / 'ran.log'
+        self.staged(lint=('static', 'exit 1'), format=('static', 'true'), unit=('unit', 'true'), smoke=('e2e-smoke', 'true'))
+        r = self.gate('--ci', '--keep-going', '--stage', 'static', RAN_LOG=str(log))
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(sorted(log.read_text().split()), ['format', 'lint'])
+        self.assertIn('PASS docs-format', r.stdout)
+        log.unlink()
+        r = self.gate('--ci', '--stage', 'unit', RAN_LOG=str(log))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(log.read_text(), 'unit\n')
+        self.assertNotIn('docs-format', r.stdout)
+
+    def test_stage_without_checks_says_so_and_passes(self):
+        self.staged(unit=('unit', 'true'))
+        r = self.gate('--ci', '--stage', 'build')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('no checks in stage build', r.stdout)
+
+    def test_config_without_stages_is_all_static(self):
+        log = self.root / 'ran.log'
+        self.configure({'a': 'echo a >> "$RAN_LOG"', 'b': 'echo b >> "$RAN_LOG"'})
+        self.assertIn('no checks in stage unit', self.gate('--stage', 'unit', RAN_LOG=str(log)).stdout)
+        self.assertFalse(log.exists())
+        self.assertEqual(self.gate('--stage', 'static', RAN_LOG=str(log)).returncode, 0)
+        self.assertEqual(sorted(log.read_text().split()), ['a', 'b'])
+
+    def test_docs_only_diff_runs_its_checks_in_static_only(self):
+        self.staged(unit=('unit', 'true'))
+        self.git('push', 'origin', 'main')
+        self.edit('README.md', '# Docs\n')
+        self.assertIn('no checks in stage unit', self.gate('--stage', 'unit').stdout)
+        self.assertIn('PASS docs-format', self.gate('--stage', 'static').stdout)
+
+    def test_bad_stage_names_and_counts_are_refused(self):
+        self.staged(unit=('unit', 'true'))
+        self.assertEqual(self.gate('--stage', 'bogus').returncode, 2)
+        self.assertEqual(self.gate('--stage').returncode, 2)
+        self.configure({'a': 'true', 'b': 'true'}, "CHECK_STAGES=(unit)")
+        self.assertEqual(self.gate().returncode, 2)
+        self.configure({'a': 'true'}, "CHECK_STAGES=(bogus)")
+        self.assertEqual(self.gate().returncode, 2)
+
+    def test_stage_run_leaves_the_full_receipt_alone(self):
+        self.staged(unit=('unit', 'true'))
+        self.assertEqual(self.gate(RAN_LOG='/dev/null').returncode, 0)
+        sha = self.git('rev-parse', 'HEAD')
+        receipt = self.work / '.git/ci-local' / sha / 'checks.json'
+        before = receipt.read_text()
+        self.assertEqual(self.gate('--stage', 'static', RAN_LOG='/dev/null').returncode, 0)
+        self.assertEqual(receipt.read_text(), before)
+
     def test_script_has_no_publication_code(self):
         source = (ROOT / 'references/ci-local.sh').read_text()
         for needle in ('gh ', 'git push', '/statuses', 'AI_REVIEW', 'CI_LOCAL_PR'):
