@@ -133,7 +133,7 @@ check: format-check lint slop typecheck test test-integration arch perf migrate 
 ## Checks
 
 - Automatic: action SHA pins, timeouts and least privilege; applicable paths and concurrency; no redundant main verification run or per-PR macOS build.
-- Automatic: the runner rejects failed checks, dirty heads locally and a missing tool in `--ci`; `ci` depends on `checks` only and skips drafts; `ci-local` has no push, `gh` or status code.
+- Automatic: the runner rejects failed checks, dirty heads locally and a missing tool in `--ci`; `ci` depends on `static` and `checks` only and fails on drafts; `ci-local` has no push, `gh` or status code.
 - Automatic: the shared host's Decision4 fixtures pass; consumers contain no Decision4 job, workflow or checker code; the code-owners file lists the boundary map; every Make target exists; arch, perf, slop, migrate and guard tests feed the local gate.
 - Automatic: Dependabot weekly, one group per ecosystem, a cooldown and a PR limit of two; `scripts/deps-land` reruns the gate after a changed head.
 - Review: CI-30 enforcement rows distinguish documentation from installed and applied gates; the monthly local audit and its continuing owner-assigned issue are current; preview eligibility and serialization are correct.
