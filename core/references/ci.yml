@@ -10,7 +10,8 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number }}
+  # The draft state keeps a draft run from cancelling the ready run after ready_for_review.
+  group: ci-${{ github.event.pull_request.number }}-${{ github.event.pull_request.draft }}
   cancel-in-progress: true
 
 permissions:
