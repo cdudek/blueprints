@@ -189,10 +189,5 @@ jobs:
           DRAFT: ${{ github.event.pull_request.draft }}
         run: |
           if [ "$DRAFT" = true ]; then echo "draft: CI runs once the PR is ready"; exit 1; fi
-          python3 - <<'PY'
-          import json, os, sys
-          needs = json.loads(os.environ["NEEDS"])
-          for job, body in needs.items():
-              print(f"{job}: {body['result']}")
-          sys.exit(0 if needs and all(body["result"] == "success" for body in needs.values()) else 1)
-          PY
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$NEEDS" | jq -e 'all(.[]; .result == "success")' >/dev/null

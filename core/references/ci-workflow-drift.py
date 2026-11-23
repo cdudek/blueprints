@@ -9,6 +9,8 @@ Reads the REPO CONFIG of scripts/ci-local and .github/workflows/ci.yml (needs Py
   - no step runs another check, or runs ci-local without --check, and `ci` needs every job with check steps,
   - every job with check steps has `if: github.event.pull_request.draft == false`, and the `ci` job needs exactly those
     jobs and checks `toJSON(needs)` generically (env NEEDS) instead of naming jobs,
+  - no check step runs under another shell, directory or environment: no `shell` (or only `bash`), no `working-directory`, no env
+    that sets PATH, BASH_ENV, ENV, SHELLOPTS or LD_PRELOAD, on the step, its job or the workflow (`defaults.run` too),
   - no check step is neutralised: its run is exactly `bash scripts/ci-local --ci --check <id>` (repeatable), its `if` is
     absent or exactly `${{ !cancelled() }}`, and neither it nor its job sets a truthy `continue-on-error`.
 Wire it into the repo's workflow-lint check, next to actionlint and zizmor.
@@ -27,6 +29,7 @@ RUNNER_CHECKS = ("docs-format", "docs-links")
 STEP_RUN = re.compile(r"bash scripts/ci-local --ci(?: --check [\w.-]+)+")
 STEP_IF = "${{ !cancelled() }}"
 JOB_IF = "github.event.pull_request.draft == false"
+UNSAFE_ENV = {"PATH", "BASH_ENV", "ENV", "SHELLOPTS", "LD_PRELOAD"}
 NEEDS_JSON = "${{ toJSON(needs) }}"
 DUMP = 'echo "${CHECK_NAMES[*]:-}"; echo "${CHECK_STAGES[*]:-}"; echo "${LOCAL_ONLY_CHECKS[*]:-}"'
 
@@ -53,6 +56,23 @@ def lenient(value):
     return not (value is False or (isinstance(value, str) and value.strip().lower() == "false"))
 
 
+def environment_problems(where, scope):
+    """Findings for a step, job or workflow mapping that could change how a check step runs."""
+    found = []
+    shells = [scope.get("shell"), ((scope.get("defaults") or {}).get("run") or {}).get("shell")]
+    if any(shell is not None and str(shell).strip() != "bash" for shell in shells):
+        found.append(f"{where} sets a shell other than bash")
+    directories = [scope.get("working-directory"), ((scope.get("defaults") or {}).get("run") or {}).get("working-directory")]
+    if any(directory is not None for directory in directories):
+        found.append(f"{where} sets a working-directory")
+    env = scope.get("env")
+    for name in sorted(k for k in (env if isinstance(env, dict) else {}) if str(k).upper() in UNSAFE_ENV):
+        found.append(f"{where} sets env {name}")
+    if env is not None and not isinstance(env, dict):
+        found.append(f"{where} sets env as an expression")
+    return found
+
+
 def workflow_steps(jobs):
     """Yield (job, job body, step index, step, check ids in the step; None when it runs ci-local without --check)."""
     for job, body in jobs.items():
@@ -73,6 +93,8 @@ def problems(root, workflow):
             errors.append(f"{where} runs ci-local without --check")
         if not STEP_RUN.fullmatch(str(step["run"]).strip()):
             errors.append(f"{where} must run exactly `bash scripts/ci-local --ci --check <id>` and nothing else (no ||, ;, &, set +e)")
+        for scope, label in ((step, where), (body, f"job {job}"), (loaded, "the workflow")):
+            errors += environment_problems(f"{label} (check steps)" if scope is not step else label, scope)
         if "if" in step and (not isinstance(step["if"], str) or step["if"].strip() != STEP_IF):
             errors.append(f"{where} has an if other than `{STEP_IF}`")
         if "continue-on-error" in step and lenient(step["continue-on-error"]):

@@ -626,6 +626,40 @@ class DriftGuardTest(unittest.TestCase):
         r = self.drift(listed)
         self.assertIn('job ci names job static', r.stderr)
 
+    def test_shell_directory_and_environment_overrides_fail_at_every_level(self):
+        base = workflow(MATCHING)
+        step = '        run: bash scripts/ci-local --ci --check lint\n'
+        job = '  unit:\n    if: github.event.pull_request.draft == false\n'
+        head = 'jobs:\n'
+        cases = {
+            'step shell': (step, step + '        shell: sh\n', 'sets a shell other than bash'),
+            'step shell expression': (step, step + '        shell: "true {0}"\n', 'sets a shell other than bash'),
+            'step working-directory': (step, step + '        working-directory: /tmp\n', 'sets a working-directory'),
+            'step PATH': (step, step + '        env:\n          PATH: /tmp/evil\n', 'sets env PATH'),
+            'step BASH_ENV': (step, step + '        env:\n          BASH_ENV: /tmp/x\n', 'sets env BASH_ENV'),
+            'step ENV': (step, step + '        env:\n          ENV: /tmp/x\n', 'sets env ENV'),
+            'step SHELLOPTS': (step, step + '        env:\n          SHELLOPTS: xtrace\n', 'sets env SHELLOPTS'),
+            'step LD_PRELOAD': (step, step + '        env:\n          LD_PRELOAD: /tmp/x.so\n', 'sets env LD_PRELOAD'),
+            'job defaults shell': (job, job + '    defaults:\n      run:\n        shell: sh\n', 'sets a shell other than bash'),
+            'job defaults directory': (job, job + '    defaults:\n      run:\n        working-directory: sub\n', 'sets a working-directory'),
+            'job env PATH': (job, job + '    env:\n      PATH: /tmp/evil\n', 'sets env PATH'),
+            'workflow defaults shell': (head, 'defaults:\n  run:\n    shell: sh\n' + head, 'the workflow'),
+            'workflow env BASH_ENV': (head, 'env:\n  BASH_ENV: /tmp/x\n' + head, 'sets env BASH_ENV'),
+        }
+        for label, (old, new, message) in cases.items():
+            with self.subTest(label):
+                self.assertIn(old, base)
+                r = self.drift(base.replace(old, new, 1))
+                self.assertEqual(r.returncode, 1, r.stdout)
+                self.assertIn(message, r.stderr)
+
+    def test_bash_shell_and_ordinary_env_are_fine(self):
+        base = workflow(MATCHING)
+        step = '        run: bash scripts/ci-local --ci --check lint\n'
+        r = self.drift(base.replace(step, step + '        shell: bash\n        env:\n          CI_LOCAL_BASE_REF: origin/main\n', 1)
+                       .replace('jobs:\n', 'defaults:\n  run:\n    shell: bash\n' + 'jobs:\n', 1))
+        self.assertEqual(r.returncode, 0, r.stderr)
+
     def test_a_step_without_an_if_still_passes(self):
         r = self.drift(workflow(MATCHING).replace('        if: ${{ !cancelled() }}\n', ''))
         self.assertEqual(r.returncode, 0, r.stderr)
