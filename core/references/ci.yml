@@ -185,12 +185,9 @@ jobs:
     timeout-minutes: 5
     steps:
       - env:
-          STATIC: ${{ needs.static.result }}
-          UNIT: ${{ needs.unit.result }}
-          BUILD: ${{ needs.build.result }}
-          EXTRAS: ${{ needs.extras.result }}
+          NEEDS: ${{ toJSON(needs) }}
           DRAFT: ${{ github.event.pull_request.draft }}
         run: |
           if [ "$DRAFT" = true ]; then echo "draft: CI runs once the PR is ready"; exit 1; fi
-          echo "static: $STATIC, unit: $UNIT, build: $BUILD, extras: $EXTRAS"
-          test "$STATIC" = success && test "$UNIT" = success && test "$BUILD" = success && test "$EXTRAS" = success
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$NEEDS" | jq -e 'all(.[]; .result == "success")' >/dev/null

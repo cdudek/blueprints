@@ -425,6 +425,35 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(self.gate('--check').returncode, 2)
         self.assertEqual(self.gate('--check', 'unit', '--stage', 'unit').returncode, 2)
 
+    def test_check_names_match_exactly_never_as_globs_or_substrings(self):
+        self.staged(lint=('static', 'true'), format=('static', 'true'))
+        for bad in ('*', '?', 'l*', 'lint format', 'format lint', ' lint', 'lint ', ''):
+            with self.subTest(name=bad):
+                r = self.gate('--check', bad, RAN_LOG='/dev/null')
+                self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
+                self.assertIn('Unknown check', r.stderr)
+        r = self.gate('--stage', '*')
+        self.assertEqual(r.returncode, 2)
+        self.assertIn('Unknown stage', r.stderr)
+
+    def test_check_selection_that_runs_nothing_fails_unless_docs_only(self):
+        self.staged(lint=('static', 'true'))
+        r = self.gate('--check', 'lint', RAN_LOG='/dev/null')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        # A selected check that is skipped (here: its tool is missing locally) leaves nothing executed.
+        script = self.work / 'scripts/ci-local'
+        script.write_text(script.read_text().replace("CHECK_TOOLS=('')", "CHECK_TOOLS=('no-such-tool-xyz')"))
+        self.commit()
+        r = self.gate('--check', 'lint', RAN_LOG='/dev/null')
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn('ran no checks', r.stderr)
+        # Docs-only: every selected check is skipped for that reason and the run still passes.
+        self.git('push', 'origin', 'main')
+        self.edit('README.md', '# Docs\n')
+        r = self.gate('--check', 'lint')
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn('SKIP lint (not selected for a docs-only change)', r.stdout)
+
     def test_ci_refuses_a_local_only_check_but_a_local_run_allows_it(self):
         log = self.root / 'heavy.log'
         r = self.gate('--ci', '--check', 'heavy', HEAVY_LOG=str(log))
@@ -466,11 +495,12 @@ MATCHING = {'static': ['format', 'lint', 'docs-format', 'docs-links'], 'unit': [
 def workflow(jobs, needs=None):
     lines = ['name: CI', 'on: pull_request', 'jobs:']
     for job, checks in jobs.items():
-        lines += [f'  {job}:', '    runs-on: ubuntu-latest', '    steps:', '      - uses: actions/checkout@v7']
+        lines += [f'  {job}:', '    if: github.event.pull_request.draft == false', '    runs-on: ubuntu-latest', '    steps:', '      - uses: actions/checkout@v7']
         for check in checks:
             lines += [f'      - name: Step {check}', '        if: ${{ !cancelled() }}', f'        run: bash scripts/ci-local --ci --check {check}']
     needs = list(jobs) if needs is None else needs
-    return '\n'.join(lines + ['  ci:', f'    needs: [{", ".join(needs)}]', '    runs-on: ubuntu-latest', '    steps:', '      - run: "true"']) + '\n'
+    return '\n'.join(lines + ['  ci:', f'    needs: [{", ".join(needs)}]', '    if: always()', '    runs-on: ubuntu-latest', '    steps:',
+                              '      - env:', '          NEEDS: ${{ toJSON(needs) }}', '        run: python3 -c "import os; os.environ[\'NEEDS\']"']) + '\n'
 
 
 class DriftGuardTest(unittest.TestCase):
@@ -532,6 +562,106 @@ class DriftGuardTest(unittest.TestCase):
     def test_stages_default_to_static_and_local_only_may_be_absent(self):
         (self.root / 'scripts/ci-local').write_text(CONFIG.replace('CHECK_STAGES=(static static unit build e2e-smoke extras extras)\n', ''))
         r = self.drift(workflow({'static': ['format', 'lint', 'unit', 'build', 'e2e-smoke', 'gates', 'docs-format', 'docs-links']}))
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_neutralised_check_steps_fail(self):
+        base = workflow(MATCHING)
+        step = '        run: bash scripts/ci-local --ci --check lint\n'
+        cases = {
+            'step continue-on-error': (step, step + '        continue-on-error: true\n', 'sets continue-on-error'),
+            'step continue-on-error expression': (step, step + "        continue-on-error: ${{ github.event_name == 'pull_request' }}\n", 'sets continue-on-error'),
+            'wrong if': ('if: ${{ !cancelled() }}\n        run: bash scripts/ci-local --ci --check lint', 'if: ${{ always() }}\n        run: bash scripts/ci-local --ci --check lint', 'an if other than'),
+            'if false': ('if: ${{ !cancelled() }}\n        run: bash scripts/ci-local --ci --check lint', 'if: false\n        run: bash scripts/ci-local --ci --check lint', 'an if other than'),
+            'or true': ('--check lint\n', '--check lint || true\n', 'must run exactly'),
+            'or colon': ('--check lint\n', '--check lint || :;\n', 'must run exactly'),
+            'semicolon true': ('--check lint\n', '--check lint; true\n', 'must run exactly'),
+            'set +e': ('run: bash scripts/ci-local --ci --check lint\n', 'run: set +e; bash scripts/ci-local --ci --check lint\n', 'must run exactly'),
+            'background': ('--check lint\n', '--check lint &\n', 'must run exactly'),
+            'extra command': ('--check lint\n', '--check lint && echo done\n', 'must run exactly'),
+            'multiline': ('run: bash scripts/ci-local --ci --check lint\n', 'run: |\n          bash scripts/ci-local --ci --check lint\n          echo done\n', 'must run exactly'),
+        }
+        for label, (old, new, message) in cases.items():
+            with self.subTest(label):
+                self.assertIn(old, base)
+                r = self.drift(base.replace(old, new, 1))
+                self.assertEqual(r.returncode, 1, r.stdout)
+                self.assertIn(message, r.stderr)
+
+    def test_job_level_continue_on_error_fails_but_false_is_fine(self):
+        base = workflow(MATCHING)
+        marker = '  unit:\n    if: github.event.pull_request.draft == false\n'
+        self.assertIn(marker, base)
+        r = self.drift(base.replace(marker, marker + '    continue-on-error: true\n', 1))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('job unit holds check steps and sets continue-on-error', r.stderr)
+        r = self.drift(base.replace(marker, marker + '    continue-on-error: false\n', 1))
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_check_steps_need_ci_flag_and_jobs_need_the_draft_condition(self):
+        base = workflow(MATCHING)
+        r = self.drift(base.replace('scripts/ci-local --ci --check lint', 'scripts/ci-local --check lint'))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('must run exactly', r.stderr)
+        for label, old, new in (('missing', '  unit:\n    if: github.event.pull_request.draft == false\n', '  unit:\n'),
+                                ('wrong', '  unit:\n    if: github.event.pull_request.draft == false\n', '  unit:\n    if: always()\n')):
+            with self.subTest(label):
+                r = self.drift(base.replace(old, new, 1))
+                self.assertEqual(r.returncode, 1)
+                self.assertIn('job unit holds check steps and needs `if: github.event.pull_request.draft == false`', r.stderr)
+
+    def test_ci_job_needs_exactly_the_check_jobs_and_checks_them_generically(self):
+        base = workflow(MATCHING)
+        r = self.drift(base.replace('needs: [static, unit, build, extras]', 'needs: [static, unit, build, extras, other]'))
+        self.assertIn('job ci needs other, which holds no check steps', r.stderr)
+        self.assertEqual(r.returncode, 1)
+        generic = '      - env:\n          NEEDS: ${{ toJSON(needs) }}\n'
+        self.assertIn(generic, base)
+        r = self.drift(base.replace(generic, '      - env:\n'))
+        self.assertIn('must check every needed job through env NEEDS', r.stderr)
+        named = base.replace(generic, '      - env:\n          NEEDS: ${{ toJSON(needs) }}\n          UNIT: ${{ needs.unit.result }}\n')
+        r = self.drift(named)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('job ci names job unit', r.stderr)
+        listed = base.replace('run: python3', 'run: test "$NEEDS" && test "$STATIC" = success && python3')
+        r = self.drift(listed)
+        self.assertIn('job ci names job static', r.stderr)
+
+    def test_shell_directory_and_environment_overrides_fail_at_every_level(self):
+        base = workflow(MATCHING)
+        step = '        run: bash scripts/ci-local --ci --check lint\n'
+        job = '  unit:\n    if: github.event.pull_request.draft == false\n'
+        head = 'jobs:\n'
+        cases = {
+            'step shell': (step, step + '        shell: sh\n', 'sets a shell other than bash'),
+            'step shell expression': (step, step + '        shell: "true {0}"\n', 'sets a shell other than bash'),
+            'step working-directory': (step, step + '        working-directory: /tmp\n', 'sets a working-directory'),
+            'step PATH': (step, step + '        env:\n          PATH: /tmp/evil\n', 'sets env PATH'),
+            'step BASH_ENV': (step, step + '        env:\n          BASH_ENV: /tmp/x\n', 'sets env BASH_ENV'),
+            'step ENV': (step, step + '        env:\n          ENV: /tmp/x\n', 'sets env ENV'),
+            'step SHELLOPTS': (step, step + '        env:\n          SHELLOPTS: xtrace\n', 'sets env SHELLOPTS'),
+            'step LD_PRELOAD': (step, step + '        env:\n          LD_PRELOAD: /tmp/x.so\n', 'sets env LD_PRELOAD'),
+            'job defaults shell': (job, job + '    defaults:\n      run:\n        shell: sh\n', 'sets a shell other than bash'),
+            'job defaults directory': (job, job + '    defaults:\n      run:\n        working-directory: sub\n', 'sets a working-directory'),
+            'job env PATH': (job, job + '    env:\n      PATH: /tmp/evil\n', 'sets env PATH'),
+            'workflow defaults shell': (head, 'defaults:\n  run:\n    shell: sh\n' + head, 'the workflow'),
+            'workflow env BASH_ENV': (head, 'env:\n  BASH_ENV: /tmp/x\n' + head, 'sets env BASH_ENV'),
+        }
+        for label, (old, new, message) in cases.items():
+            with self.subTest(label):
+                self.assertIn(old, base)
+                r = self.drift(base.replace(old, new, 1))
+                self.assertEqual(r.returncode, 1, r.stdout)
+                self.assertIn(message, r.stderr)
+
+    def test_bash_shell_and_ordinary_env_are_fine(self):
+        base = workflow(MATCHING)
+        step = '        run: bash scripts/ci-local --ci --check lint\n'
+        r = self.drift(base.replace(step, step + '        shell: bash\n        env:\n          CI_LOCAL_BASE_REF: origin/main\n', 1)
+                       .replace('jobs:\n', 'defaults:\n  run:\n    shell: bash\n' + 'jobs:\n', 1))
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_a_step_without_an_if_still_passes(self):
+        r = self.drift(workflow(MATCHING).replace('        if: ${{ !cancelled() }}\n', ''))
         self.assertEqual(r.returncode, 0, r.stderr)
 
     def test_the_shipped_template_matches_its_own_check_ids(self):

@@ -6,7 +6,13 @@ Reads the REPO CONFIG of scripts/ci-local and .github/workflows/ci.yml (needs Py
   - every check in CHECK_NAMES (plus docs-format and docs-links, which the runner adds) except
     LOCAL_ONLY_CHECKS has exactly one `scripts/ci-local ... --check <id>` step,
   - that step sits in the job named after the check's CHECK_STAGES entry (e2e-smoke runs in `build`),
-  - no step runs another check, or runs ci-local without --check, and `ci` needs every job with check steps.
+  - no step runs another check, or runs ci-local without --check, and `ci` needs every job with check steps,
+  - every job with check steps has `if: github.event.pull_request.draft == false`, and the `ci` job needs exactly those
+    jobs and checks `toJSON(needs)` generically (env NEEDS) instead of naming jobs,
+  - no check step runs under another shell, directory or environment: no `shell` (or only `bash`), no `working-directory`, no env
+    that sets PATH, BASH_ENV, ENV, SHELLOPTS or LD_PRELOAD, on the step, its job or the workflow (`defaults.run` too),
+  - no check step is neutralised: its run is exactly `bash scripts/ci-local --ci --check <id>` (repeatable), its `if` is
+    absent or exactly `${{ !cancelled() }}`, and neither it nor its job sets a truthy `continue-on-error`.
 Wire it into the repo's workflow-lint check, next to actionlint and zizmor.
 """
 import argparse
@@ -20,6 +26,11 @@ import yaml
 # The e2e-smoke stage runs after the build in the same job; every other stage is a job of its own name.
 JOB_OF_STAGE = {"e2e-smoke": "build"}
 RUNNER_CHECKS = ("docs-format", "docs-links")
+STEP_RUN = re.compile(r"bash scripts/ci-local --ci(?: --check [\w.-]+)+")
+STEP_IF = "${{ !cancelled() }}"
+JOB_IF = "github.event.pull_request.draft == false"
+UNSAFE_ENV = {"PATH", "BASH_ENV", "ENV", "SHELLOPTS", "LD_PRELOAD"}
+NEEDS_JSON = "${{ toJSON(needs) }}"
 DUMP = 'echo "${CHECK_NAMES[*]:-}"; echo "${CHECK_STAGES[*]:-}"; echo "${LOCAL_ONLY_CHECKS[*]:-}"'
 
 
@@ -40,22 +51,58 @@ def read_config(script):
     return dict(zip(names, stages)), set(local_only)
 
 
-def workflow_steps(workflow):
-    """Yield (job, step index, check ids in the step; None when the step runs ci-local without --check)."""
-    for job, body in (yaml.safe_load(workflow.read_text()).get("jobs") or {}).items():
+def lenient(value):
+    """True when a continue-on-error value is anything but a literal false (an expression cannot be proven false)."""
+    return not (value is False or (isinstance(value, str) and value.strip().lower() == "false"))
+
+
+def environment_problems(where, scope):
+    """Findings for a step, job or workflow mapping that could change how a check step runs."""
+    found = []
+    shells = [scope.get("shell"), ((scope.get("defaults") or {}).get("run") or {}).get("shell")]
+    if any(shell is not None and str(shell).strip() != "bash" for shell in shells):
+        found.append(f"{where} sets a shell other than bash")
+    directories = [scope.get("working-directory"), ((scope.get("defaults") or {}).get("run") or {}).get("working-directory")]
+    if any(directory is not None for directory in directories):
+        found.append(f"{where} sets a working-directory")
+    env = scope.get("env")
+    for name in sorted(k for k in (env if isinstance(env, dict) else {}) if str(k).upper() in UNSAFE_ENV):
+        found.append(f"{where} sets env {name}")
+    if env is not None and not isinstance(env, dict):
+        found.append(f"{where} sets env as an expression")
+    return found
+
+
+def workflow_steps(jobs):
+    """Yield (job, job body, step index, step, check ids in the step; None when it runs ci-local without --check)."""
+    for job, body in jobs.items():
         for index, step in enumerate((body or {}).get("steps") or []):
-            run = step.get("run") or ""
+            run = str(step.get("run") or "")
             if "ci-local" in run:
-                yield job, index, re.findall(r"--check[ =]+(\S+)", run) or None
+                yield job, body, index, step, re.findall(r"--check[ =]+(\S+)", run) or None
 
 
 def problems(root, workflow):
     stages, local_only = read_config(root / "scripts/ci-local")
     expected = {n: JOB_OF_STAGE.get(s, s) for n, s in stages.items() if n not in local_only}
-    found, errors, jobs = {}, [], set()
-    for job, index, ids in workflow_steps(workflow):
+    found, errors, jobs, holding, loaded = {}, [], set(), set(), yaml.safe_load(workflow.read_text())
+    for job, body, index, step, ids in workflow_steps(loaded.get("jobs") or {}):
+        where = f"{job} step {index + 1}"
+        holding.add(job)
         if ids is None:
-            errors.append(f"{job} step {index + 1} runs ci-local without --check")
+            errors.append(f"{where} runs ci-local without --check")
+        if not STEP_RUN.fullmatch(str(step["run"]).strip()):
+            errors.append(f"{where} must run exactly `bash scripts/ci-local --ci --check <id>` and nothing else (no ||, ;, &, set +e)")
+        for scope, label in ((step, where), (body, f"job {job}"), (loaded, "the workflow")):
+            errors += environment_problems(f"{label} (check steps)" if scope is not step else label, scope)
+        if "if" in step and (not isinstance(step["if"], str) or step["if"].strip() != STEP_IF):
+            errors.append(f"{where} has an if other than `{STEP_IF}`")
+        if "continue-on-error" in step and lenient(step["continue-on-error"]):
+            errors.append(f"{where} sets continue-on-error")
+        if "continue-on-error" in body and lenient(body["continue-on-error"]):
+            errors.append(f"job {job} holds check steps and sets continue-on-error")
+        if not isinstance(body.get("if"), str) or body["if"].strip() != JOB_IF:
+            errors.append(f"job {job} holds check steps and needs `if: {JOB_IF}`")
         for check in ids or []:
             jobs.add(job)
             if check in found:
@@ -68,10 +115,20 @@ def problems(root, workflow):
             errors.append(f"check {check} runs in job {found[check]}, but its stage puts it in {job}")
     for check in sorted(set(found) - set(expected)):
         errors.append(f"step for {check} matches no CI check (unknown name or LOCAL_ONLY_CHECKS)")
-    gate = (yaml.safe_load(workflow.read_text())["jobs"].get("ci") or {}).get("needs") or []
-    gate = [gate] if isinstance(gate, str) else gate
-    errors += [f"job ci does not need {job}" for job in sorted(jobs - set(gate))]
-    return errors
+    ci = loaded["jobs"].get("ci") or {}
+    gate = ci.get("needs") or []
+    gate = {gate} if isinstance(gate, str) else set(gate)
+    errors += [f"job ci does not need {job}" for job in sorted(holding - gate)]
+    errors += [f"job ci needs {job}, which holds no check steps" for job in sorted(gate - holding)]
+    steps = ci.get("steps") or []
+    if not any((step.get("env") or {}).get("NEEDS") == NEEDS_JSON and "NEEDS" in str(step.get("run")) for step in steps):
+        errors.append(f"job ci must check every needed job through env NEEDS: {NEEDS_JSON} and a run that reads it")
+    for step in steps:
+        text = str(step.get("run") or "") + " ".join(str(v) for v in (step.get("env") or {}).values() if v != NEEDS_JSON)
+        for job in sorted(holding | gate):
+            if re.search(rf"(?<![\w-]){re.escape(job)}(?![\w-])", text, re.IGNORECASE):
+                errors.append(f"job ci names job {job}; check every needed job through NEEDS instead")
+    return list(dict.fromkeys(errors))  # a job-level finding repeats per step
 
 
 def main():
