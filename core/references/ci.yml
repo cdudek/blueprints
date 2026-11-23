@@ -190,4 +190,4 @@ jobs:
         run: |
           if [ "$DRAFT" = true ]; then echo "draft: CI runs once the PR is ready"; exit 1; fi
           echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
-          echo "$NEEDS" | jq -e 'all(.[]; .result == "success")' >/dev/null
+          echo "$NEEDS" | jq -e 'length > 0 and all(.[]; .result == "success")' >/dev/null
