@@ -47,13 +47,15 @@ while (( $# > 0 )); do
   shift
 done
 STAGES=(static unit build extras e2e-smoke)
-if [[ -n $stage && " ${STAGES[*]} " != *" $stage "* ]]; then echo "Unknown stage '$stage'; use one of: ${STAGES[*]}." >&2; exit 2; fi
+# Exact membership: a glob character or a space in a user-supplied name must never match by substring.
+has() { local needle=$1 item; shift; for item in "$@"; do if [[ $item == "$needle" ]]; then return 0; fi; done; return 1; }
+if [[ -n $stage ]] && ! has "$stage" "${STAGES[@]}"; then echo "Unknown stage '$stage'; use one of: ${STAGES[*]}." >&2; exit 2; fi
 if (( ${#only[@]} > 0 )); then
   if [[ -n $stage ]]; then echo '--check and --stage cannot be combined.' >&2; exit 2; fi
   for check in "${only[@]}"; do
     # A typo must fail: an empty selection would otherwise pass.
-    if [[ " ${CHECK_NAMES[*]} docs-format docs-links " != *" $check "* ]]; then echo "Unknown check '$check'; use one of: ${CHECK_NAMES[*]} docs-format docs-links." >&2; exit 2; fi
-    if [[ $ci == true && " ${LOCAL_ONLY_CHECKS[*]:-} " == *" $check "* ]]; then echo "Check '$check' is local only (LOCAL_ONLY_CHECKS); --ci refuses it." >&2; exit 2; fi
+    if ! has "$check" "${CHECK_NAMES[@]}" docs-format docs-links; then echo "Unknown check '$check'; use one of: ${CHECK_NAMES[*]} docs-format docs-links." >&2; exit 2; fi
+    if [[ $ci == true ]] && has "$check" "${LOCAL_ONLY_CHECKS[@]+"${LOCAL_ONLY_CHECKS[@]}"}"; then echo "Check '$check' is local only (LOCAL_ONLY_CHECKS); --ci refuses it." >&2; exit 2; fi
   done
 fi
 if [[ $ci == true && $cheap == true ]]; then echo '--cheap and --ci cannot be combined.' >&2; usage >&2; exit 2; fi
@@ -212,10 +214,11 @@ fi
 export -f ci_docs
 export base_sha
 # A docs-only diff drops the repo's own checks; a named check that is gone is not a typo.
+docs_skipped=0
 for check in "${only[@]+"${only[@]}"}"; do
-  if [[ " ${CHECK_NAMES[*]} " != *" $check "* ]]; then echo "SKIP $check (not selected for a docs-only change)"; fi
+  if ! has "$check" "${CHECK_NAMES[@]}"; then echo "SKIP $check (not selected for a docs-only change)"; docs_skipped=$((docs_skipped + 1)); fi
 done
-if [[ -n $stage && " ${CHECK_STAGES[*]} " != *" $stage "* ]]; then echo "no checks in stage $stage"; exit 0; fi
+if [[ -n $stage ]] && ! has "$stage" "${CHECK_STAGES[@]}"; then echo "no checks in stage $stage"; exit 0; fi
 
 
 # Container checks share the selected engine with build, scanner and smoke subprocesses.
@@ -333,7 +336,7 @@ timings=()
 first_failed=
 for i in "${order[@]}"; do
   if [[ -n $stage && ${CHECK_STAGES[$i]} != "$stage" ]]; then continue; fi
-  if (( ${#only[@]} > 0 )) && [[ " ${only[*]} " != *" ${CHECK_NAMES[$i]} "* ]]; then continue; fi
+  if (( ${#only[@]} > 0 )) && ! has "${CHECK_NAMES[$i]}" "${only[@]}"; then continue; fi
   if (( failed > 0 )) && [[ $keep_going == false ]]; then
     echo 'STOP at the first failure; later checks did not run (--keep-going runs them all).' >&2
     break
@@ -396,6 +399,12 @@ if [[ $ci == false && -n "$(git status --porcelain --untracked-files=normal)" ]]
   echo 'FAIL worktree changed during checks' >&2
   failed=$((failed + 1))
   first_failed=${first_failed:-worktree}
+fi
+# A --check selection that ran nothing must not go green; only a docs-only skip of every selected name may.
+if (( ${#only[@]} > 0 && passed + failed == 0 && docs_skipped < ${#only[@]} )); then
+  echo 'FAIL --check selection ran no checks' >&2
+  failed=$((failed + 1))
+  first_failed=${first_failed:-selection}
 fi
 printf '%s checks passed in %ss; %s failed. Logs: %s\n' "$passed" "$((SECONDS - started))" "$failed" "$log_dir"
 echo "Seconds per check: ${timings[*]:-none}"
