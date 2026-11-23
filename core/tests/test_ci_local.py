@@ -5,6 +5,7 @@ from pathlib import Path
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -169,7 +170,7 @@ class RunnerTest(unittest.TestCase):
         self.assertIn('FAIL code: no-such-tool-xyz is not installed', r.stderr)
 
     def test_removed_and_unknown_flags_are_refused(self):
-        for flag in ('--check', '--no-push', '--decision4', '--proposed-body', '--bogus'):
+        for flag in ('--no-push', '--decision4', '--proposed-body', '--bogus'):
             with self.subTest(flag=flag):
                 self.assertEqual(self.gate(flag).returncode, 2)
         self.assertEqual(self.gate('--help').returncode, 0)
@@ -395,10 +396,153 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(self.gate('--stage', 'static', RAN_LOG='/dev/null').returncode, 0)
         self.assertEqual(receipt.read_text(), before)
 
+    def test_check_runs_only_that_check_with_stage_setup_and_no_receipt(self):
+        log = self.root / 'ran.log'
+        self.staged(lint=('static', 'true'), unit=('unit', 'true'), smoke=('e2e-smoke', 'true'))
+        r = self.gate('--ci', '--check', 'unit', RAN_LOG=str(log))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(log.read_text(), 'unit\n')
+        self.assertIn('PASS unit', r.stdout)
+        self.assertNotIn('docs-format', r.stdout)
+        sha = self.git('rev-parse', 'HEAD')
+        self.assertFalse((self.work / '.git/ci-local' / sha / 'checks.json').exists())
+        self.assertTrue((self.work / '.git/ci-local/check' / sha / 'unit.log').exists())
+        log.unlink()
+        r = self.gate('--check', 'lint', '--check', 'smoke', RAN_LOG=str(log))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(sorted(log.read_text().split()), ['lint', 'smoke'])
+        self.assertEqual(self.gate('--check', 'docs-links').returncode, 0)
+
+    def test_check_failure_fails_and_unknown_name_fails(self):
+        self.staged(lint=('static', 'exit 1'), unit=('unit', 'true'))
+        r = self.gate('--ci', '--check', 'lint', RAN_LOG='/dev/null')
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('FAIL lint', r.stderr)
+        r = self.gate('--ci', '--check', 'lnt', RAN_LOG='/dev/null')
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("Unknown check 'lnt'", r.stderr)
+        self.assertEqual(self.gate('--check', 'unit', '--check', 'lnt', RAN_LOG='/dev/null').returncode, 2)
+        self.assertEqual(self.gate('--check').returncode, 2)
+        self.assertEqual(self.gate('--check', 'unit', '--stage', 'unit').returncode, 2)
+
+    def test_ci_refuses_a_local_only_check_but_a_local_run_allows_it(self):
+        log = self.root / 'heavy.log'
+        r = self.gate('--ci', '--check', 'heavy', HEAVY_LOG=str(log))
+        self.assertEqual(r.returncode, 2)
+        self.assertIn('local only', r.stderr)
+        self.assertFalse(log.exists())
+        self.assertEqual(self.gate('--check', 'heavy', HEAVY_LOG=str(log)).returncode, 0)
+        self.assertEqual(log.read_text(), 'ran\n')
+
+    def test_check_in_a_docs_only_diff_is_skipped_not_a_typo(self):
+        self.staged(unit=('unit', 'true'))
+        self.git('push', 'origin', 'main')
+        self.edit('README.md', '# Docs\n')
+        r = self.gate('--ci', '--check', 'unit', RAN_LOG='/dev/null')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('SKIP unit (not selected for a docs-only change)', r.stdout)
+        self.assertEqual(self.gate('--ci', '--check', 'docs-format').returncode, 0)
+
     def test_script_has_no_publication_code(self):
         source = (ROOT / 'references/ci-local.sh').read_text()
         for needle in ('gh ', 'git push', '/statuses', 'AI_REVIEW', 'CI_LOCAL_PR'):
             self.assertNotIn(needle, source)
+
+
+DRIFT = ROOT / 'references/ci-workflow-drift.py'
+CONFIG = """#!/usr/bin/env bash
+set -euo pipefail
+CHECK_NAMES=(format lint unit build e2e-smoke gates heavy)
+CHECK_COMMANDS=(true true true true true true true)
+CHECK_STAGES=(static static unit build e2e-smoke extras extras)
+LOCAL_ONLY_CHECKS=(heavy)
+# END REPO CONFIG
+"""
+# The job and check ids a matching workflow holds; docs-format and docs-links are runner built-ins.
+MATCHING = {'static': ['format', 'lint', 'docs-format', 'docs-links'], 'unit': ['unit'],
+            'build': ['build', 'e2e-smoke'], 'extras': ['gates']}
+
+
+def workflow(jobs, needs=None):
+    lines = ['name: CI', 'on: pull_request', 'jobs:']
+    for job, checks in jobs.items():
+        lines += [f'  {job}:', '    runs-on: ubuntu-latest', '    steps:', '      - uses: actions/checkout@v7']
+        for check in checks:
+            lines += [f'      - name: Step {check}', '        if: ${{ !cancelled() }}', f'        run: bash scripts/ci-local --ci --check {check}']
+    needs = list(jobs) if needs is None else needs
+    return '\n'.join(lines + ['  ci:', f'    needs: [{", ".join(needs)}]', '    runs-on: ubuntu-latest', '    steps:', '      - run: "true"']) + '\n'
+
+
+class DriftGuardTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        (self.root / 'scripts').mkdir()
+        (self.root / 'scripts/ci-local').write_text(CONFIG)
+
+    def drift(self, text):
+        path = self.root / 'ci.yml'
+        path.write_text(text)
+        return subprocess.run([sys.executable, str(DRIFT), '--root', str(self.root), '--workflow', str(path)], text=True, capture_output=True)
+
+    def changed(self, edit):
+        jobs = {job: list(checks) for job, checks in MATCHING.items()}
+        edit(jobs)
+        return self.drift(workflow(jobs))
+
+    def test_matching_pair_passes(self):
+        r = self.drift(workflow(MATCHING))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('PASS', r.stdout)
+
+    def test_missing_step_fails(self):
+        r = self.changed(lambda jobs: jobs['unit'].remove('unit'))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('check unit has no step', r.stderr)
+
+    def test_extra_step_fails_whether_unknown_or_local_only(self):
+        for extra in ('typo', 'heavy'):
+            with self.subTest(extra=extra):
+                r = self.changed(lambda jobs: jobs['extras'].append(extra))
+                self.assertEqual(r.returncode, 1)
+                self.assertIn(f'step for {extra} matches no CI check', r.stderr)
+
+    def test_step_in_the_wrong_job_fails(self):
+        def move(jobs):
+            jobs['unit'].remove('unit')
+            jobs['static'].append('unit')
+        r = self.changed(move)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('check unit runs in job static, but its stage puts it in unit', r.stderr)
+
+    def test_duplicate_step_and_bulk_step_fail(self):
+        r = self.changed(lambda jobs: jobs['static'].append('lint'))
+        self.assertIn('check lint has more than one step', r.stderr)
+        bulk = workflow(MATCHING).replace('--check format', '--stage static')
+        r = self.drift(bulk)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('without --check', r.stderr)
+
+    def test_ci_job_must_need_every_job_with_checks(self):
+        r = self.drift(workflow(MATCHING, needs=['static', 'unit', 'build']))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('job ci does not need extras', r.stderr)
+
+    def test_stages_default_to_static_and_local_only_may_be_absent(self):
+        (self.root / 'scripts/ci-local').write_text(CONFIG.replace('CHECK_STAGES=(static static unit build e2e-smoke extras extras)\n', ''))
+        r = self.drift(workflow({'static': ['format', 'lint', 'unit', 'build', 'e2e-smoke', 'gates', 'docs-format', 'docs-links']}))
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_the_shipped_template_matches_its_own_check_ids(self):
+        names = ['format', 'lint', 'typecheck', 'arch', 'slop', 'secrets', 'workflow-lint', 'unit', 'build', 'e2e-smoke', 'gates', 'migrate']
+        stages = ['static'] * 7 + ['unit', 'build', 'e2e-smoke', 'extras', 'extras']
+        (self.root / 'scripts/ci-local').write_text(CONFIG.replace('(format lint unit build e2e-smoke gates heavy)', f'({" ".join(names)})')
+                                                    .replace('(true true true true true true true)', '(' + ' '.join(['true'] * len(names)) + ')')
+                                                    .replace('(static static unit build e2e-smoke extras extras)', f'({" ".join(stages)})')
+                                                    .replace('(heavy)', '()'))
+        r = subprocess.run([sys.executable, str(DRIFT), '--root', str(self.root), '--workflow', str(ROOT / 'references/ci.yml')], text=True, capture_output=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
 
 
 if __name__ == '__main__':

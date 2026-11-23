@@ -1,7 +1,10 @@
 # Consumer workflow template: copy to .github/workflows/ci.yml; change only the marked SLOT lines.
 # Runs only on ready (non-draft) pull requests, never on push. `ci` is the one required check.
-# Two jobs run in parallel: `static` (fast, source-only checks) and `checks` (unit, build, extras,
-# e2e-smoke as separate steps). Stage contents are in ci.md (CI-43); the runner maps checks to stages.
+# Four jobs run in parallel, one per stage: `static`, `unit`, `build` (build, then e2e-smoke) and `extras`.
+# Inside a job every check is its own step: `name:` is a human label, `run:` is `scripts/ci-local --ci --check <id>`,
+# and `if: !cancelled()` keeps one failure from hiding the other steps. Stage contents are in ci.md (CI-43).
+# The step ids must equal CHECK_NAMES (plus docs-format and docs-links) minus LOCAL_ONLY_CHECKS, each in the job of
+# its CHECK_STAGES entry; `python3 scripts/ci-workflow-drift.py` enforces it from the repo's workflow-lint check.
 # The tool-install steps are identical in every repo: change them here first, then copy.
 name: CI
 
@@ -39,7 +42,7 @@ jobs:
       #     node-version-file: .nvmrc
       #     cache: npm
       # - run: npm ci --ignore-scripts
-      # BEGIN COMMON TOOLS: identical in every repo and in both jobs.
+      # BEGIN COMMON TOOLS: identical in every repo; a job carries them only when its checks need them.
       - name: Install lizard, zizmor and pyyaml
         run: |
           set -euo pipefail
@@ -57,10 +60,37 @@ jobs:
           tar -xzf "$RUNNER_TEMP/gitleaks.tgz" -C "$RUNNER_TEMP/bin" gitleaks
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
       # END COMMON TOOLS
-      - name: static
-        run: bash scripts/ci-local --ci --keep-going --stage static
+      # SLOT checks: one step per static check id in CHECK_NAMES; delete the ones the repo lacks, copy a step for its own.
+      - name: Format (Biome)
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --check format
+      - name: Lint
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --check lint
+      - name: Typecheck
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --check typecheck
+      - name: Architecture rules
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --check arch
+      - name: Slop rules
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --check slop
+      - name: Secret scan (gitleaks)
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --check secrets
+      - name: Workflow lint (actionlint, zizmor)
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --check workflow-lint
+      # The runner adds these two to every repo's CHECK_NAMES.
+      - name: Docs format
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --check docs-format
+      - name: Docs links
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --check docs-links
 
-  checks:
+  unit:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -69,60 +99,98 @@ jobs:
       contents: read
     env:
       CI_LOCAL_BASE_REF: origin/${{ github.base_ref }}
-      # SLOT env: repo variables the checks read, for example a test database URL.
-    # SLOT services: service containers, for example a Postgres image with a health check.
+      # SLOT database: a job that runs tests against a database sets TEST_DATABASE_URL and has the Postgres
+      # service below, or those suites skip silently. Same values in every such job.
+      # TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+    # SLOT services: the Postgres service container for the database tests, for example
+    # services:
+    #   postgres:
+    #     image: postgres:17
+    #     env:
+    #       POSTGRES_PASSWORD: postgres
+    #       POSTGRES_DB: test
+    #     ports: ['5432:5432']
+    #     options: >-
+    #       --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-      # SLOT toolchain: the same setup as in `static`, plus anything only the heavier stages need
-      # (browser binaries, system packages, native rebuilds).
-      # BEGIN COMMON TOOLS: identical in every repo and in both jobs.
-      - name: Install lizard, zizmor and pyyaml
-        run: |
-          set -euo pipefail
-          pipx install lizard==1.25.1 zizmor==1.31.1
-          sudo apt-get install -y -qq python3-yaml
-      - name: Install actionlint and gitleaks
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/bin"
-          curl -sSfL -o "$RUNNER_TEMP/actionlint.tgz" https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
-          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tgz" | sha256sum -c -
-          tar -xzf "$RUNNER_TEMP/actionlint.tgz" -C "$RUNNER_TEMP/bin" actionlint
-          curl -sSfL -o "$RUNNER_TEMP/gitleaks.tgz" https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
-          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $RUNNER_TEMP/gitleaks.tgz" | sha256sum -c -
-          tar -xzf "$RUNNER_TEMP/gitleaks.tgz" -C "$RUNNER_TEMP/bin" gitleaks
-          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
-      # END COMMON TOOLS
-      # Each stage is its own step so one failure still shows the others; an empty stage passes.
-      - name: unit
+      # SLOT toolchain: the same language setup and dependency install as in `static`.
+      # SLOT checks: one step per unit-stage check id (JS and Python unit tests).
+      - name: Unit tests
         if: ${{ !cancelled() }}
-        run: bash scripts/ci-local --ci --keep-going --stage unit
-      - name: build
+        run: bash scripts/ci-local --ci --check unit
+
+  build:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # SLOT permissions: add `packages: read` when the repo installs from GitHub Packages.
+    permissions:
+      contents: read
+    env:
+      CI_LOCAL_BASE_REF: origin/${{ github.base_ref }}
+      # SLOT database: the e2e-smoke journeys run against a database; see `unit` for the two lines to set.
+      # TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+    # SLOT services: the same Postgres service container as in `unit`.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # SLOT toolchain: the same setup as in `static`, plus browser binaries and system packages.
+      # SLOT checks: the build stage check ids, then the e2e-smoke stage check ids (they need the build).
+      - name: Production build
         if: ${{ !cancelled() }}
-        run: bash scripts/ci-local --ci --keep-going --stage build
-      - name: extras
+        run: bash scripts/ci-local --ci --check build
+      - name: E2E smoke (Playwright)
         if: ${{ !cancelled() }}
-        run: bash scripts/ci-local --ci --keep-going --stage extras
-      - name: e2e-smoke
+        run: bash scripts/ci-local --ci --check e2e-smoke
+
+  extras:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # SLOT permissions: add `packages: read` when the repo installs from GitHub Packages.
+    permissions:
+      contents: read
+    env:
+      CI_LOCAL_BASE_REF: origin/${{ github.base_ref }}
+      # SLOT database: migration checks run against a database; see `unit` for the two lines to set.
+      # TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+    # SLOT services: the same Postgres service container as in `unit`.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # SLOT toolchain: the same setup as in `static`. When an extras check needs lizard, zizmor, actionlint or
+      # gitleaks, copy the COMMON TOOLS block from `static` here.
+      # SLOT checks: one step per extras check id (repo-specific gates); delete any that the repo lacks.
+      - name: Gate tests
         if: ${{ !cancelled() }}
-        run: bash scripts/ci-local --ci --keep-going --stage e2e-smoke
+        run: bash scripts/ci-local --ci --check gates
+      - name: Migrations (disposable Postgres)
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci-local --ci --check migrate
 
   # The required check. Never skipped: a skipped required check counts as passed, so a draft would merge unchecked.
   ci:
     name: ci
-    needs: [static, checks]
+    needs: [static, unit, build, extras]
     if: always()
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
       - env:
           STATIC: ${{ needs.static.result }}
-          CHECKS: ${{ needs.checks.result }}
+          UNIT: ${{ needs.unit.result }}
+          BUILD: ${{ needs.build.result }}
+          EXTRAS: ${{ needs.extras.result }}
           DRAFT: ${{ github.event.pull_request.draft }}
         run: |
           if [ "$DRAFT" = true ]; then echo "draft: CI runs once the PR is ready"; exit 1; fi
-          echo "static: $STATIC, checks: $CHECKS"
-          test "$STATIC" = success && test "$CHECKS" = success
+          echo "static: $STATIC, unit: $UNIT, build: $BUILD, extras: $EXTRAS"
+          test "$STATIC" = success && test "$UNIT" = success && test "$BUILD" = success && test "$EXTRAS" = success
