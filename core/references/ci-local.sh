@@ -20,11 +20,12 @@ CHECK_STAGES=()
 CI_LOCAL_CLEAN_PATHS=()
 # END REPO CONFIG
 
-usage() { echo 'Usage: scripts/ci-local [--ci | --cheap] [--keep-going] [--stage <name>] | --help  (no flag: every check, locally, stopping at the first failure; --ci: all but LOCAL_ONLY_CHECKS, for Actions; --cheap: all but HEAVY_CHECKS, no lock, no receipt, ends with CHEAP PASS <sha> or CHEAP FAIL check=<name>; --keep-going: run every check after a failure; --stage: only that stage (static, unit, build, extras, e2e-smoke), logs apart from the receipt folder)'; }
+usage() { echo 'Usage: scripts/ci-local [--ci | --cheap] [--keep-going] [--stage <name> | --check <name>...] | --help  (no flag: every check, locally, stopping at the first failure; --ci: all but LOCAL_ONLY_CHECKS, for Actions; --cheap: all but HEAVY_CHECKS, no lock, no receipt, ends with CHEAP PASS <sha> or CHEAP FAIL check=<name>; --keep-going: run every check after a failure; --stage: only that stage (static, unit, build, extras, e2e-smoke), logs apart from the receipt folder; --check: only that check (repeatable; an unknown name or, with --ci, a LOCAL_ONLY_CHECKS name fails), same setup as --stage, no receipt)'; }
 ci=false
 cheap=false
 keep_going=false
 stage=
+only=()
 while (( $# > 0 )); do
   case $1 in
     --ci) ci=true ;;
@@ -35,6 +36,11 @@ while (( $# > 0 )); do
       stage=$2
       shift
       ;;
+    --check)
+      if (( $# < 2 )); then usage >&2; exit 2; fi
+      only+=("$2")
+      shift
+      ;;
     --help|-h) usage; exit 0 ;;
     *) usage >&2; exit 2 ;;
   esac
@@ -42,6 +48,14 @@ while (( $# > 0 )); do
 done
 STAGES=(static unit build extras e2e-smoke)
 if [[ -n $stage && " ${STAGES[*]} " != *" $stage "* ]]; then echo "Unknown stage '$stage'; use one of: ${STAGES[*]}." >&2; exit 2; fi
+if (( ${#only[@]} > 0 )); then
+  if [[ -n $stage ]]; then echo '--check and --stage cannot be combined.' >&2; exit 2; fi
+  for check in "${only[@]}"; do
+    # A typo must fail: an empty selection would otherwise pass.
+    if [[ " ${CHECK_NAMES[*]} docs-format docs-links " != *" $check "* ]]; then echo "Unknown check '$check'; use one of: ${CHECK_NAMES[*]} docs-format docs-links." >&2; exit 2; fi
+    if [[ $ci == true && " ${LOCAL_ONLY_CHECKS[*]:-} " == *" $check "* ]]; then echo "Check '$check' is local only (LOCAL_ONLY_CHECKS); --ci refuses it." >&2; exit 2; fi
+  done
+fi
 if [[ $ci == true && $cheap == true ]]; then echo '--cheap and --ci cannot be combined.' >&2; usage >&2; exit 2; fi
 
 cd "$(git rev-parse --show-toplevel)"
@@ -87,8 +101,9 @@ git_dir=$(git rev-parse --absolute-git-dir)
 log_dir="$git_dir/ci-local/$sha"
 # A cheap pass is not evidence for the head: its logs stay apart from the receipt folder.
 if [[ $cheap == true ]]; then log_dir="$git_dir/ci-local/cheap/$sha"; fi
-# Likewise a single stage: it must not overwrite the receipt of a full run.
+# Likewise a single stage or check: it must not overwrite the receipt of a full run.
 if [[ -n $stage ]]; then log_dir="$git_dir/ci-local/stage-$stage/$sha"; fi
+if (( ${#only[@]} > 0 )); then log_dir="$git_dir/ci-local/check/$sha"; fi
 mkdir -p "$log_dir"
 export CI_LOCAL_EVIDENCE="$log_dir"
 
@@ -196,6 +211,10 @@ else
 fi
 export -f ci_docs
 export base_sha
+# A docs-only diff drops the repo's own checks; a named check that is gone is not a typo.
+for check in "${only[@]+"${only[@]}"}"; do
+  if [[ " ${CHECK_NAMES[*]} " != *" $check "* ]]; then echo "SKIP $check (not selected for a docs-only change)"; fi
+done
 if [[ -n $stage && " ${CHECK_STAGES[*]} " != *" $stage "* ]]; then echo "no checks in stage $stage"; exit 0; fi
 
 
@@ -314,6 +333,7 @@ timings=()
 first_failed=
 for i in "${order[@]}"; do
   if [[ -n $stage && ${CHECK_STAGES[$i]} != "$stage" ]]; then continue; fi
+  if (( ${#only[@]} > 0 )) && [[ " ${only[*]} " != *" ${CHECK_NAMES[$i]} "* ]]; then continue; fi
   if (( failed > 0 )) && [[ $keep_going == false ]]; then
     echo 'STOP at the first failure; later checks did not run (--keep-going runs them all).' >&2
     break
