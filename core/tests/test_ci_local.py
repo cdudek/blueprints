@@ -492,15 +492,26 @@ MATCHING = {'static': ['format', 'lint', 'docs-format', 'docs-links'], 'unit': [
             'build': ['build', 'e2e-smoke'], 'extras': ['gates']}
 
 
-def workflow(jobs, needs=None):
+GATE_LINES = ['if [ "$DRAFT" = true ]; then echo "draft: CI runs once the PR is ready"; exit 1; fi',
+              """echo "$NEEDS" | jq -r 'to_entries[] | "\\(.key): \\(.value.result)"'""",
+              """echo "$NEEDS" | jq -e --argjson want '{want}' '([keys[]] | sort) == $want and all(.[]; .result == "success")' >/dev/null"""]
+
+
+def gate_run(want):
+    return ''.join(f'          {line.replace("{want}", json.dumps(sorted(want), separators=(",", ":")))}\n' for line in GATE_LINES)
+
+
+def workflow(jobs, needs=None, want=None):
     lines = ['name: CI', 'on: pull_request', 'jobs:']
     for job, checks in jobs.items():
         lines += [f'  {job}:', '    if: github.event.pull_request.draft == false', '    runs-on: ubuntu-latest', '    steps:', '      - uses: actions/checkout@v7']
         for check in checks:
             lines += [f'      - name: Step {check}', '        if: ${{ !cancelled() }}', f'        run: bash scripts/ci-local --ci --check {check}']
     needs = list(jobs) if needs is None else needs
+    want = list(jobs) if want is None else want
     return '\n'.join(lines + ['  ci:', f'    needs: [{", ".join(needs)}]', '    if: always()', '    runs-on: ubuntu-latest', '    steps:',
-                              '      - env:', '          NEEDS: ${{ toJSON(needs) }}', '        run: python3 -c "import os; os.environ[\'NEEDS\']"']) + '\n'
+                              '      - env:', '          NEEDS: ${{ toJSON(needs) }}', '          DRAFT: ${{ github.event.pull_request.draft }}',
+                              '        run: |']) + '\n' + gate_run(want)
 
 
 class DriftGuardTest(unittest.TestCase):
@@ -609,22 +620,80 @@ class DriftGuardTest(unittest.TestCase):
                 self.assertEqual(r.returncode, 1)
                 self.assertIn('job unit holds check steps and needs `if: github.event.pull_request.draft == false`', r.stderr)
 
-    def test_ci_job_needs_exactly_the_check_jobs_and_checks_them_generically(self):
-        base = workflow(MATCHING)
-        r = self.drift(base.replace('needs: [static, unit, build, extras]', 'needs: [static, unit, build, extras, other]'))
+    def test_ci_job_needs_exactly_the_check_jobs(self):
+        r = self.drift(workflow(MATCHING).replace('needs: [static, unit, build, extras]', 'needs: [static, unit, build, extras, other]'))
+        self.assertEqual(r.returncode, 1)
         self.assertIn('job ci needs other, which holds no check steps', r.stderr)
-        self.assertEqual(r.returncode, 1)
-        generic = '      - env:\n          NEEDS: ${{ toJSON(needs) }}\n'
-        self.assertIn(generic, base)
-        r = self.drift(base.replace(generic, '      - env:\n'))
-        self.assertIn('must check every needed job through env NEEDS', r.stderr)
-        named = base.replace(generic, '      - env:\n          NEEDS: ${{ toJSON(needs) }}\n          UNIT: ${{ needs.unit.result }}\n')
-        r = self.drift(named)
-        self.assertEqual(r.returncode, 1)
-        self.assertIn('job ci names job unit', r.stderr)
-        listed = base.replace('run: python3', 'run: test "$NEEDS" && test "$STATIC" = success && python3')
-        r = self.drift(listed)
-        self.assertIn('job ci names job static', r.stderr)
+
+    def test_dropping_a_job_from_the_gate_fails_even_when_want_follows(self):
+        for label, needs, want in (('needs only', ['static', 'unit', 'build'], None),
+                                   ('needs and want', ['static', 'unit', 'build'], ['static', 'unit', 'build']),
+                                   ('want only', None, ['static', 'unit', 'build']),
+                                   ('extra in want', None, ['static', 'unit', 'build', 'extras', 'other'])):
+            with self.subTest(label):
+                r = self.drift(workflow(MATCHING, needs=needs, want=want))
+                self.assertEqual(r.returncode, 1, r.stdout)
+                self.assertTrue('job ci does not need extras' in r.stderr or 'the ci gate run must be exactly' in r.stderr, r.stderr)
+
+    def test_any_change_to_the_gate_run_fails(self):
+        base = workflow(MATCHING)
+        last = "'([keys[]] | sort) == $want and all(.[]; .result == \"success\")' >/dev/null\n"
+        cases = {
+            'or true': (last, last.replace('\n', ' || true\n')),
+            'extra line': (last, last + '          true\n'),
+            'dropped assertion': (' and all(.[]; .result == "success")', ''),
+            'draft check': ('exit 1; fi', 'exit 0; fi'),
+            'unsorted want': ('["build","extras","static","unit"]', '["static","unit","build","extras"]'),
+            'spaced want': ('["build","extras","static","unit"]', '["build", "extras", "static", "unit"]'),
+        }
+        for label, (old, new) in cases.items():
+            with self.subTest(label):
+                self.assertIn(old, base)
+                r = self.drift(base.replace(old, new, 1))
+                self.assertEqual(r.returncode, 1, r.stdout)
+                self.assertIn('the ci gate run must be exactly the canonical text', r.stderr)
+
+    def test_gate_step_and_job_cannot_be_neutralised(self):
+        base = workflow(MATCHING)
+        step = '      - env:\n          NEEDS: ${{ toJSON(needs) }}\n'
+        job = '    if: always()\n'
+        cases = {
+            'step if': (step, step.replace('- env:', '- if: false\n        env:'), 'the ci gate step sets if'),
+            'step continue-on-error': (step, step.replace('- env:', '- continue-on-error: true\n        env:'), 'the ci gate step sets continue-on-error'),
+            'step shell': (step, step.replace('- env:', '- shell: sh\n        env:'), 'the ci gate step sets a shell other than bash'),
+            'step working-directory': (step, step.replace('- env:', '- working-directory: /tmp\n        env:'), 'the ci gate step sets a working-directory'),
+            'step PATH': (step, step + '          PATH: /tmp/evil\n', 'the ci gate step sets env PATH'),
+            'extra env': (step, step + '          EXTRA: 1\n', 'the ci gate step env must be exactly'),
+            'job continue-on-error': (job, job + '    continue-on-error: true\n', 'job ci sets continue-on-error'),
+            'job if': (job, '    if: success()\n', 'job ci must keep `if: always()`'),
+            'no job if': (job, '', 'job ci must keep `if: always()`'),
+            'job defaults shell': (job, job + '    defaults:\n      run:\n        shell: sh\n', 'job ci sets a shell other than bash'),
+            'job env LD_PRELOAD': (job, job + '    env:\n      LD_PRELOAD: /tmp/x.so\n', 'job ci sets env LD_PRELOAD'),
+        }
+        for label, (old, new, message) in cases.items():
+            with self.subTest(label):
+                self.assertIn(old, base)
+                r = self.drift(base.replace(old, new, 1))
+                self.assertEqual(r.returncode, 1, r.stdout)
+                self.assertIn(message, r.stderr)
+        two = base + '      - run: echo hi\n'
+        self.assertIn('exactly one step', self.drift(two).stderr)
+
+    @unittest.skipUnless(shutil.which('jq'), 'jq is not installed')
+    def test_the_gate_jq_fails_closed(self):
+        base = workflow(MATCHING)
+        want = json.dumps(sorted(MATCHING), separators=(',', ':'))
+        filter_ = [line for line in GATE_LINES if '--argjson' in line][0].replace('{want}', want)
+        ok = {job: {'result': 'success'} for job in MATCHING}
+        cases = {'all success': (ok, 0), 'one failure': ({**ok, 'unit': {'result': 'failure'}}, 1),
+                 'one skipped': ({**ok, 'unit': {'result': 'skipped'}}, 1),
+                 'static missing': ({k: v for k, v in ok.items() if k != 'static'}, 1), 'empty': ({}, 1),
+                 'extra job': ({**ok, 'other': {'result': 'success'}}, 1)}
+        self.assertIn(want, base)
+        for label, (needs, code) in cases.items():
+            with self.subTest(label):
+                r = subprocess.run(['bash', '-c', filter_], env={**os.environ, 'NEEDS': json.dumps(needs)}, text=True, capture_output=True)
+                self.assertEqual(r.returncode, code, r.stderr)
 
     def test_shell_directory_and_environment_overrides_fail_at_every_level(self):
         base = workflow(MATCHING)
@@ -640,6 +709,14 @@ class DriftGuardTest(unittest.TestCase):
             'step ENV': (step, step + '        env:\n          ENV: /tmp/x\n', 'sets env ENV'),
             'step SHELLOPTS': (step, step + '        env:\n          SHELLOPTS: xtrace\n', 'sets env SHELLOPTS'),
             'step LD_PRELOAD': (step, step + '        env:\n          LD_PRELOAD: /tmp/x.so\n', 'sets env LD_PRELOAD'),
+            'step NODE_OPTIONS': (step, step + '        env:\n          NODE_OPTIONS: --require /tmp/x.js\n', 'sets env NODE_OPTIONS'),
+            'step PYTHONPATH': (step, step + '        env:\n          PYTHONPATH: /tmp\n', 'sets env PYTHONPATH'),
+            'step lowercase ld_library_path': (step, step + '        env:\n          ld_library_path: /tmp\n', 'sets env ld_library_path'),
+            'step DYLD_INSERT_LIBRARIES': (step, step + '        env:\n          DYLD_INSERT_LIBRARIES: /tmp/x\n', 'sets env DYLD_INSERT_LIBRARIES'),
+            'step BASH_FUNC': (step, step + '        env:\n          BASH_FUNC_git%%: () { :; }\n', 'sets env BASH_FUNC_git%%'),
+            'job GIT_CONFIG_GLOBAL': (job, job + '    env:\n      GIT_CONFIG_GLOBAL: /tmp/x\n', 'sets env GIT_CONFIG_GLOBAL'),
+            'job RUBYOPT': (job, job + '    env:\n      RUBYOPT: -r/tmp/x\n', 'sets env RUBYOPT'),
+            'workflow PERL5OPT': (head, 'env:\n  PERL5OPT: -M/tmp/x\n' + head, 'sets env PERL5OPT'),
             'job defaults shell': (job, job + '    defaults:\n      run:\n        shell: sh\n', 'sets a shell other than bash'),
             'job defaults directory': (job, job + '    defaults:\n      run:\n        working-directory: sub\n', 'sets a working-directory'),
             'job env PATH': (job, job + '    env:\n      PATH: /tmp/evil\n', 'sets env PATH'),

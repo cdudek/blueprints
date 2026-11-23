@@ -7,15 +7,18 @@ Reads the REPO CONFIG of scripts/ci-local and .github/workflows/ci.yml (needs Py
     LOCAL_ONLY_CHECKS has exactly one `scripts/ci-local ... --check <id>` step,
   - that step sits in the job named after the check's CHECK_STAGES entry (e2e-smoke runs in `build`),
   - no step runs another check, or runs ci-local without --check, and `ci` needs every job with check steps,
-  - every job with check steps has `if: github.event.pull_request.draft == false`, and the `ci` job needs exactly those
-    jobs and checks `toJSON(needs)` generically (env NEEDS) instead of naming jobs,
+  - every job with check steps has `if: github.event.pull_request.draft == false`, and the `ci` job (`if: always()`) needs
+    exactly those jobs and has one step: env exactly NEEDS and DRAFT, run exactly the canonical gate text (GATE_RUN), whose
+    jq asserts `keys == want` (the sorted JSON list of those jobs, literal) and every result `success`, so a dropped job fails closed,
   - no check step runs under another shell, directory or environment: no `shell` (or only `bash`), no `working-directory`, no env
-    that sets PATH, BASH_ENV, ENV, SHELLOPTS or LD_PRELOAD, on the step, its job or the workflow (`defaults.run` too),
+    that sets PATH, BASH_ENV, ENV, SHELLOPTS, NODE_OPTIONS, PYTHONPATH, PYTHONSTARTUP, PYTHONHOME, PERL5OPT, RUBYOPT,
+    GIT_CONFIG_GLOBAL, GIT_CONFIG_SYSTEM or a BASH_FUNC_, LD_ or DYLD_ name (any case), on the step, its job or the workflow (`defaults.run` too),
   - no check step is neutralised: its run is exactly `bash scripts/ci-local --ci --check <id>` (repeatable), its `if` is
     absent or exactly `${{ !cancelled() }}`, and neither it nor its job sets a truthy `continue-on-error`.
 Wire it into the repo's workflow-lint check, next to actionlint and zizmor.
 """
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -29,8 +32,16 @@ RUNNER_CHECKS = ("docs-format", "docs-links")
 STEP_RUN = re.compile(r"bash scripts/ci-local --ci(?: --check [\w.-]+)+")
 STEP_IF = "${{ !cancelled() }}"
 JOB_IF = "github.event.pull_request.draft == false"
-UNSAFE_ENV = {"PATH", "BASH_ENV", "ENV", "SHELLOPTS", "LD_PRELOAD"}
-NEEDS_JSON = "${{ toJSON(needs) }}"
+UNSAFE_ENV = {"PATH", "BASH_ENV", "ENV", "SHELLOPTS", "NODE_OPTIONS", "PYTHONPATH", "PYTHONSTARTUP", "PYTHONHOME", "PERL5OPT",
+              "RUBYOPT", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM"}
+UNSAFE_ENV_PREFIXES = ("BASH_FUNC_", "LD_", "DYLD_")
+GATE_ENV = {"NEEDS": "${{ toJSON(needs) }}", "DRAFT": "${{ github.event.pull_request.draft }}"}
+# The one canonical text of the `ci` gate run; {want} is the sorted compact JSON list of the check jobs.
+GATE_RUN = (
+    'if [ "$DRAFT" = true ]; then echo "draft: CI runs once the PR is ready"; exit 1; fi',
+    """echo "$NEEDS" | jq -r 'to_entries[] | "\\(.key): \\(.value.result)"'""",
+    """echo "$NEEDS" | jq -e --argjson want '{want}' '([keys[]] | sort) == $want and all(.[]; .result == "success")' >/dev/null""",
+)
 DUMP = 'echo "${CHECK_NAMES[*]:-}"; echo "${CHECK_STAGES[*]:-}"; echo "${LOCAL_ONLY_CHECKS[*]:-}"'
 
 
@@ -66,7 +77,7 @@ def environment_problems(where, scope):
     if any(directory is not None for directory in directories):
         found.append(f"{where} sets a working-directory")
     env = scope.get("env")
-    for name in sorted(k for k in (env if isinstance(env, dict) else {}) if str(k).upper() in UNSAFE_ENV):
+    for name in sorted(k for k in (env if isinstance(env, dict) else {}) if str(k).upper() in UNSAFE_ENV or str(k).upper().startswith(UNSAFE_ENV_PREFIXES)):
         found.append(f"{where} sets env {name}")
     if env is not None and not isinstance(env, dict):
         found.append(f"{where} sets env as an expression")
@@ -80,6 +91,29 @@ def workflow_steps(jobs):
             run = str(step.get("run") or "")
             if "ci-local" in run:
                 yield job, body, index, step, re.findall(r"--check[ =]+(\S+)", run) or None
+
+
+def gate_problems(ci, check_jobs, loaded):
+    """Findings for the `ci` job: it must assert the literal, sorted set of check jobs, so a dropped job fails closed."""
+    found, steps = [], ci.get("steps") or []
+    if str(ci.get("if", "")).strip() != "always()":
+        found.append("job ci must keep `if: always()`")
+    if "continue-on-error" in ci and lenient(ci["continue-on-error"]):
+        found.append("job ci sets continue-on-error")
+    found += environment_problems("job ci", ci)
+    if len(steps) != 1 or not isinstance(steps[0], dict):
+        return found + ["job ci must have exactly one step, the gate"]
+    step = steps[0]
+    found += [f"the ci gate step sets {key}; only env and run are allowed" for key in sorted(set(step) - {"name", "env", "run"})]
+    found += environment_problems("the ci gate step", step)
+    if step.get("env") != GATE_ENV:
+        found.append(f"the ci gate step env must be exactly {GATE_ENV}")
+    want = json.dumps(check_jobs, separators=(",", ":"))
+    expected = [line.replace("{want}", want) for line in GATE_RUN]
+    actual = [" ".join(line.split()) for line in str(step.get("run") or "").strip().splitlines()]
+    if actual != expected:
+        found.append("the ci gate run must be exactly the canonical text, with want = " + want + ":\n" + "\n".join(expected))
+    return found
 
 
 def problems(root, workflow):
@@ -120,14 +154,7 @@ def problems(root, workflow):
     gate = {gate} if isinstance(gate, str) else set(gate)
     errors += [f"job ci does not need {job}" for job in sorted(holding - gate)]
     errors += [f"job ci needs {job}, which holds no check steps" for job in sorted(gate - holding)]
-    steps = ci.get("steps") or []
-    if not any((step.get("env") or {}).get("NEEDS") == NEEDS_JSON and "NEEDS" in str(step.get("run")) for step in steps):
-        errors.append(f"job ci must check every needed job through env NEEDS: {NEEDS_JSON} and a run that reads it")
-    for step in steps:
-        text = str(step.get("run") or "") + " ".join(str(v) for v in (step.get("env") or {}).values() if v != NEEDS_JSON)
-        for job in sorted(holding | gate):
-            if re.search(rf"(?<![\w-]){re.escape(job)}(?![\w-])", text, re.IGNORECASE):
-                errors.append(f"job ci names job {job}; check every needed job through NEEDS instead")
+    errors += gate_problems(ci, sorted(holding), loaded)
     return list(dict.fromkeys(errors))  # a job-level finding repeats per step
 
 

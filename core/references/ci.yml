@@ -184,10 +184,12 @@ jobs:
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
+      # The job list in `want` is literal and sorted, so a job dropped from `needs` fails here. ci-workflow-drift.py
+      # enforces this exact text and that list (its failure message prints the expected text).
       - env:
           NEEDS: ${{ toJSON(needs) }}
           DRAFT: ${{ github.event.pull_request.draft }}
         run: |
           if [ "$DRAFT" = true ]; then echo "draft: CI runs once the PR is ready"; exit 1; fi
           echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
-          echo "$NEEDS" | jq -e 'length > 0 and all(.[]; .result == "success")' >/dev/null
+          echo "$NEEDS" | jq -e --argjson want '["build","extras","static","unit"]' '([keys[]] | sort) == $want and all(.[]; .result == "success")' >/dev/null
